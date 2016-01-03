@@ -1,0 +1,11 @@
+[package]
+name = "rfmt"
+version = "0.1.0"
+authors = ["baitu <zbaitu@gmail.com>"]
+
+[[bin]]
+name = "rfmt"
+
+[[bin]]
+name = "dump_ast"
+path = "src/dump_ast.rs"
