@@ -1,0 +1,3 @@
+extern "stdcall" {
+    fn f();
+}
