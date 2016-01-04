@@ -17,4 +17,9 @@ fn main() {
 
     let krate = parse::parse_crate_from_file(&path, cfg, &session);
     println!("{:#?}", krate);
+
+    println!("{:#?}", session.codemap().span_to_snippet(krate.span));
+    println!("{:#?}", session.codemap().span_to_string(krate.span));
+    println!("{:#?}", session.codemap().span_to_expanded_string(krate.span));
+    println!("{:#?}", session.codemap().span_to_filename(krate.span));
 }
