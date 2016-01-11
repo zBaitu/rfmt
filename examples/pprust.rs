@@ -3,7 +3,6 @@ extern crate syntax;
 
 use syntax::ast::CrateConfig;
 use syntax::parse::{self, ParseSess};
-use syntax::print::pprust;
 
 use std::env;
 use std::fs::File;

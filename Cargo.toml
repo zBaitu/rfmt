@@ -5,12 +5,3 @@ authors = ["baitu <zbaitu@gmail.com>"]
 
 [[bin]]
 name = "rfmt"
-path = "src/bin/rfmt.rs"
-
-[[bin]]
-name = "dump_ast"
-path = "src/bin/dump_ast.rs"
-
-[[bin]]
-name = "pprust"
-path = "src/bin/pprust.rs"
