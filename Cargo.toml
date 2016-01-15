@@ -5,3 +5,6 @@ authors = ["baitu <zbaitu@gmail.com>"]
 
 [[bin]]
 name = "rfmt"
+
+[dependencies]
+rsyntax = { path = "/home/baitu/workspace/rust/rsyntax" }
