@@ -1,9 +1,9 @@
 #![feature(rustc_private)]
-extern crate syntax;
+extern crate rst;
 
-use syntax::ast::CrateConfig;
-use syntax::parse::{self, ParseSess};
-use syntax::parse::lexer::comments;
+use rst::ast::CrateConfig;
+use rst::parse::{self, ParseSess};
+use rst::parse::lexer::comments;
 
 use std::env;
 use std::fs::File;
@@ -33,6 +33,7 @@ fn main() {
                                                    &session);
     println!("{:#?}", krate);
 
+    println!("\n----------");
     println!("{:#?}", session.codemap().span_to_snippet(krate.span));
     println!("{:#?}", session.codemap().span_to_string(krate.span));
     println!("{:#?}", session.codemap().span_to_expanded_string(krate.span));
@@ -45,10 +46,12 @@ fn main() {
                                                                   .unwrap()
                                                                   .to_string(),
                                                               &mut input);
+    println!("\n----------");
     for cmt in cmts {
         println!("{:?}", cmt.lines);
         println!("{:?}", cmt.pos);
     }
+    println!("----------");
     for lit in lits {
         println!("{}", lit.lit);
         println!("{:?}", lit.pos);
