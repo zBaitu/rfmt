@@ -1,10 +1,22 @@
-use std::fmt::{self, Display, Debug};
+use std::fmt::{self, Debug, Display};
 
-pub struct Span(pub u32, pub u32);
+pub struct Span {
+    s: u32,
+    e: u32,
+}
+
+impl Span {
+    pub fn new(s: u32, e: u32) -> Span {
+        Span {
+            s: s,
+            e: e,
+        }
+    }
+}
 
 impl Display for Span {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Span({}, {})", self.0, self.1)
+        write!(f, "Span({}, {})", self.s, self.e)
     }
 }
 
@@ -20,13 +32,13 @@ pub struct Attr {
 }
 
 #[derive(Debug)]
-pub struct Doc<'a> {
-    pub doc: &'a str,
+pub struct Doc {
+    pub doc: String,
     pub sp: Span,
 }
 
 #[derive(Debug)]
-pub enum AttrOrDoc<'a> {
+pub enum AttrOrDoc {
     IsAttr(Attr),
-    IsDoc(Doc<'a>),
+    IsDoc(Doc),
 }

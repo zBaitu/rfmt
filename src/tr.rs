@@ -32,11 +32,11 @@ impl<'a> Trans<'a> {
         println!("{:#?}", attrs);
     }
 
-    fn trans_attrs<'tr>(&self, attrs: &'tr Vec<ast::Attribute>) -> Vec<AttrOrDoc<'tr>> {
+    fn trans_attrs(&self, attrs: &Vec<ast::Attribute>) -> Vec<AttrOrDoc> {
         attrs.iter().map(|attr| self.trans_attr(attr)).collect()
     }
 
-    fn trans_attr<'tr>(&self, attr: &'tr ast::Attribute) -> AttrOrDoc<'tr> {
+    fn trans_attr(&self, attr: &ast::Attribute) -> AttrOrDoc {
         if attr.node.is_sugared_doc {
             AttrOrDoc::IsDoc(self.trans_attr_doc(attr))
         } else {
@@ -44,12 +44,12 @@ impl<'a> Trans<'a> {
         }
     }
 
-    fn trans_attr_doc<'tr>(&self, attr: &'tr ast::Attribute) -> Doc<'tr> {
+    fn trans_attr_doc(&self, attr: &ast::Attribute) -> Doc {
         if let ast::MetaNameValue(_, ref value) = attr.node.value.node {
             if let ast::LitStr(ref s, _) = value.node {
                 return Doc {
-                    doc: &s,
-                    sp: Span(attr.span.lo.0, attr.span.hi.0),
+                    doc: s.to_string(),
+                    sp: Span::new(attr.span.lo.0, attr.span.hi.0),
                 };
             }
         }
