@@ -1,2 +1,2 @@
-#[test]
-mod a {}
+#[inline]
+fn f() {}

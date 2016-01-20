@@ -9,6 +9,7 @@
 // except according to those terms.
 
 //! # The Rust Standard Library             
+#![test]
 
 /// # The Rust Standard Library             
 /// 

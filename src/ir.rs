@@ -27,18 +27,60 @@ impl Debug for Span {
 }
 
 #[derive(Debug)]
-pub struct Attr {
-    pub sp: Span,
+pub struct Chunk {
+    s: String,
+    sp: Span,
+}
+
+impl Chunk {
+    pub fn new(s: String, sp: Span) -> Chunk {
+        Chunk {
+            s: s,
+            sp: sp,
+        }
+    }
+}
+
+#[inline]
+fn attr_head(is_outer: bool) -> &'static str {
+    static HASH: &'static str = "#";
+    static HASH_BANG: &'static str = "#!";
+
+    if is_outer {
+        HASH
+    }
+    else {
+        HASH_BANG
+    }
 }
 
 #[derive(Debug)]
-pub struct Doc {
-    pub doc: String,
+pub enum MetaItem {
+    Single(Chunk),
+    List(String, Vec<MetaItem>, Span),
+}
+
+#[derive(Debug)]
+pub struct Attr {
+    pub head: &'static str,
+    pub mi: MetaItem,
     pub sp: Span,
 }
+
+impl Attr {
+    pub fn new(is_outer: bool, mi: MetaItem, sp: Span) -> Attr {
+        Attr {
+            head: attr_head(is_outer),
+            mi: mi,
+            sp: sp,
+        }
+    }
+}
+
+pub type Doc = Chunk;
 
 #[derive(Debug)]
 pub enum AttrOrDoc {
-    IsAttr(Attr),
-    IsDoc(Doc),
+    Attr(Attr),
+    Doc(Doc),
 }

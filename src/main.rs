@@ -44,5 +44,5 @@ fn main() {
                                                                    .to_string(),
                                                                &mut input);
 
-    tr::trans(&krate, &cmnts, &lits);
+    tr::trans(krate, cmnts, lits);
 }
