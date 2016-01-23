@@ -1,26 +1,33 @@
 use std::fmt::{self, Debug, Display};
 
-pub struct Span {
-    s: u32,
-    e: u32,
+#[derive(Clone, Copy, Default)]
+pub struct Loc {
+    pub s: u32,
+    pub e: u32,
+    pub w: bool,
 }
 
-impl Span {
-    pub fn new(s: u32, e: u32) -> Span {
-        Span {
+impl Loc {
+    pub fn new(s: u32, e: u32, w: bool) -> Loc {
+        Loc {
             s: s,
             e: e,
+            w: w,
         }
     }
 }
 
-impl Display for Span {
+impl Display for Loc {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Span({}, {})", self.s, self.e)
+        if self.w {
+            write!(f, "Loc({}, {}, wrapped)", self.s, self.e)
+        } else {
+            write!(f, "Loc({}, {})", self.s, self.e)
+        }
     }
 }
 
-impl Debug for Span {
+impl Debug for Loc {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(self, f)
     }
@@ -28,15 +35,15 @@ impl Debug for Span {
 
 #[derive(Debug)]
 pub struct Chunk {
+    loc: Loc,
     s: String,
-    sp: Span,
 }
 
 impl Chunk {
-    pub fn new(s: String, sp: Span) -> Chunk {
+    pub fn new(loc: Loc, s: String) -> Chunk {
         Chunk {
+            loc: loc,
             s: s,
-            sp: sp,
         }
     }
 }
@@ -48,8 +55,7 @@ fn attr_head(is_outer: bool) -> &'static str {
 
     if is_outer {
         HASH
-    }
-    else {
+    } else {
         HASH_BANG
     }
 }
@@ -57,22 +63,22 @@ fn attr_head(is_outer: bool) -> &'static str {
 #[derive(Debug)]
 pub enum MetaItem {
     Single(Chunk),
-    List(String, Vec<MetaItem>, Span),
+    List(Loc, String, Vec<MetaItem>),
 }
 
 #[derive(Debug)]
 pub struct Attr {
+    pub loc: Loc,
     pub head: &'static str,
     pub mi: MetaItem,
-    pub sp: Span,
 }
 
 impl Attr {
-    pub fn new(is_outer: bool, mi: MetaItem, sp: Span) -> Attr {
+    pub fn new(loc: Loc, is_outer: bool, mi: MetaItem) -> Attr {
         Attr {
+            loc: loc,
             head: attr_head(is_outer),
             mi: mi,
-            sp: sp,
         }
     }
 }
