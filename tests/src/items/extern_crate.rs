@@ -1,2 +1,8 @@
 extern crate z;
-extern crate std as ruststd;
+//mod a;
+
+/// aaaaa
+/// bbbb
+#[test]
+extern crate std 
+as ruststd;

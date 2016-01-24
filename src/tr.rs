@@ -1,6 +1,5 @@
 use std::cell::Cell;
 use std::collections::HashMap;
-use std::slice::Iter;
 
 use rst;
 
@@ -8,19 +7,10 @@ use ir::*;
 
 pub fn trans(sess: rst::ParseSess, krate: rst::Crate, cmnts: Vec<rst::Comment>,
              lits: Vec<rst::Literal>) {
-    let cmnt_idx = skip_head_blanks(&cmnts);
-    let ts = Trans::new(sess, krate, cmnts, cmnt_idx, to_lit_map(lits));
-    ts.trans();
-}
-
-fn skip_head_blanks<'a>(cmnts: &Vec<rst::Comment>) -> u32 {
-    for i in 0..cmnts.len() {
-        if !cmnts[i].lines.is_empty() {
-            return i as u32;
-        }
-    }
-    0
-}
+                 let ts = Trans::new(sess, krate, cmnts, to_lit_map(lits));
+                 let krate = ts.trans();
+                 println!("{:#?}", krate);
+             }
 
 fn to_lit_map(lits: Vec<rst::Literal>) -> HashMap<rst::BytePos, String> {
     lits.into_iter().fold(HashMap::new(), |mut map, e| {
@@ -45,19 +35,23 @@ struct Trans {
 }
 
 impl Trans {
-    fn new(sess: rst::ParseSess, krate: rst::Crate, cmnts: Vec<rst::Comment>, cmnt_idx: u32,
+    fn new(sess: rst::ParseSess, krate: rst::Crate, cmnts: Vec<rst::Comment>,
            lits: HashMap<rst::BytePos, String>)
         -> Trans {
-        Trans {
-            sess: sess,
-            krate: krate,
-            cmnts: cmnts,
-            cmnt_idx: cmnt_idx,
-            lits: lits,
+            let crate_start = krate.span.lo.0;
+            Trans {
+                sess: sess,
+                krate: krate,
+                cmnts: cmnts,
+                cmnt_idx: crate_start,
+                lits: lits,
 
-            last_loc: Cell::new(Loc::new(0, cmnt_idx, false)),
+                last_loc: Cell::new(Loc {
+                    e: crate_start,
+                    ..Default::default()
+                }),
+            }
         }
-    }
 
     fn loc(&self, sp: &rst::Span) -> Loc {
         Loc::new(sp.lo.0, sp.hi.0, self.is_wrapped(sp))
@@ -73,9 +67,9 @@ impl Trans {
     #[inline]
     fn is_wrapped(&self, sp: &rst::Span) -> bool {
         let snippet = self.sess
-                          .codemap()
-                          .span_to_snippet(span(self.last_loc.get().e, sp.lo.0))
-                          .unwrap();
+            .codemap()
+            .span_to_snippet(span(self.last_loc.get().e, sp.lo.0))
+            .unwrap();
 
         let mut wrapped = false;
         let mut in_comment = false;
@@ -101,31 +95,26 @@ impl Trans {
         self.lits[&pos].clone()
     }
 
-    fn trans(&self) {
-        self.trans_crate();
+    fn trans(&self) -> Crate {
+        self.trans_crate()
     }
 
-    fn trans_crate(&self) {
+    fn trans_crate(&self) -> Crate {
+        let loc = self.loc(&self.krate.span);
         let attrs = self.trans_attrs(&self.krate.attrs);
-        println!("{:#?}", attrs);
-        //
-        // let s = self.sess.codemap().span_to_snippet(rst::codemap::mk_sp(rst::BytePos(7), rst::BytePos(90))).unwrap();
-        // println!("{:?}", s);
-        // println!("{}", s);
-        // println!("{:?}", s.find('\n'));
-        // println!("{:?}", s.rfind('\n'));
-        //
+        let module = self.trans_mod(&self.krate.module);
+        Crate::new(loc, attrs, module)
     }
 
-    fn trans_attrs(&self, attrs: &Vec<rst::Attribute>) -> Vec<AttrOrDoc> {
+    fn trans_attrs(&self, attrs: &Vec<rst::Attribute>) -> Vec<AttrKind> {
         attrs.iter().map(|attr| self.trans_attr(attr)).collect()
     }
 
-    fn trans_attr(&self, attr: &rst::Attribute) -> AttrOrDoc {
+    fn trans_attr(&self, attr: &rst::Attribute) -> AttrKind {
         if attr.node.is_sugared_doc {
-            AttrOrDoc::Doc(self.trans_attr_doc(attr))
+            AttrKind::Doc(self.trans_attr_doc(attr))
         } else {
-            AttrOrDoc::Attr(self.trans_attr_attr(attr))
+            AttrKind::Attr(self.trans_attr_attr(attr))
         }
     }
 
@@ -143,9 +132,8 @@ impl Trans {
         let loc = self.loc(&attr.span);
         let is_outer = attr.node.style == rst::AttrStyle::Outer;
         let mi = self.trans_meta_item(&attr.node.value);
-        let attr = Attr::new(loc, is_outer, mi);
         self.last_loc.set(loc);
-        attr
+        Attr::new(loc, is_outer, mi)
     }
 
     fn trans_meta_item(&self, mi: &rst::MetaItem) -> MetaItem {
@@ -162,11 +150,40 @@ impl Trans {
                 let mi_list = MetaItem::List(loc,
                                              ident.to_string(),
                                              mis.iter()
-                                                .map(|mi| self.trans_meta_item(mi))
-                                                .collect());
+                                             .map(|mi| self.trans_meta_item(mi))
+                                             .collect());
                 self.last_loc.set(loc);
                 mi_list
             }
         }
+    }
+
+    fn trans_mod(&self, module: &rst::Mod) -> Mod {
+        let loc = self.loc(&module.inner);
+        let items = module.items.iter().map(|item| self.trans_item(item)).collect();
+        self.last_loc.set(loc);
+        Mod::new(loc, items)
+    }
+
+    fn trans_item(&self, item: &rst::Item) -> Item {
+        let loc = self.loc(&item.span);
+        let attrs = self.trans_attrs(&item.attrs);
+        let item = match item.node {
+            rst::ItemExternCrate(ref name) => {
+                ItemKind::ExternCrate(self.trans_extren_crate(item, name))
+            }
+            _ => unreachable!(),
+        };
+        self.last_loc.set(loc);
+
+        Item::new(loc, attrs, item)
+    }
+
+    fn trans_extren_crate(&self, item: &rst::Item, name: &Option<rst::Name>) -> ExternCrate {
+        let mut krate = item.ident.name.as_str().to_string();
+        if let Some(rename) = *name {
+            krate = format!("{} as {}", krate, rename.as_str().to_string());
+        }
+        ExternCrate::new(krate)
     }
 }
