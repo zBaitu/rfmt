@@ -1,5 +1,6 @@
 use std::cell::Cell;
 use std::collections::HashMap;
+use std::slice::Iter;
 
 use rst;
 
@@ -7,8 +8,18 @@ use ir::*;
 
 pub fn trans(sess: rst::ParseSess, krate: rst::Crate, cmnts: Vec<rst::Comment>,
              lits: Vec<rst::Literal>) {
-    let ts = Trans::new(sess, krate, cmnts, to_lit_map(lits));
+    let cmnt_idx = skip_head_blanks(&cmnts);
+    let ts = Trans::new(sess, krate, cmnts, cmnt_idx, to_lit_map(lits));
     ts.trans();
+}
+
+fn skip_head_blanks<'a>(cmnts: &Vec<rst::Comment>) -> u32 {
+    for i in 0..cmnts.len() {
+        if !cmnts[i].lines.is_empty() {
+            return i as u32;
+        }
+    }
+    0
 }
 
 fn to_lit_map(lits: Vec<rst::Literal>) -> HashMap<rst::BytePos, String> {
@@ -27,22 +38,24 @@ struct Trans {
     sess: rst::ParseSess,
     krate: rst::Crate,
     cmnts: Vec<rst::Comment>,
+    cmnt_idx: u32,
     lits: HashMap<rst::BytePos, String>,
 
     last_loc: Cell<Loc>,
 }
 
 impl Trans {
-    fn new(sess: rst::ParseSess, krate: rst::Crate, cmnts: Vec<rst::Comment>,
+    fn new(sess: rst::ParseSess, krate: rst::Crate, cmnts: Vec<rst::Comment>, cmnt_idx: u32,
            lits: HashMap<rst::BytePos, String>)
         -> Trans {
         Trans {
             sess: sess,
             krate: krate,
             cmnts: cmnts,
+            cmnt_idx: cmnt_idx,
             lits: lits,
 
-            last_loc: Cell::default(),
+            last_loc: Cell::new(Loc::new(0, cmnt_idx, false)),
         }
     }
 
@@ -66,8 +79,7 @@ impl Trans {
 
         let mut wrapped = false;
         let mut in_comment = false;
-        let mut chars = snippet.chars();
-        while let Some(ch) = chars.next() {
+        for ch in snippet.chars() {
             if !in_comment {
                 if ch == '/' {
                     in_comment = true;
