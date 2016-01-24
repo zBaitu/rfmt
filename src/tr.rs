@@ -24,6 +24,24 @@ fn span(s: u32, e: u32) -> rst::Span {
     rst::codemap::mk_sp(rst::BytePos(s), rst::BytePos(e))
 }
 
+#[inline]
+fn is_pub(vis: rst::Visibility) -> bool {
+    match vis {
+        rst::Visibility::Public => true,
+        _ => false,
+    }
+}
+
+#[inline]
+fn name_to_string(name: &rst::Name) -> String {
+    name.as_str().to_string()
+}
+
+#[inline]
+fn ident_to_string(ident: &rst::Ident) -> String {
+    name_to_string(&ident.name)
+}
+
 struct Trans {
     sess: rst::ParseSess,
     krate: rst::Crate,
@@ -172,6 +190,7 @@ impl Trans {
             rst::ItemExternCrate(ref name) => {
                 ItemKind::ExternCrate(self.trans_extren_crate(item, name))
             }
+            rst::ItemUse(ref view_path) => ItemKind::Use(self.trans_use(item, view_path)),
             _ => unreachable!(),
         };
         self.last_loc.set(loc);
@@ -180,10 +199,70 @@ impl Trans {
     }
 
     fn trans_extren_crate(&self, item: &rst::Item, name: &Option<rst::Name>) -> ExternCrate {
-        let mut krate = item.ident.name.as_str().to_string();
-        if let Some(rename) = *name {
-            krate = format!("{} as {}", krate, rename.as_str().to_string());
+        let mut krate = ident_to_string(&item.ident);
+        if let Some(ref rename) = *name {
+            krate = format!("{} as {}", krate, name_to_string(rename));
         }
         ExternCrate::new(krate)
+    }
+
+    fn trans_use(&self, item: &rst::Item, view_path: &rst::ViewPath) -> Use {
+        match view_path.node {
+            rst::ViewPathSimple(ident, ref path) => {
+                self.loc_leaf(&path.span);
+                let mut fullpath = self.path_to_string(path);
+                if path.segments.last().unwrap().identifier.name != ident.name {
+                    fullpath = format!("{} as {}", fullpath, ident_to_string(&ident));
+                }
+                Use::new(is_pub(item.vis), fullpath, None)
+            }
+            rst::ViewPathGlob(ref path) => {
+                self.loc_leaf(&path.span);
+                let fullpath = format!("{}::*", self.path_to_string(path));
+                Use::new(is_pub(item.vis), fullpath, None)
+            }
+            rst::ViewPathList(ref path, ref list) => {
+                let loc = self.loc(&path.span);
+                let fullpath = self.path_to_string(path);
+                let use_item = Use::new(is_pub(item.vis), fullpath, Some(self.trans_path_list(list)));
+                self.last_loc.set(loc);
+                use_item
+            }
+        }
+    }
+
+    fn path_to_string(&self, path: &rst::Path) -> String {
+        path.segments.iter().fold(String::new(), |mut s, e| {
+            if !s.is_empty() {
+                s.push_str("::");
+            }
+            s.push_str(&ident_to_string(&e.identifier));
+            s
+        })
+    }
+
+    fn trans_path_list(&self, list: &Vec<rst::PathListItem>) -> Vec<Chunk> {
+        list.iter().fold(Vec::new(), |mut vec, e| {
+            let loc = self.loc_leaf(&e.span);
+            let chunk = match e.node {
+                rst::PathListIdent{ ref name, ref rename, .. } => {
+                    let mut s = ident_to_string(name);
+                    if let Some(ref ident) = *rename {
+                        s = format!("{} as {}", s, ident_to_string(ident));
+                    }
+                    Chunk::new(loc, s)
+                }
+                rst::PathListMod { ref rename, .. } => {
+                    let mut s = "self".to_string();
+                    if let Some(ref ident) = *rename {
+                        s = format!("{} as {}", s, ident_to_string(ident));
+                    }
+                    Chunk::new(loc, s)
+                }
+            };
+
+            vec.push(chunk);
+            vec
+        })
     }
 }

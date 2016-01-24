@@ -84,16 +84,6 @@ pub enum MetaItem {
     List(Loc, String, Vec<MetaItem>),
 }
 
-impl Attr {
-    pub fn new(loc: Loc, is_outer: bool, mi: MetaItem) -> Attr {
-        Attr {
-            loc: loc,
-            head: attr_head(is_outer),
-            mi: mi,
-        }
-    }
-}
-
 #[inline]
 fn attr_head(is_outer: bool) -> &'static str {
     static HASH: &'static str = "#";
@@ -103,6 +93,16 @@ fn attr_head(is_outer: bool) -> &'static str {
         HASH
     } else {
         HASH_BANG
+    }
+}
+
+impl Attr {
+    pub fn new(loc: Loc, is_outer: bool, mi: MetaItem) -> Attr {
+        Attr {
+            loc: loc,
+            head: attr_head(is_outer),
+            mi: mi,
+        }
     }
 }
 
@@ -143,6 +143,7 @@ impl Item {
 #[derive(Debug)]
 pub enum ItemKind {
     ExternCrate(ExternCrate),
+    Use(Use),
 }
 
 #[derive(Debug)]
@@ -157,6 +158,35 @@ impl ExternCrate {
         ExternCrate {
             head: HEAD,
             krate: krate,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Use {
+    pub head: &'static str,
+    pub path: String,
+    pub list: Option<Vec<Chunk>>,
+}
+
+#[inline]
+fn use_head(is_pub: bool) -> &'static str {
+    static HEAD: &'static str = "use";
+    static PUB_HEAD: &'static str = "pub use";
+
+    if is_pub {
+        PUB_HEAD
+    } else {
+        HEAD
+    }
+}
+
+impl Use {
+    pub fn new(is_pub: bool, path: String, list: Option<Vec<Chunk>>) -> Use {
+        Use {
+            head: use_head(is_pub),
+            path: path,
+            list: list,
         }
     }
 }
