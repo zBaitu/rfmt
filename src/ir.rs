@@ -144,6 +144,8 @@ impl Item {
 pub enum ItemKind {
     ExternCrate(ExternCrate),
     Use(Use),
+    ModDecl(ModDecl),
+    Mod(Mod),
 }
 
 #[derive(Debug)]
@@ -187,6 +189,33 @@ impl Use {
             head: use_head(is_pub),
             path: path,
             list: list,
+        }
+    }
+}
+
+#[inline]
+fn mod_head(is_pub: bool) -> &'static str {
+    static HEAD: &'static str = "mod";
+    static PUB_HEAD: &'static str = "pub mod";
+
+    if is_pub {
+        PUB_HEAD
+    } else {
+        HEAD
+    }
+}
+
+#[derive(Debug)]
+pub struct ModDecl {
+    pub head: &'static str,
+    pub module: String,
+}
+
+impl ModDecl {
+    pub fn new(is_pub: bool, module: String) -> ModDecl {
+        ModDecl {
+            head: mod_head(is_pub),
+            module: module,
         }
     }
 }

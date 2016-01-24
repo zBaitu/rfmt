@@ -7,10 +7,10 @@ use ir::*;
 
 pub fn trans(sess: rst::ParseSess, krate: rst::Crate, cmnts: Vec<rst::Comment>,
              lits: Vec<rst::Literal>) {
-                 let ts = Trans::new(sess, krate, cmnts, to_lit_map(lits));
-                 let krate = ts.trans();
-                 println!("{:#?}", krate);
-             }
+    let ts = Trans::new(sess, krate, cmnts, to_lit_map(lits));
+    let krate = ts.trans();
+    println!("{:#?}", krate);
+}
 
 fn to_lit_map(lits: Vec<rst::Literal>) -> HashMap<rst::BytePos, String> {
     lits.into_iter().fold(HashMap::new(), |mut map, e| {
@@ -56,20 +56,20 @@ impl Trans {
     fn new(sess: rst::ParseSess, krate: rst::Crate, cmnts: Vec<rst::Comment>,
            lits: HashMap<rst::BytePos, String>)
         -> Trans {
-            let crate_start = krate.span.lo.0;
-            Trans {
-                sess: sess,
-                krate: krate,
-                cmnts: cmnts,
-                cmnt_idx: crate_start,
-                lits: lits,
+        let crate_start = krate.span.lo.0;
+        Trans {
+            sess: sess,
+            krate: krate,
+            cmnts: cmnts,
+            cmnt_idx: crate_start,
+            lits: lits,
 
-                last_loc: Cell::new(Loc {
-                    e: crate_start,
-                    ..Default::default()
-                }),
-            }
+            last_loc: Cell::new(Loc {
+                e: crate_start,
+                ..Default::default()
+            }),
         }
+    }
 
     fn loc(&self, sp: &rst::Span) -> Loc {
         Loc::new(sp.lo.0, sp.hi.0, self.is_wrapped(sp))
@@ -85,9 +85,9 @@ impl Trans {
     #[inline]
     fn is_wrapped(&self, sp: &rst::Span) -> bool {
         let snippet = self.sess
-            .codemap()
-            .span_to_snippet(span(self.last_loc.get().e, sp.lo.0))
-            .unwrap();
+                          .codemap()
+                          .span_to_snippet(span(self.last_loc.get().e, sp.lo.0))
+                          .unwrap();
 
         let mut wrapped = false;
         let mut in_comment = false;
@@ -111,6 +111,10 @@ impl Trans {
 
     fn lit(&self, pos: rst::BytePos) -> String {
         self.lits[&pos].clone()
+    }
+
+    fn is_mod_decl(&self, sp: &rst::Span) -> bool {
+        sp.lo.0 > self.krate.span.hi.0
     }
 
     fn trans(&self) -> Crate {
@@ -168,8 +172,8 @@ impl Trans {
                 let mi_list = MetaItem::List(loc,
                                              ident.to_string(),
                                              mis.iter()
-                                             .map(|mi| self.trans_meta_item(mi))
-                                             .collect());
+                                                .map(|mi| self.trans_meta_item(mi))
+                                                .collect());
                 self.last_loc.set(loc);
                 mi_list
             }
@@ -191,6 +195,13 @@ impl Trans {
                 ItemKind::ExternCrate(self.trans_extren_crate(item, name))
             }
             rst::ItemUse(ref view_path) => ItemKind::Use(self.trans_use(item, view_path)),
+            rst::ItemMod(ref module) => {
+                if self.is_mod_decl(&module.inner) {
+                    ItemKind::ModDecl(self.trans_mod_decl(&item))
+                } else {
+                    ItemKind::Mod(self.trans_mod(module))
+                }
+            }
             _ => unreachable!(),
         };
         self.last_loc.set(loc);
@@ -224,7 +235,9 @@ impl Trans {
             rst::ViewPathList(ref path, ref list) => {
                 let loc = self.loc(&path.span);
                 let fullpath = self.path_to_string(path);
-                let use_item = Use::new(is_pub(item.vis), fullpath, Some(self.trans_path_list(list)));
+                let use_item = Use::new(is_pub(item.vis),
+                                        fullpath,
+                                        Some(self.trans_path_list(list)));
                 self.last_loc.set(loc);
                 use_item
             }
@@ -264,5 +277,9 @@ impl Trans {
             vec.push(chunk);
             vec
         })
+    }
+
+    fn trans_mod_decl(&self, item: &rst::Item) -> ModDecl {
+        ModDecl::new(is_pub(item.vis), ident_to_string(&item.ident))
     }
 }
