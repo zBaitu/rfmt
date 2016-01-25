@@ -169,7 +169,7 @@ impl ExternCrate {
 pub struct Use {
     pub head: &'static str,
     pub path: String,
-    pub list: Option<Vec<Chunk>>,
+    pub list: Vec<Chunk>,
 }
 
 #[inline]
@@ -185,7 +185,7 @@ fn use_head(is_pub: bool) -> &'static str {
 }
 
 impl Use {
-    pub fn new(is_pub: bool, path: String, list: Option<Vec<Chunk>>) -> Use {
+    pub fn new(is_pub: bool, path: String, list: Vec<Chunk>) -> Use {
         Use {
             head: use_head(is_pub),
             path: path,
@@ -226,11 +226,11 @@ pub type Lifetime = Chunk;
 #[derive(Debug)]
 pub struct LifetimeDef {
     pub lifetime: Lifetime,
-    pub bounds: Option<Vec<Lifetime>>,
+    pub bounds: Vec<Lifetime>,
 }
 
 impl LifetimeDef {
-    pub fn new(lifetime: Lifetime, bounds: Option<Vec<Lifetime>>) -> LifetimeDef {
+    pub fn new(lifetime: Lifetime, bounds: Vec<Lifetime>) -> LifetimeDef {
         LifetimeDef {
             lifetime: lifetime,
             bounds: bounds,
@@ -247,12 +247,12 @@ pub enum TypeParamBound {
 pub struct TypeParam {
     pub loc: Loc,
     pub name: String,
-    pub bounds: Option<Vec<TypeParamBound>>,
+    pub bounds: Vec<TypeParamBound>,
     pub default: Option<Type>,
 }
 
 impl TypeParam {
-    pub fn new(loc: Loc, name: String, bounds: Option<Vec<TypeParamBound>>, default: Option<Type>)
+    pub fn new(loc: Loc, name: String, bounds: Vec<TypeParamBound>, default: Option<Type>)
         -> TypeParam {
         TypeParam {
             loc: loc,
@@ -265,12 +265,12 @@ impl TypeParam {
 
 #[derive(Debug)]
 pub struct Generics {
-    pub lifetimes: Option<Vec<LifetimeDef>>,
-    pub type_params: Option<Vec<TypeParam>>,
+    pub lifetimes: Vec<LifetimeDef>,
+    pub type_params: Vec<TypeParam>,
 }
 
 impl Generics {
-    pub fn new(lifetimes: Option<Vec<LifetimeDef>>, type_params: Option<Vec<TypeParam>>) -> Generics {
+    pub fn new(lifetimes: Vec<LifetimeDef>, type_params: Vec<TypeParam>) -> Generics {
         Generics {
             lifetimes: lifetimes,
             type_params: type_params,

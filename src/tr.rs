@@ -52,6 +52,12 @@ struct Trans {
     last_loc: Cell<Loc>,
 }
 
+macro_rules! trans_list {
+    ($self_: ident, $list: ident, $trans_single: ident) => ({
+        $list.iter().map(|ref e| $self_.$trans_single(e)).collect()
+    })
+}
+
 impl Trans {
     fn new(sess: rst::ParseSess, krate: rst::Crate, cmnts: Vec<rst::Comment>,
            lits: HashMap<rst::BytePos, String>)
@@ -133,8 +139,9 @@ impl Trans {
         Crate::new(loc, attrs, module)
     }
 
+    #[inline]
     fn trans_attrs(&self, attrs: &Vec<rst::Attribute>) -> Vec<AttrKind> {
-        attrs.iter().map(|ref attr| self.trans_attr(attr)).collect()
+        trans_list!(self, attrs, trans_attr)
     }
 
     fn trans_attr(&self, attr: &rst::Attribute) -> AttrKind {
@@ -158,38 +165,41 @@ impl Trans {
     fn trans_attr_attr(&self, attr: &rst::Attribute) -> Attr {
         let loc = self.loc(&attr.span);
         let is_outer = attr.node.style == rst::AttrStyle::Outer;
-        let mi = self.trans_meta_item(&attr.node.value);
+        let meta_item = self.trans_meta_item(&attr.node.value);
         self.set_loc(&loc);
-        Attr::new(loc, is_outer, mi)
+        Attr::new(loc, is_outer, meta_item)
     }
 
-    fn trans_meta_item(&self, mi: &rst::MetaItem) -> MetaItem {
-        match mi.node {
+    fn trans_meta_item(&self, meta_item: &rst::MetaItem) -> MetaItem {
+        match meta_item.node {
             rst::MetaWord(ref ident) => {
-                MetaItem::Single(Chunk::new(self.loc_leaf(&mi.span), ident.to_string()))
+                MetaItem::Single(Chunk::new(self.loc_leaf(&meta_item.span), ident.to_string()))
             }
             rst::MetaNameValue(ref ident, ref lit) => {
                 let s = format!("{} = {}", ident, self.lit(lit.span.lo));
-                MetaItem::Single(Chunk::new(self.loc_leaf(&mi.span), s))
+                MetaItem::Single(Chunk::new(self.loc_leaf(&meta_item.span), s))
             }
-            rst::MetaList(ref ident, ref mis) => {
-                let loc = self.loc(&mi.span);
-                let mi_list = MetaItem::List(loc,
+            rst::MetaList(ref ident, ref meta_items) => {
+                let loc = self.loc(&meta_item.span);
+                let meta_item = MetaItem::List(loc,
                                              ident.to_string(),
-                                             mis.iter()
-                                                .map(|ref mi| self.trans_meta_item(mi))
-                                                .collect());
+                                             trans_list!(self, meta_items, trans_meta_item));
                 self.set_loc(&loc);
-                mi_list
+                meta_item
             }
         }
     }
 
     fn trans_mod(&self, module: &rst::Mod) -> Mod {
         let loc = self.loc(&module.inner);
-        let items = module.items.iter().map(|item| self.trans_item(item)).collect();
+        let items = self.trans_items(&module.items);
         self.set_loc(&loc);
         Mod::new(loc, items)
+    }
+
+    #[inline]
+    fn trans_items(&self, items: &Vec<rst::P<rst::Item>>) -> Vec<Item> {
+        trans_list!(self, items, trans_item)
     }
 
     fn trans_item(&self, item: &rst::Item) -> Item {
@@ -208,7 +218,9 @@ impl Trans {
                     ItemKind::Mod(self.trans_mod(module))
                 }
             }
-            rst::ItemTy(ref ty, ref generics) => ItemKind::Type(self.trans_type_alias(ty, generics)),
+            rst::ItemTy(ref ty, ref generics) => {
+                ItemKind::Type(self.trans_type_alias(ty, generics))
+            }
             _ => unreachable!(),
         };
 
@@ -232,19 +244,17 @@ impl Trans {
                 if path.segments.last().unwrap().identifier.name != ident.name {
                     fullpath = format!("{} as {}", fullpath, ident_to_string(&ident));
                 }
-                Use::new(is_pub(item.vis), fullpath, None)
+                Use::new(is_pub(item.vis), fullpath, Vec::new())
             }
             rst::ViewPathGlob(ref path) => {
                 self.loc_leaf(&path.span);
                 let fullpath = format!("{}::*", self.use_view_path_to_string(path));
-                Use::new(is_pub(item.vis), fullpath, None)
+                Use::new(is_pub(item.vis), fullpath, Vec::new())
             }
             rst::ViewPathList(ref path, ref list) => {
                 let loc = self.loc(&path.span);
                 let fullpath = self.use_view_path_to_string(path);
-                let use_item = Use::new(is_pub(item.vis),
-                                        fullpath,
-                                        Some(self.trans_use_paths(list)));
+                let use_item = Use::new(is_pub(item.vis), fullpath, self.trans_use_paths(list));
                 self.set_loc(&loc);
                 use_item
             }
@@ -294,12 +304,9 @@ impl Trans {
                       self.trans_type_params(&generics.ty_params))
     }
 
-    fn trans_lifetime_defs(&self, lifetime_defs: &Vec<rst::LifetimeDef>) -> Option<Vec<LifetimeDef>> {
-        if lifetime_defs.is_empty() {
-            None
-        } else {
-            Some(lifetime_defs.iter().map(|ref e| self.trans_lifetime_def(e)).collect())
-        }
+    #[inline]
+    fn trans_lifetime_defs(&self, lifetime_defs: &Vec<rst::LifetimeDef>) -> Vec<LifetimeDef> {
+        trans_list!(self, lifetime_defs, trans_lifetime_def)
     }
 
     fn trans_lifetime_def(&self, lifetime_def: &rst::LifetimeDef) -> LifetimeDef {
@@ -311,20 +318,14 @@ impl Trans {
         Lifetime::new(self.loc_leaf(&lifetime.span), name_to_string(&lifetime.name))
     }
 
-    fn trans_lifetime_bounds(&self, bounds: &Vec<rst::Lifetime>) -> Option<Vec<Lifetime>> {
-        if bounds.is_empty() {
-            None
-        } else {
-            Some(bounds.iter().map(|ref e| self.trans_lifetime(e)).collect())
-        }
+    #[inline]
+    fn trans_lifetime_bounds(&self, bounds: &Vec<rst::Lifetime>) -> Vec<Lifetime> {
+        trans_list!(self, bounds, trans_lifetime)
     }
 
-    fn trans_type_params(&self, type_params: &[rst::TyParam]) -> Option<Vec<TypeParam>> {
-        if type_params.is_empty() {
-            None
-        } else {
-            Some(type_params.iter().map(|ref e| self.trans_type_param(e)).collect())
-        }
+    #[inline]
+    fn trans_type_params(&self, type_params: &[rst::TyParam]) -> Vec<TypeParam> {
+        trans_list!(self, type_params, trans_type_param)
     }
 
     fn trans_type_param(&self, type_param: &rst::TyParam) -> TypeParam {
@@ -334,26 +335,25 @@ impl Trans {
         let default = None;
         self.set_loc(&loc);
         TypeParam::new(loc, name, bounds, default)
-        /*
-        let default = match type_param.default {
-            Some(ref ty) => Some(self.trans_type(ty)),
-            None => None,
-        }
-        */
+        //
+        // let default = match type_param.default {
+        // Some(ref ty) => Some(self.trans_type(ty)),
+        // None => None,
+        // }
+        //
     }
 
-    fn trans_type_param_bounds(&self, bounds: &[rst::TyParamBound]) -> Option<Vec<TypeParamBound>> {
-        if bounds.is_empty() {
-            None
-        } else {
-            Some(bounds.iter().map(|ref e| self.trans_type_param_bound(e)).collect())
-        }
+    #[inline]
+    fn trans_type_param_bounds(&self, bounds: &[rst::TyParamBound]) -> Vec<TypeParamBound> {
+        trans_list!(self, bounds, trans_type_param_bound)
     }
 
     fn trans_type_param_bound(&self, bound: &rst::TyParamBound) -> TypeParamBound {
         match bound {
-            &rst::RegionTyParamBound(ref lifetime) => TypeParamBound::Lifetime(self.trans_lifetime(lifetime)),
-            _ => unreachable!()
+            &rst::RegionTyParamBound(ref lifetime) => {
+                TypeParamBound::Lifetime(self.trans_lifetime(lifetime))
+            }
+            _ => unreachable!(),
         }
     }
 }
