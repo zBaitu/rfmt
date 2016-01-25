@@ -2,27 +2,27 @@ use std::fmt::{self, Debug, Display};
 
 #[derive(Clone, Copy, Default)]
 pub struct Loc {
-    pub s: u32,
-    pub e: u32,
-    pub w: bool,
+    pub start: u32,
+    pub end: u32,
+    pub wrapped: bool,
 }
 
 impl Loc {
-    pub fn new(s: u32, e: u32, w: bool) -> Loc {
+    pub fn new(start: u32, end: u32, wrapped: bool) -> Loc {
         Loc {
-            s: s,
-            e: e,
-            w: w,
+            start: start,
+            end: end,
+            wrapped: wrapped,
         }
     }
 }
 
 impl Display for Loc {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.w {
-            write!(f, "Loc({}, {}, wrapped)", self.s, self.e)
+        if self.wrapped {
+            write!(f, "Loc({}, {}, wrapped)", self.start, self.end)
         } else {
-            write!(f, "Loc({}, {})", self.s, self.e)
+            write!(f, "Loc({}, {})", self.start, self.end)
         }
     }
 }
@@ -75,7 +75,7 @@ pub enum AttrKind {
 pub struct Attr {
     pub loc: Loc,
     pub head: &'static str,
-    pub mi: MetaItem,
+    pub meta_item: MetaItem,
 }
 
 #[derive(Debug)]
@@ -97,11 +97,11 @@ fn attr_head(is_outer: bool) -> &'static str {
 }
 
 impl Attr {
-    pub fn new(loc: Loc, is_outer: bool, mi: MetaItem) -> Attr {
+    pub fn new(loc: Loc, is_outer: bool, meta_item: MetaItem) -> Attr {
         Attr {
             loc: loc,
             head: attr_head(is_outer),
-            mi: mi,
+            meta_item: meta_item,
         }
     }
 }
@@ -239,14 +239,41 @@ impl LifetimeDef {
 }
 
 #[derive(Debug)]
+pub enum TypeParamBound {
+    Lifetime(Lifetime),
+}
+
+#[derive(Debug)]
+pub struct TypeParam {
+    pub loc: Loc,
+    pub name: String,
+    pub bounds: Option<Vec<TypeParamBound>>,
+    pub default: Option<Type>,
+}
+
+impl TypeParam {
+    pub fn new(loc: Loc, name: String, bounds: Option<Vec<TypeParamBound>>, default: Option<Type>)
+        -> TypeParam {
+        TypeParam {
+            loc: loc,
+            name: name,
+            bounds: bounds,
+            default: default,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Generics {
     pub lifetimes: Option<Vec<LifetimeDef>>,
+    pub type_params: Option<Vec<TypeParam>>,
 }
 
 impl Generics {
-    pub fn new(lifetimes: Option<Vec<LifetimeDef>>) -> Generics {
+    pub fn new(lifetimes: Option<Vec<LifetimeDef>>, type_params: Option<Vec<TypeParam>>) -> Generics {
         Generics {
             lifetimes: lifetimes,
+            type_params: type_params,
         }
     }
 }

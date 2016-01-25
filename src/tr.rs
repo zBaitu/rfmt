@@ -65,7 +65,7 @@ impl Trans {
             lits: lits,
 
             last_loc: Cell::new(Loc {
-                e: crate_start,
+                end: crate_start,
                 ..Default::default()
             }),
         }
@@ -78,15 +78,20 @@ impl Trans {
     #[inline]
     fn loc_leaf(&self, sp: &rst::Span) -> Loc {
         let loc = Loc::new(sp.lo.0, sp.hi.0, self.is_wrapped(sp));
-        self.last_loc.set(loc);
+        self.set_loc(&loc);
         loc
+    }
+
+    #[inline]
+    fn set_loc(&self, loc: &Loc) {
+        self.last_loc.set(*loc)
     }
 
     #[inline]
     fn is_wrapped(&self, sp: &rst::Span) -> bool {
         let snippet = self.sess
                           .codemap()
-                          .span_to_snippet(span(self.last_loc.get().e, sp.lo.0))
+                          .span_to_snippet(span(self.last_loc.get().end, sp.lo.0))
                           .unwrap();
 
         let mut wrapped = false;
@@ -129,7 +134,7 @@ impl Trans {
     }
 
     fn trans_attrs(&self, attrs: &Vec<rst::Attribute>) -> Vec<AttrKind> {
-        attrs.iter().map(|attr| self.trans_attr(attr)).collect()
+        attrs.iter().map(|ref attr| self.trans_attr(attr)).collect()
     }
 
     fn trans_attr(&self, attr: &rst::Attribute) -> AttrKind {
@@ -154,7 +159,7 @@ impl Trans {
         let loc = self.loc(&attr.span);
         let is_outer = attr.node.style == rst::AttrStyle::Outer;
         let mi = self.trans_meta_item(&attr.node.value);
-        self.last_loc.set(loc);
+        self.set_loc(&loc);
         Attr::new(loc, is_outer, mi)
     }
 
@@ -172,9 +177,9 @@ impl Trans {
                 let mi_list = MetaItem::List(loc,
                                              ident.to_string(),
                                              mis.iter()
-                                                .map(|mi| self.trans_meta_item(mi))
+                                                .map(|ref mi| self.trans_meta_item(mi))
                                                 .collect());
-                self.last_loc.set(loc);
+                self.set_loc(&loc);
                 mi_list
             }
         }
@@ -183,7 +188,7 @@ impl Trans {
     fn trans_mod(&self, module: &rst::Mod) -> Mod {
         let loc = self.loc(&module.inner);
         let items = module.items.iter().map(|item| self.trans_item(item)).collect();
-        self.last_loc.set(loc);
+        self.set_loc(&loc);
         Mod::new(loc, items)
     }
 
@@ -203,11 +208,11 @@ impl Trans {
                     ItemKind::Mod(self.trans_mod(module))
                 }
             }
-            rst::ItemTy(ref ty, ref generics) => ItemKind::Type(self.trans_type(ty, generics)),
+            rst::ItemTy(ref ty, ref generics) => ItemKind::Type(self.trans_type_alias(ty, generics)),
             _ => unreachable!(),
         };
 
-        self.last_loc.set(loc);
+        self.set_loc(&loc);
         Item::new(loc, attrs, item)
     }
 
@@ -240,7 +245,7 @@ impl Trans {
                 let use_item = Use::new(is_pub(item.vis),
                                         fullpath,
                                         Some(self.trans_use_paths(list)));
-                self.last_loc.set(loc);
+                self.set_loc(&loc);
                 use_item
             }
         }
@@ -280,12 +285,13 @@ impl Trans {
         ModDecl::new(is_pub(item.vis), ident_to_string(&item.ident))
     }
 
-    fn trans_type(&self, ty: &rst::Ty, generics: &rst::Generics) -> Type {
+    fn trans_type_alias(&self, ty: &rst::Ty, generics: &rst::Generics) -> Type {
         Type::new(self.trans_generics(generics))
     }
 
     fn trans_generics(&self, generics: &rst::Generics) -> Generics {
-        Generics::new(self.trans_lifetime_defs(&generics.lifetimes))
+        Generics::new(self.trans_lifetime_defs(&generics.lifetimes),
+                      self.trans_type_params(&generics.ty_params))
     }
 
     fn trans_lifetime_defs(&self, lifetime_defs: &Vec<rst::LifetimeDef>) -> Option<Vec<LifetimeDef>> {
@@ -310,6 +316,44 @@ impl Trans {
             None
         } else {
             Some(bounds.iter().map(|ref e| self.trans_lifetime(e)).collect())
+        }
+    }
+
+    fn trans_type_params(&self, type_params: &[rst::TyParam]) -> Option<Vec<TypeParam>> {
+        if type_params.is_empty() {
+            None
+        } else {
+            Some(type_params.iter().map(|ref e| self.trans_type_param(e)).collect())
+        }
+    }
+
+    fn trans_type_param(&self, type_param: &rst::TyParam) -> TypeParam {
+        let loc = self.loc(&type_param.span);
+        let name = ident_to_string(&type_param.ident);
+        let bounds = self.trans_type_param_bounds(&type_param.bounds);
+        let default = None;
+        self.set_loc(&loc);
+        TypeParam::new(loc, name, bounds, default)
+        /*
+        let default = match type_param.default {
+            Some(ref ty) => Some(self.trans_type(ty)),
+            None => None,
+        }
+        */
+    }
+
+    fn trans_type_param_bounds(&self, bounds: &[rst::TyParamBound]) -> Option<Vec<TypeParamBound>> {
+        if bounds.is_empty() {
+            None
+        } else {
+            Some(bounds.iter().map(|ref e| self.trans_type_param_bound(e)).collect())
+        }
+    }
+
+    fn trans_type_param_bound(&self, bound: &rst::TyParamBound) -> TypeParamBound {
+        match bound {
+            &rst::RegionTyParamBound(ref lifetime) => TypeParamBound::Lifetime(self.trans_lifetime(lifetime)),
+            _ => unreachable!()
         }
     }
 }
