@@ -190,6 +190,7 @@ impl Trans {
     fn trans_item(&self, item: &rst::Item) -> Item {
         let loc = self.loc(&item.span);
         let attrs = self.trans_attrs(&item.attrs);
+
         let item = match item.node {
             rst::ItemExternCrate(ref name) => {
                 ItemKind::ExternCrate(self.trans_extren_crate(item, name))
@@ -202,10 +203,11 @@ impl Trans {
                     ItemKind::Mod(self.trans_mod(module))
                 }
             }
+            rst::ItemTy(ref ty, ref generics) => ItemKind::Type(self.trans_type(ty, generics)),
             _ => unreachable!(),
         };
-        self.last_loc.set(loc);
 
+        self.last_loc.set(loc);
         Item::new(loc, attrs, item)
     }
 
@@ -221,7 +223,7 @@ impl Trans {
         match view_path.node {
             rst::ViewPathSimple(ident, ref path) => {
                 self.loc_leaf(&path.span);
-                let mut fullpath = self.path_to_string(path);
+                let mut fullpath = self.use_view_path_to_string(path);
                 if path.segments.last().unwrap().identifier.name != ident.name {
                     fullpath = format!("{} as {}", fullpath, ident_to_string(&ident));
                 }
@@ -229,22 +231,22 @@ impl Trans {
             }
             rst::ViewPathGlob(ref path) => {
                 self.loc_leaf(&path.span);
-                let fullpath = format!("{}::*", self.path_to_string(path));
+                let fullpath = format!("{}::*", self.use_view_path_to_string(path));
                 Use::new(is_pub(item.vis), fullpath, None)
             }
             rst::ViewPathList(ref path, ref list) => {
                 let loc = self.loc(&path.span);
-                let fullpath = self.path_to_string(path);
+                let fullpath = self.use_view_path_to_string(path);
                 let use_item = Use::new(is_pub(item.vis),
                                         fullpath,
-                                        Some(self.trans_path_list(list)));
+                                        Some(self.trans_use_paths(list)));
                 self.last_loc.set(loc);
                 use_item
             }
         }
     }
 
-    fn path_to_string(&self, path: &rst::Path) -> String {
+    fn use_view_path_to_string(&self, path: &rst::Path) -> String {
         path.segments.iter().fold(String::new(), |mut s, e| {
             if !s.is_empty() {
                 s.push_str("::");
@@ -254,32 +256,60 @@ impl Trans {
         })
     }
 
-    fn trans_path_list(&self, list: &Vec<rst::PathListItem>) -> Vec<Chunk> {
-        list.iter().fold(Vec::new(), |mut vec, e| {
-            let loc = self.loc_leaf(&e.span);
-            let chunk = match e.node {
-                rst::PathListIdent{ ref name, ref rename, .. } => {
-                    let mut s = ident_to_string(name);
-                    if let Some(ref ident) = *rename {
-                        s = format!("{} as {}", s, ident_to_string(ident));
-                    }
-                    Chunk::new(loc, s)
-                }
-                rst::PathListMod { ref rename, .. } => {
-                    let mut s = "self".to_string();
-                    if let Some(ref ident) = *rename {
-                        s = format!("{} as {}", s, ident_to_string(ident));
-                    }
-                    Chunk::new(loc, s)
-                }
-            };
-
-            vec.push(chunk);
+    fn trans_use_paths(&self, list: &Vec<rst::PathListItem>) -> Vec<Chunk> {
+        list.iter().fold(Vec::new(), |mut vec, ref e| {
+            vec.push(self.trans_use_path(e));
             vec
         })
     }
 
+    fn trans_use_path(&self, use_path: &rst::PathListItem) -> Chunk {
+        let loc = self.loc_leaf(&use_path.span);
+        let (mut s, rename) = match use_path.node {
+            rst::PathListIdent{ ref name, ref rename, .. } => (ident_to_string(name), rename),
+            rst::PathListMod{ ref rename, .. } => ("self".to_string(), rename),
+        };
+        if let Some(ref ident) = *rename {
+            s = format!("{} as {}", s, ident_to_string(ident));
+        };
+
+        Chunk::new(loc, s)
+    }
+
     fn trans_mod_decl(&self, item: &rst::Item) -> ModDecl {
         ModDecl::new(is_pub(item.vis), ident_to_string(&item.ident))
+    }
+
+    fn trans_type(&self, ty: &rst::Ty, generics: &rst::Generics) -> Type {
+        Type::new(self.trans_generics(generics))
+    }
+
+    fn trans_generics(&self, generics: &rst::Generics) -> Generics {
+        Generics::new(self.trans_lifetime_defs(&generics.lifetimes))
+    }
+
+    fn trans_lifetime_defs(&self, lifetime_defs: &Vec<rst::LifetimeDef>) -> Option<Vec<LifetimeDef>> {
+        if lifetime_defs.is_empty() {
+            None
+        } else {
+            Some(lifetime_defs.iter().map(|ref e| self.trans_lifetime_def(e)).collect())
+        }
+    }
+
+    fn trans_lifetime_def(&self, lifetime_def: &rst::LifetimeDef) -> LifetimeDef {
+        LifetimeDef::new(self.trans_lifetime(&lifetime_def.lifetime),
+                         self.trans_lifetime_bounds(&lifetime_def.bounds))
+    }
+
+    fn trans_lifetime(&self, lifetime: &rst::Lifetime) -> Lifetime {
+        Lifetime::new(self.loc_leaf(&lifetime.span), name_to_string(&lifetime.name))
+    }
+
+    fn trans_lifetime_bounds(&self, bounds: &Vec<rst::Lifetime>) -> Option<Vec<Lifetime>> {
+        if bounds.is_empty() {
+            None
+        } else {
+            Some(bounds.iter().map(|ref e| self.trans_lifetime(e)).collect())
+        }
     }
 }

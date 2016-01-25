@@ -146,6 +146,7 @@ pub enum ItemKind {
     Use(Use),
     ModDecl(ModDecl),
     Mod(Mod),
+    Type(Type),
 }
 
 #[derive(Debug)]
@@ -216,6 +217,49 @@ impl ModDecl {
         ModDecl {
             head: mod_head(is_pub),
             module: module,
+        }
+    }
+}
+
+pub type Lifetime = Chunk;
+
+#[derive(Debug)]
+pub struct LifetimeDef {
+    pub lifetime: Lifetime,
+    pub bounds: Option<Vec<Lifetime>>,
+}
+
+impl LifetimeDef {
+    pub fn new(lifetime: Lifetime, bounds: Option<Vec<Lifetime>>) -> LifetimeDef {
+        LifetimeDef {
+            lifetime: lifetime,
+            bounds: bounds,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Generics {
+    pub lifetimes: Option<Vec<LifetimeDef>>,
+}
+
+impl Generics {
+    pub fn new(lifetimes: Option<Vec<LifetimeDef>>) -> Generics {
+        Generics {
+            lifetimes: lifetimes,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Type {
+    pub generics: Generics,
+}
+
+impl Type {
+    pub fn new(generics: Generics) -> Type {
+        Type {
+            generics: generics,
         }
     }
 }
