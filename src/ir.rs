@@ -169,7 +169,7 @@ impl ExternCrate {
 pub struct Use {
     pub head: &'static str,
     pub path: String,
-    pub list: Vec<Chunk>,
+    pub used_items: Vec<Chunk>,
 }
 
 #[inline]
@@ -185,11 +185,11 @@ fn use_head(is_pub: bool) -> &'static str {
 }
 
 impl Use {
-    pub fn new(is_pub: bool, path: String, list: Vec<Chunk>) -> Use {
+    pub fn new(is_pub: bool, path: String, used_items: Vec<Chunk>) -> Use {
         Use {
             head: use_head(is_pub),
             path: path,
-            list: list,
+            used_items: used_items,
         }
     }
 }
@@ -236,14 +236,14 @@ impl TypeAlias {
 
 #[derive(Debug)]
 pub struct Generics {
-    pub lifetimes: Vec<LifetimeDef>,
+    pub lifetime_defs: Vec<LifetimeDef>,
     pub type_params: Vec<TypeParam>,
 }
 
 impl Generics {
-    pub fn new(lifetimes: Vec<LifetimeDef>, type_params: Vec<TypeParam>) -> Generics {
+    pub fn new(lifetime_defs: Vec<LifetimeDef>, type_params: Vec<TypeParam>) -> Generics {
         Generics {
-            lifetimes: lifetimes,
+            lifetime_defs: lifetime_defs,
             type_params: type_params,
         }
     }
@@ -309,8 +309,108 @@ impl PolyTraitRef {
     }
 }
 
-#[derive(Debug)]
-pub struct TraitRef;
+pub type TraitRef = Path;
 
 #[derive(Debug)]
 pub struct Type;
+
+#[inline]
+fn path_head(is_global: bool) -> &'static str {
+    static HEAD: &'static str = "";
+    static GLOBAL_HEAD: &'static str = "::";
+
+    if is_global {
+        GLOBAL_HEAD
+    } else {
+        HEAD
+    }
+}
+
+#[derive(Debug)]
+pub struct Path {
+    pub loc: Loc,
+    pub head: &'static str,
+    pub segs: Vec<PathSegment>,
+}
+
+impl Path {
+    pub fn new(loc: Loc, is_global: bool, segs: Vec<PathSegment>) -> Path {
+        Path {
+            loc: loc,
+            head: path_head(is_global),
+            segs: segs,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct PathSegment {
+    pub name: String,
+    pub params: Vec<PathParam>,
+}
+
+impl PathSegment {
+    pub fn new(name: String, params: Vec<PathParam>) -> PathSegment {
+        PathSegment {
+            name: name,
+            params: params,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum PathParam {
+    Angle(AngleParam),
+    Paren(ParenParam),
+}
+
+#[derive(Debug)]
+pub struct AngleParam {
+    pub lifetimes: Vec<Lifetime>,
+    pub types: Vec<Type>,
+    pub bindings: Vec<TypeBinding>,
+}
+
+impl AngleParam {
+    pub fn new(lifetimes: Vec<Lifetime>, types: Vec<Type>, bindings: Vec<TypeBinding>) -> AngleParam {
+        AngleParam {
+            lifetimes: lifetimes,
+            types: types,
+            bindings: bindings,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct TypeBinding {
+    pub loc: Loc,
+    pub name: String,
+    pub ty: Type,
+}
+
+impl TypeBinding {
+    pub fn new(loc: Loc, name: String, ty: Type) -> TypeBinding {
+        TypeBinding {
+            loc: loc,
+            name: name,
+            ty: ty,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ParenParam {
+    pub loc: Loc,
+    pub inputs: Vec<Type>,
+    pub output: Option<Type>,
+}
+
+impl ParenParam {
+    pub fn new(loc: Loc, inputs: Vec<Type>, output: Option<Type>) -> ParenParam {
+        ParenParam {
+            loc: loc,
+            inputs: inputs,
+            output: output,
+        }
+    }
+}
