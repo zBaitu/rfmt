@@ -222,7 +222,7 @@ impl Trans {
                 }
             }
             rst::ItemTy(ref ty, ref generics) => {
-                ItemKind::Type(self.trans_type_alias(ty, generics))
+                ItemKind::TypeAlias(self.trans_type_alias(ty, generics))
             }
             _ => unreachable!(),
         };
@@ -243,7 +243,7 @@ impl Trans {
         match view_path.node {
             rst::ViewPathSimple(ref ident, ref path) => {
                 self.loc_leaf(&path.span);
-                let mut fullpath = self.use_view_path_to_string(path);
+                let mut fullpath = self.use_path_to_string(path);
                 if path.segments.last().unwrap().identifier.name != ident.name {
                     fullpath = format!("{} as {}", fullpath, ident_to_string(ident));
                 }
@@ -251,20 +251,20 @@ impl Trans {
             }
             rst::ViewPathGlob(ref path) => {
                 self.loc_leaf(&path.span);
-                let fullpath = format!("{}::*", self.use_view_path_to_string(path));
+                let fullpath = format!("{}::*", self.use_path_to_string(path));
                 Use::new(is_pub(item.vis), fullpath, Vec::new())
             }
-            rst::ViewPathList(ref path, ref use_paths) => {
+            rst::ViewPathList(ref path, ref used_items) => {
                 let loc = self.loc(&path.span);
-                let fullpath = self.use_view_path_to_string(path);
-                let use_item = Use::new(is_pub(item.vis), fullpath, self.trans_use_paths(use_paths));
+                let fullpath = self.use_path_to_string(path);
+                let use_item = Use::new(is_pub(item.vis), fullpath, self.trans_used_items(used_items));
                 self.set_loc(&loc);
                 use_item
             }
         }
     }
 
-    fn use_view_path_to_string(&self, path: &rst::Path) -> String {
+    fn use_path_to_string(&self, path: &rst::Path) -> String {
         path.segments.iter().fold(String::new(), |mut s, e| {
             if !s.is_empty() {
                 s.push_str("::");
@@ -275,13 +275,13 @@ impl Trans {
     }
 
     #[inline]
-    fn trans_use_paths(&self, use_paths: &Vec<rst::PathListItem>) -> Vec<Chunk> {
-        trans_list!(self, use_paths, trans_use_path)
+    fn trans_used_items(&self, used_items: &Vec<rst::PathListItem>) -> Vec<Chunk> {
+        trans_list!(self, used_items, trans_used_item)
     }
 
-    fn trans_use_path(&self, use_path: &rst::PathListItem) -> Chunk {
-        let loc = self.loc_leaf(&use_path.span);
-        let (mut s, rename) = match use_path.node {
+    fn trans_used_item(&self, used_item: &rst::PathListItem) -> Chunk {
+        let loc = self.loc_leaf(&used_item.span);
+        let (mut s, rename) = match used_item.node {
             rst::PathListIdent{ ref name, ref rename, .. } => (ident_to_string(name), rename),
             rst::PathListMod{ ref rename, .. } => ("self".to_string(), rename),
         };
@@ -296,8 +296,8 @@ impl Trans {
         ModDecl::new(is_pub(item.vis), ident_to_string(&item.ident))
     }
 
-    fn trans_type_alias(&self, ty: &rst::Ty, generics: &rst::Generics) -> Type {
-        Type::new(self.trans_generics(generics))
+    fn trans_type_alias(&self, ty: &rst::Ty, generics: &rst::Generics) -> TypeAlias {
+        TypeAlias::new(self.trans_generics(generics))
     }
 
     fn trans_generics(&self, generics: &rst::Generics) -> Generics {
@@ -336,12 +336,6 @@ impl Trans {
         let default = None;
         self.set_loc(&loc);
         TypeParam::new(loc, name, bounds, default)
-        //
-        // let default = match type_param.default {
-        // Some(ref ty) => Some(self.trans_type(ty)),
-        // None => None,
-        // }
-        //
     }
 
     #[inline]

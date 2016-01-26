@@ -146,7 +146,7 @@ pub enum ItemKind {
     Use(Use),
     ModDecl(ModDecl),
     Mod(Mod),
-    Type(Type),
+    TypeAlias(TypeAlias),
 }
 
 #[derive(Debug)]
@@ -221,6 +221,34 @@ impl ModDecl {
     }
 }
 
+#[derive(Debug)]
+pub struct TypeAlias {
+    pub generics: Generics,
+}
+
+impl TypeAlias {
+    pub fn new(generics: Generics) -> TypeAlias {
+        TypeAlias {
+            generics: generics,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Generics {
+    pub lifetimes: Vec<LifetimeDef>,
+    pub type_params: Vec<TypeParam>,
+}
+
+impl Generics {
+    pub fn new(lifetimes: Vec<LifetimeDef>, type_params: Vec<TypeParam>) -> Generics {
+        Generics {
+            lifetimes: lifetimes,
+            type_params: type_params,
+        }
+    }
+}
+
 pub type Lifetime = Chunk;
 
 #[derive(Debug)]
@@ -236,11 +264,6 @@ impl LifetimeDef {
             bounds: bounds,
         }
     }
-}
-
-#[derive(Debug)]
-pub enum TypeParamBound {
-    Lifetime(Lifetime),
 }
 
 #[derive(Debug)]
@@ -264,29 +287,30 @@ impl TypeParam {
 }
 
 #[derive(Debug)]
-pub struct Generics {
-    pub lifetimes: Vec<LifetimeDef>,
-    pub type_params: Vec<TypeParam>,
+pub enum TypeParamBound {
+    Lifetime(Lifetime),
+    PolyTraitRef(PolyTraitRef),
 }
 
-impl Generics {
-    pub fn new(lifetimes: Vec<LifetimeDef>, type_params: Vec<TypeParam>) -> Generics {
-        Generics {
+#[derive(Debug)]
+pub struct PolyTraitRef {
+    pub loc: Loc,
+    pub lifetimes: Vec<LifetimeDef>,
+    pub trait_ref: TraitRef,
+}
+
+impl PolyTraitRef {
+    pub fn new(loc: Loc, lifetimes: Vec<LifetimeDef>, trait_ref: TraitRef) -> PolyTraitRef {
+        PolyTraitRef {
+            loc: loc,
             lifetimes: lifetimes,
-            type_params: type_params,
+            trait_ref: trait_ref,
         }
     }
 }
 
 #[derive(Debug)]
-pub struct Type {
-    pub generics: Generics,
-}
+pub struct TraitRef;
 
-impl Type {
-    pub fn new(generics: Generics) -> Type {
-        Type {
-            generics: generics,
-        }
-    }
-}
+#[derive(Debug)]
+pub struct Type;
