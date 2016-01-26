@@ -13,10 +13,7 @@ pub fn trans(sess: rst::ParseSess, krate: rst::Crate, cmnts: Vec<rst::Comment>,
 }
 
 fn to_lit_map(lits: Vec<rst::Literal>) -> HashMap<rst::BytePos, String> {
-    lits.into_iter().fold(HashMap::new(), |mut map, e| {
-        map.insert(e.pos, e.lit);
-        map
-    })
+    lits.into_iter().map(|e| (e.pos, e.lit)).collect()
 }
 
 #[inline]
@@ -93,13 +90,14 @@ impl Trans {
         self.last_loc.set(*loc)
     }
 
-    #[inline]
     fn is_wrapped(&self, sp: &rst::Span) -> bool {
-        let snippet = self.sess
-                          .codemap()
-                          .span_to_snippet(span(self.last_loc.get().end, sp.lo.0))
-                          .unwrap();
+        let start = self.last_loc.get().end;
+        let end = sp.lo.0;
+        if start > end {
+            return false;
+        }
 
+        let snippet = self.sess.codemap().span_to_snippet(span(start, end)).unwrap();
         let mut wrapped = false;
         let mut in_comment = false;
         for ch in snippet.chars() {
@@ -182,12 +180,17 @@ impl Trans {
             rst::MetaList(ref ident, ref meta_items) => {
                 let loc = self.loc(&meta_item.span);
                 let meta_item = MetaItem::List(loc,
-                                             ident.to_string(),
-                                             trans_list!(self, meta_items, trans_meta_item));
+                                               ident.to_string(),
+                                               self.trans_meta_items(meta_items));
                 self.set_loc(&loc);
                 meta_item
             }
         }
+    }
+
+    #[inline]
+    fn trans_meta_items(&self, meta_items: &Vec<rst::P<rst::MetaItem>>) -> Vec<MetaItem> {
+        trans_list!(self, meta_items, trans_meta_item)
     }
 
     fn trans_mod(&self, module: &rst::Mod) -> Mod {
@@ -238,11 +241,11 @@ impl Trans {
 
     fn trans_use(&self, item: &rst::Item, view_path: &rst::ViewPath) -> Use {
         match view_path.node {
-            rst::ViewPathSimple(ident, ref path) => {
+            rst::ViewPathSimple(ref ident, ref path) => {
                 self.loc_leaf(&path.span);
                 let mut fullpath = self.use_view_path_to_string(path);
                 if path.segments.last().unwrap().identifier.name != ident.name {
-                    fullpath = format!("{} as {}", fullpath, ident_to_string(&ident));
+                    fullpath = format!("{} as {}", fullpath, ident_to_string(ident));
                 }
                 Use::new(is_pub(item.vis), fullpath, Vec::new())
             }
@@ -251,10 +254,10 @@ impl Trans {
                 let fullpath = format!("{}::*", self.use_view_path_to_string(path));
                 Use::new(is_pub(item.vis), fullpath, Vec::new())
             }
-            rst::ViewPathList(ref path, ref list) => {
+            rst::ViewPathList(ref path, ref use_paths) => {
                 let loc = self.loc(&path.span);
                 let fullpath = self.use_view_path_to_string(path);
-                let use_item = Use::new(is_pub(item.vis), fullpath, self.trans_use_paths(list));
+                let use_item = Use::new(is_pub(item.vis), fullpath, self.trans_use_paths(use_paths));
                 self.set_loc(&loc);
                 use_item
             }
@@ -271,11 +274,9 @@ impl Trans {
         })
     }
 
-    fn trans_use_paths(&self, list: &Vec<rst::PathListItem>) -> Vec<Chunk> {
-        list.iter().fold(Vec::new(), |mut vec, ref e| {
-            vec.push(self.trans_use_path(e));
-            vec
-        })
+    #[inline]
+    fn trans_use_paths(&self, use_paths: &Vec<rst::PathListItem>) -> Vec<Chunk> {
+        trans_list!(self, use_paths, trans_use_path)
     }
 
     fn trans_use_path(&self, use_path: &rst::PathListItem) -> Chunk {
