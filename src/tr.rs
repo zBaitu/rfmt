@@ -222,7 +222,7 @@ impl Trans {
                 }
             }
             rst::ItemTy(ref ty, ref generics) => {
-                ItemKind::TypeAlias(self.trans_type_alias(ty, generics))
+                ItemKind::TypeAlias(self.trans_type_alias(generics, ty))
             }
             _ => unreachable!(),
         };
@@ -257,7 +257,9 @@ impl Trans {
             rst::ViewPathList(ref path, ref used_items) => {
                 let loc = self.loc(&path.span);
                 let fullpath = self.use_path_to_string(path);
-                let use_item = Use::new(is_pub(item.vis), fullpath, self.trans_used_items(used_items));
+                let use_item = Use::new(is_pub(item.vis),
+                                        fullpath,
+                                        self.trans_used_items(used_items));
                 self.set_loc(&loc);
                 use_item
             }
@@ -296,8 +298,8 @@ impl Trans {
         ModDecl::new(is_pub(item.vis), ident_to_string(&item.ident))
     }
 
-    fn trans_type_alias(&self, ty: &rst::Ty, generics: &rst::Generics) -> TypeAlias {
-        TypeAlias::new(self.trans_generics(generics))
+    fn trans_type_alias(&self, generics: &rst::Generics, ty: &rst::Ty) -> TypeAlias {
+        TypeAlias::new(self.trans_generics(generics), self.trans_type(ty))
     }
 
     fn trans_generics(&self, generics: &rst::Generics) -> Generics {
@@ -312,16 +314,16 @@ impl Trans {
 
     fn trans_lifetime_def(&self, lifetime_def: &rst::LifetimeDef) -> LifetimeDef {
         LifetimeDef::new(self.trans_lifetime(&lifetime_def.lifetime),
-                         self.trans_lifetime_bounds(&lifetime_def.bounds))
+                         self.trans_lifetimes(&lifetime_def.bounds))
+    }
+
+    #[inline]
+    fn trans_lifetimes(&self, lifetimes: &Vec<rst::Lifetime>) -> Vec<Lifetime> {
+        trans_list!(self, lifetimes, trans_lifetime)
     }
 
     fn trans_lifetime(&self, lifetime: &rst::Lifetime) -> Lifetime {
         Lifetime::new(self.loc_leaf(&lifetime.span), name_to_string(&lifetime.name))
-    }
-
-    #[inline]
-    fn trans_lifetime_bounds(&self, bounds: &Vec<rst::Lifetime>) -> Vec<Lifetime> {
-        trans_list!(self, bounds, trans_lifetime)
     }
 
     #[inline]
@@ -333,7 +335,10 @@ impl Trans {
         let loc = self.loc(&type_param.span);
         let name = ident_to_string(&type_param.ident);
         let bounds = self.trans_type_param_bounds(&type_param.bounds);
-        let default = None;
+        let default = match type_param.default {
+            Some(ref ty) => Some(self.trans_type(ty)),
+            None => None
+        };
         self.set_loc(&loc);
         TypeParam::new(loc, name, bounds, default)
     }
@@ -348,7 +353,87 @@ impl Trans {
             &rst::RegionTyParamBound(ref lifetime) => {
                 TypeParamBound::Lifetime(self.trans_lifetime(lifetime))
             }
-            _ => unreachable!(),
+            &rst::TraitTyParamBound(ref poly_trait_ref, is_sized) => {
+                TypeParamBound::PolyTraitRef(self.trans_poly_trait_ref(poly_trait_ref, is_sized))
+            }
         }
+    }
+
+    fn trans_poly_trait_ref(&self, poly_trait_ref: &rst::PolyTraitRef,
+                            is_sized: rst::TraitBoundModifier)
+        -> PolyTraitRef {
+        if let rst::TraitBoundModifier::Maybe = is_sized {
+            return PolyTraitRef::new_maybe_sized(self.loc_leaf(&poly_trait_ref.span));
+        }
+
+        let loc = self.loc(&poly_trait_ref.span);
+        let lifetime_defs = self.trans_lifetime_defs(&poly_trait_ref.bound_lifetimes);
+        let trait_ref = self.trans_trait_ref(&poly_trait_ref.trait_ref);
+        self.set_loc(&loc);
+        PolyTraitRef::new(loc, lifetime_defs, trait_ref)
+    }
+
+    fn trans_trait_ref(&self, trait_ref: &rst::TraitRef) -> TraitRef {
+        self.trans_path(&trait_ref.path)
+    }
+
+    fn trans_path(&self, path: &rst::Path) -> Path {
+        let loc = self.loc(&path.span);
+        let segs = self.trans_path_segments(&path.segments);
+        self.set_loc(&loc);
+        Path::new(loc, path.global, segs)
+    }
+
+    #[inline]
+    fn trans_path_segments(&self, segs: &Vec<rst::PathSegment>) -> Vec<PathSegment> {
+        trans_list!(self, segs, trans_path_segment)
+    }
+
+    fn trans_path_segment(&self, seg: &rst::PathSegment) -> PathSegment {
+        PathSegment::new(ident_to_string(&seg.identifier), self.trans_path_param(&seg.parameters))
+    }
+
+    fn trans_path_param(&self, param: &rst::PathParameters) -> PathParam {
+        match param {
+            &rst::AngleBracketed(ref param) => PathParam::Angle(self.trans_angle_param(param)),
+            &rst::Parenthesized(ref param) => PathParam::Paren(self.trans_paren_param(param)),
+        }
+    }
+
+    fn trans_angle_param(&self, param: &rst::AngleBracketedParameterData) -> AngleParam {
+        AngleParam::new(self.trans_lifetimes(&param.lifetimes),
+                        self.trans_types(&param.types),
+                        self.trans_type_bindings(&param.bindings))
+    }
+
+    #[inline]
+    fn trans_type_bindings(&self, bindings: &[rst::P<rst::TypeBinding>]) -> Vec<TypeBinding> {
+        trans_list!(self, bindings, trans_type_binding)
+    }
+
+    fn trans_type_binding(&self, binding: &rst::TypeBinding) -> TypeBinding {
+        TypeBinding::new(self.loc_leaf(&binding.span),
+                         ident_to_string(&binding.ident),
+                         self.trans_type(&binding.ty))
+    }
+
+    fn trans_paren_param(&self, param: &rst::ParenthesizedParameterData) -> ParenParam {
+        let loc = self.loc(&param.span);
+        let inputs = self.trans_types(&param.inputs);
+        let output = match param.output {
+            Some(ref ty) => Some(self.trans_type(ty)),
+            None => None,
+        };
+        self.set_loc(&loc);
+        ParenParam::new(loc, inputs, output)
+    }
+
+    #[inline]
+    fn trans_types(&self, types: &[rst::P<rst::Ty>]) -> Vec<Type> {
+        trans_list!(self, types, trans_type)
+    }
+
+    fn trans_type(&self, ty: &rst::Ty) -> Type {
+        Type::new()
     }
 }

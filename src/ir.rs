@@ -224,12 +224,14 @@ impl ModDecl {
 #[derive(Debug)]
 pub struct TypeAlias {
     pub generics: Generics,
+    pub ty: Type,
 }
 
 impl TypeAlias {
-    pub fn new(generics: Generics) -> TypeAlias {
+    pub fn new(generics: Generics, ty: Type) -> TypeAlias {
         TypeAlias {
             generics: generics,
+            ty: ty,
         }
     }
 }
@@ -307,19 +309,24 @@ impl PolyTraitRef {
             trait_ref: trait_ref,
         }
     }
+
+    pub fn new_maybe_sized(loc: Loc) -> PolyTraitRef {
+        PolyTraitRef {
+            loc: loc,
+            lifetimes: Vec::new(),
+            trait_ref: TraitRef::new_maybe_sized(loc),
+        }
+    }
 }
 
 pub type TraitRef = Path;
 
-#[derive(Debug)]
-pub struct Type;
-
 #[inline]
-fn path_head(is_global: bool) -> &'static str {
+fn path_head(global: bool) -> &'static str {
     static HEAD: &'static str = "";
     static GLOBAL_HEAD: &'static str = "::";
 
-    if is_global {
+    if global {
         GLOBAL_HEAD
     } else {
         HEAD
@@ -334,11 +341,19 @@ pub struct Path {
 }
 
 impl Path {
-    pub fn new(loc: Loc, is_global: bool, segs: Vec<PathSegment>) -> Path {
+    pub fn new(loc: Loc, global: bool, segs: Vec<PathSegment>) -> Path {
         Path {
             loc: loc,
-            head: path_head(is_global),
+            head: path_head(global),
             segs: segs,
+        }
+    }
+
+    pub fn new_maybe_sized(loc: Loc) -> Path {
+        Path {
+            loc: loc,
+            head: path_head(false),
+            segs: vec![PathSegment::new_maybe_sized()],
         }
     }
 }
@@ -346,14 +361,21 @@ impl Path {
 #[derive(Debug)]
 pub struct PathSegment {
     pub name: String,
-    pub params: Vec<PathParam>,
+    pub param: PathParam,
 }
 
 impl PathSegment {
-    pub fn new(name: String, params: Vec<PathParam>) -> PathSegment {
+    pub fn new(name: String, param: PathParam) -> PathSegment {
         PathSegment {
             name: name,
-            params: params,
+            param: param,
+        }
+    }
+
+    pub fn new_maybe_sized() -> PathSegment {
+        PathSegment {
+            name: "?Sized".to_string(),
+            param: PathParam::Angle(Default::default()),
         }
     }
 }
@@ -364,7 +386,7 @@ pub enum PathParam {
     Paren(ParenParam),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct AngleParam {
     pub lifetimes: Vec<Lifetime>,
     pub types: Vec<Type>,
@@ -412,5 +434,14 @@ impl ParenParam {
             inputs: inputs,
             output: output,
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct Type;
+
+impl Type {
+    pub fn new() -> Type {
+        Type
     }
 }
