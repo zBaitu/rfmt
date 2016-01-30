@@ -1,2 +1,2 @@
-fn f<>(t: Result + Sized + Eq) {
+extern fn f<>(t: Result + Sized + Eq) {
 }

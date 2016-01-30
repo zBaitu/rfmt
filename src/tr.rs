@@ -95,6 +95,7 @@ impl Trans {
         }
     }
 
+    #[inline]
     fn loc(&self, sp: &rst::Span) -> Loc {
         Loc::new(sp.lo.0, sp.hi.0, self.is_wrapped(sp))
     }
@@ -139,10 +140,12 @@ impl Trans {
         wrapped
     }
 
+    #[inline]
     fn lit(&self, pos: rst::BytePos) -> String {
         self.lits[&pos].clone()
     }
 
+    #[inline]
     fn is_mod_decl(&self, sp: &rst::Span) -> bool {
         sp.lo.0 > self.krate.span.hi.0
     }
@@ -234,7 +237,7 @@ impl Trans {
             rst::ItemExternCrate(ref name) => {
                 ItemKind::ExternCrate(self.trans_extren_crate(item, name))
             }
-            rst::ItemUse(ref view_path) => ItemKind::Use(self.trans_use(item, view_path)),
+            rst::ItemUse(ref view_path) => ItemKind::Use(self.trans_use(is_pub(item.vis), view_path)),
             rst::ItemMod(ref module) => {
                 if self.is_mod_decl(&module.inner) {
                     ItemKind::ModDecl(self.trans_mod_decl(&item))
@@ -244,6 +247,9 @@ impl Trans {
             }
             rst::ItemTy(ref ty, ref generics) => {
                 ItemKind::TypeAlias(self.trans_type_alias(item, generics, ty))
+            }
+            rst::ItemForeignMod(ref module) => {
+                ItemKind::ForeignMod(self.trans_foreign_mod(module))
             }
             _ => unreachable!(),
         };
@@ -260,7 +266,7 @@ impl Trans {
         ExternCrate::new(krate)
     }
 
-    fn trans_use(&self, item: &rst::Item, view_path: &rst::ViewPath) -> Use {
+    fn trans_use(&self, is_pub: bool, view_path: &rst::ViewPath) -> Use {
         match view_path.node {
             rst::ViewPathSimple(ref ident, ref path) => {
                 self.loc_leaf(&path.span);
@@ -268,19 +274,17 @@ impl Trans {
                 if path.segments.last().unwrap().identifier.name != ident.name {
                     fullpath = format!("{} as {}", fullpath, ident_to_string(ident));
                 }
-                Use::new(is_pub(item.vis), fullpath, Vec::new())
+                Use::new(is_pub, fullpath, Vec::new())
             }
             rst::ViewPathGlob(ref path) => {
                 self.loc_leaf(&path.span);
                 let fullpath = format!("{}::*", self.use_path_to_string(path));
-                Use::new(is_pub(item.vis), fullpath, Vec::new())
+                Use::new(is_pub, fullpath, Vec::new())
             }
             rst::ViewPathList(ref path, ref used_items) => {
                 let loc = self.loc(&path.span);
                 let fullpath = self.use_path_to_string(path);
-                let use_item = Use::new(is_pub(item.vis),
-                                        fullpath,
-                                        self.trans_used_items(used_items));
+                let use_item = Use::new(is_pub, fullpath, self.trans_used_items(used_items));
                 self.set_loc(&loc);
                 use_item
             }
@@ -545,6 +549,40 @@ impl Trans {
 
     fn trans_macro_type(&self, mac: &rst::Mac) -> MacroType {
         self.trans_macro(mac)
+    }
+
+    fn trans_foreign_mod(&self, module: &rst::ForeignMod) -> ForeignMod {
+        ForeignMod::new(abi_to_string(module.abi), self.trans_foreign_items(&module.items))
+    }
+
+    #[inline]
+    fn trans_foreign_items(&self, items: &Vec<rst::P<rst::ForeignItem>>) -> Vec<Foreign> {
+        trans_list!(self, items, trans_foreign_item)
+    }
+
+    fn trans_foreign_item(&self, item: &rst::ForeignItem) -> Foreign {
+        let loc = self.loc(&item.span);
+        let attrs = self.trans_attrs(&item.attrs);
+
+        let item = match item.node {
+            rst::ForeignItemStatic(ref ty, is_mut) => {
+                ForeignKind::Static(self.trans_foreign_static(is_pub(item.vis), is_mut, ty))
+            }
+            rst::ForeignItemFn(ref fn_decl, ref generics) => {
+                ForeignKind::Fn(self.trans_foreign_fn(is_pub(item.vis), generics, fn_decl))
+            }
+        };
+
+        self.set_loc(&loc);
+        Foreign::new(loc, attrs, item)
+    }
+
+    fn trans_foreign_static(&self, is_pub: bool, is_mut: bool, ty: &rst::Ty) -> ForeignStatic {
+        ForeignStatic::new(is_pub, is_mut, self.trans_type(ty))
+    }
+
+    fn trans_foreign_fn(&self, is_pub: bool, generics: &rst::Generics, fn_decl: &rst::FnDecl) -> ForeignFn {
+        ForeignFn::new(is_pub, self.trans_generics(generics), self.trans_fn_decl(fn_decl))
     }
 
     fn trans_fn_decl(&self, fn_decl: &rst::FnDecl) -> FnDecl {

@@ -13,14 +13,52 @@ macro_rules! head_fn {
                 FALSE_HEAD
             }
         }
-    );
+        );
 }
 head_fn!(attr_head, is_outer, "#", "#!");
 head_fn!(use_head, is_pub, "pub use", "use");
 head_fn!(mod_head, is_pub, "pub mod", "mod");
 head_fn!(path_head, global, "::", "");
 head_fn!(ptr_head, is_mut, "*mut", "*const");
-head_fn!(mut_deco, is_mut, "mut", "");
+
+#[inline]
+fn foreign_head(abi: String) -> String {
+    format!("extern {}", abi)
+}
+
+#[inline]
+fn static_head(is_pub: bool, is_mut: bool) -> String {
+    let mut head = String::new();
+    if is_pub {
+        head.push_str("pub ");
+    }
+    if is_mut {
+        head.push_str("mut ");
+    }
+    head.push_str("static ");
+    head
+}
+
+#[inline]
+fn fn_head(is_pub: bool, is_unsafe: bool, is_const: bool, abi: Option<&str>) -> String {
+    let mut head = String::new();
+    if is_pub {
+        head.push_str("pub ");
+    }
+    if is_unsafe {
+        head.push_str("unsafe ");
+    }
+    if is_const {
+        head.push_str("const ");
+    }
+    if let Some(abi) = abi {
+        if abi != "Rust" {
+            head.push_str(abi);
+            head.push_str(" ");
+        }
+    }
+    head
+}
 
 #[derive(Clone, Copy, Default)]
 pub struct Loc {
@@ -157,6 +195,7 @@ pub enum ItemKind {
     ModDecl(ModDecl),
     Mod(Mod),
     TypeAlias(TypeAlias),
+    ForeignMod(ForeignMod),
 }
 
 #[derive(Debug)]
@@ -168,6 +207,7 @@ pub struct ExternCrate {
 impl ExternCrate {
     pub fn new(krate: String) -> ExternCrate {
         static HEAD: &'static str = "extern crate ";
+
         ExternCrate {
             head: HEAD,
             krate: krate,
@@ -440,7 +480,7 @@ pub enum TypeKind {
     Sum(Box<SumType>),
     PolyTraitRef(Box<PolyTraitRefType>),
     Macro(Box<MacroType>),
-    Infer
+    Infer,
 }
 
 #[derive(Debug)]
@@ -539,9 +579,10 @@ pub struct BareFnType {
 }
 
 impl BareFnType {
-    pub fn new(is_unsafe: bool, abi: String, lifetimes: Vec<LifetimeDef>, fn_decl: FnDecl) -> BareFnType {
+    pub fn new(is_unsafe: bool, abi: String, lifetimes: Vec<LifetimeDef>, fn_decl: FnDecl)
+        -> BareFnType {
         BareFnType {
-            head: fn_head(is_unsafe, false, &abi),
+            head: fn_head(false, is_unsafe, false, Some(&abi)),
             lifetimes: lifetimes,
             fn_decl: fn_decl,
         }
@@ -576,22 +617,77 @@ impl PolyTraitRefType {
     }
 }
 
-pub type MacroType = Macro;
-
-fn fn_head(is_unsafe: bool, is_const: bool, abi: &str) -> String {
-    let mut head = String::new();
-    if is_unsafe {
-        head.push_str("unsafe ");
-    }
-    if is_const {
-        head.push_str("const ");
-    }
-    if abi != "Rust" {
-        head.push_str(abi);
-        head.push_str(" ");
-    }
-    head
+#[derive(Debug)]
+pub struct ForeignMod {
+    pub head: String,
+    pub items: Vec<Foreign>,
 }
+
+impl ForeignMod {
+    pub fn new(abi: String, items: Vec<Foreign>) -> ForeignMod {
+        ForeignMod {
+            head: foreign_head(abi),
+            items: items,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Foreign {
+    pub loc: Loc,
+    pub attrs: Vec<AttrKind>,
+    pub item: ForeignKind,
+}
+
+impl Foreign {
+    pub fn new(loc: Loc, attrs: Vec<AttrKind>, item: ForeignKind) -> Foreign {
+        Foreign {
+            loc: loc,
+            attrs: attrs,
+            item: item,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ForeignKind {
+    Static(ForeignStatic),
+    Fn(ForeignFn),
+}
+
+#[derive(Debug)]
+pub struct ForeignStatic {
+    pub head: String,
+    pub ty: Type,
+}
+
+impl ForeignStatic {
+    pub fn new(is_pub: bool, is_mut: bool, ty: Type) -> ForeignStatic {
+        ForeignStatic {
+            head: static_head(is_pub, is_mut),
+            ty: ty,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ForeignFn {
+    pub head: String,
+    pub generics: Generics,
+    pub fn_decl: FnDecl,
+}
+
+impl ForeignFn {
+    pub fn new(is_pub: bool, generics: Generics, fn_decl: FnDecl) -> ForeignFn {
+        ForeignFn {
+            head: fn_head(is_pub, false, false, None),
+            generics: generics,
+            fn_decl: fn_decl,
+        }
+    }
+}
+
+pub type MacroType = Macro;
 
 #[derive(Debug)]
 pub struct FnDecl;
