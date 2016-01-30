@@ -38,6 +38,14 @@ fn is_mut(mutbl: rst::Mutability) -> bool {
 }
 
 #[inline]
+fn is_unsafe(safety: rst::Unsafety) -> bool {
+    match safety {
+        rst::Unsafety::Unsafe => true,
+        _ => false,
+    }
+}
+
+#[inline]
 fn name_to_string(name: &rst::Name) -> String {
     name.as_str().to_string()
 }
@@ -45,6 +53,11 @@ fn name_to_string(name: &rst::Name) -> String {
 #[inline]
 fn ident_to_string(ident: &rst::Ident) -> String {
     name_to_string(&ident.name)
+}
+
+#[inline]
+fn abi_to_string(abi: rst::abi::Abi) -> String {
+    format!("{:?}", abi)
 }
 
 struct Trans {
@@ -447,19 +460,60 @@ impl Trans {
         let loc = self.loc(&ty.span);
 
         let ty = match ty.node {
+            rst::TyPath(ref qself, ref path) => {
+                TypeKind::Path(Box::new(self.trans_path_type(qself, path)))
+            }
+            rst::TyPtr(ref mut_type) => TypeKind::Ptr(Box::new(self.trans_ptr_type(mut_type))),
+            rst::TyRptr(ref lifetime, ref mut_type) => {
+                TypeKind::Ref(Box::new(self.trans_ref_type(lifetime, mut_type)))
+            }
             rst::TyVec(ref ty) => TypeKind::Array(Box::new(self.trans_array_type(ty))),
             rst::TyFixedLengthVec(ref ty, ref expr) => {
                 TypeKind::FixedSizeArray(Box::new(self.trans_fixed_size_array_type(ty, expr)))
             }
-            rst::TyPtr(ref mut_type) => TypeKind::Ptr(Box::new(self.trans_ptr_type(mut_type))),
-            rst::TyPath(ref qself, ref path) => {
-                TypeKind::Path(Box::new(self.trans_path_type(qself, path)))
+            rst::TyTup(ref types) => TypeKind::Tuple(Box::new(self.trans_tuple_type(types))),
+            rst::TyParen(ref ty) => {
+                TypeKind::Tuple(Box::new(self.trans_tuple_type(&vec![ty.clone()])))
             }
+            rst::TyBareFn(ref bare_fn) => {
+                TypeKind::BareFn(Box::new(self.trans_bare_fn_type(bare_fn)))
+            }
+            rst::TyObjectSum(ref ty, ref bounds) => {
+                TypeKind::Sum(Box::new(self.trans_sum_type(ty, bounds)))
+            }
+            rst::TyPolyTraitRef(ref bounds) => {
+                TypeKind::PolyTraitRef(Box::new(self.trans_poly_trait_ref_type(bounds)))
+            }
+            rst::TyMac(ref mac) => TypeKind::Macro(Box::new(self.trans_macro_type(mac))),
+            rst::TyInfer => TypeKind::Infer,
             _ => unreachable!(),
         };
 
         self.set_loc(&loc);
         Type::new(loc, ty)
+    }
+
+    fn trans_path_type(&self, qself: &Option<rst::QSelf>, path: &rst::Path) -> PathType {
+        let qself = match qself {
+            &Some(ref qself) => Some(self.trans_type(&qself.ty)),
+            &None => None,
+        };
+        let path = self.trans_path(path);
+        PathType::new(qself, path)
+    }
+
+    fn trans_ptr_type(&self, mut_type: &rst::MutTy) -> PtrType {
+        PtrType::new(is_mut(mut_type.mutbl), self.trans_type(&mut_type.ty))
+    }
+
+    fn trans_ref_type(&self, lifetime: &Option<rst::Lifetime>, mut_type: &rst::MutTy) -> RefType {
+        let lifetime = match lifetime {
+            &Some(ref lifetime) => Some(self.trans_lifetime(lifetime)),
+            &None => None,
+        };
+        let is_mut = is_mut(mut_type.mutbl);
+        let ty = self.trans_type(&mut_type.ty);
+        RefType::new(lifetime, is_mut, ty)
     }
 
     fn trans_array_type(&self, ty: &rst::Ty) -> ArrayType {
@@ -470,17 +524,35 @@ impl Trans {
         FixedSizeArrayType::new(self.trans_type(ty), self.trans_expr(expr))
     }
 
-    fn trans_ptr_type(&self, mut_type: &rst::MutTy) -> PtrType {
-        PtrType::new(is_mut(mut_type.mutbl), self.trans_type(&mut_type.ty))
+    fn trans_tuple_type(&self, types: &Vec<rst::P<rst::Ty>>) -> TupleType {
+        TupleType::new(self.trans_types(types))
     }
 
-    fn trans_path_type(&self, qself: &Option<rst::QSelf>, path: &rst::Path) -> PathType {
-        let qself = match qself {
-            &Some(ref qself) => Some(self.trans_type(&qself.ty)),
-            &None => None,
-        };
-        let path = self.trans_path(path);
-        PathType::new(qself, path)
+    fn trans_bare_fn_type(&self, bare_fn: &rst::BareFnTy) -> BareFnType {
+        BareFnType::new(is_unsafe(bare_fn.unsafety),
+                        abi_to_string(bare_fn.abi),
+                        self.trans_lifetime_defs(&bare_fn.lifetimes),
+                        self.trans_fn_decl(&bare_fn.decl))
+    }
+
+    fn trans_sum_type(&self, ty: &rst::Ty, bounds: &rst::TyParamBounds) -> SumType {
+        SumType::new(self.trans_type(ty), self.trans_type_param_bounds(bounds))
+    }
+
+    fn trans_poly_trait_ref_type(&self, bounds: &rst::TyParamBounds) -> PolyTraitRefType {
+        PolyTraitRefType::new(self.trans_type_param_bounds(bounds))
+    }
+
+    fn trans_macro_type(&self, mac: &rst::Mac) -> MacroType {
+        self.trans_macro(mac)
+    }
+
+    fn trans_fn_decl(&self, fn_decl: &rst::FnDecl) -> FnDecl {
+        FnDecl
+    }
+
+    fn trans_macro(&self, mac: &rst::Mac) -> Macro {
+        Macro
     }
 
     fn trans_expr(&self, expr: &rst::Expr) -> Expr {

@@ -15,6 +15,12 @@ macro_rules! head_fn {
         }
     );
 }
+head_fn!(attr_head, is_outer, "#", "#!");
+head_fn!(use_head, is_pub, "pub use", "use");
+head_fn!(mod_head, is_pub, "pub mod", "mod");
+head_fn!(path_head, global, "::", "");
+head_fn!(ptr_head, is_mut, "*mut", "*const");
+head_fn!(mut_deco, is_mut, "mut", "");
 
 #[derive(Clone, Copy, Default)]
 pub struct Loc {
@@ -100,8 +106,6 @@ pub enum MetaItem {
     List(Loc, String, Vec<MetaItem>),
 }
 
-head_fn!(attr_head, is_outer, "#", "#!");
-
 impl Attr {
     pub fn new(loc: Loc, is_outer: bool, meta_item: MetaItem) -> Attr {
         Attr {
@@ -178,8 +182,6 @@ pub struct Use {
     pub used_items: Vec<Chunk>,
 }
 
-head_fn!(use_head, is_pub, "pub use", "use");
-
 impl Use {
     pub fn new(is_pub: bool, path: String, used_items: Vec<Chunk>) -> Use {
         Use {
@@ -189,8 +191,6 @@ impl Use {
         }
     }
 }
-
-head_fn!(mod_head, is_pub, "pub mod", "mod");
 
 #[derive(Debug)]
 pub struct ModDecl {
@@ -308,8 +308,6 @@ impl PolyTraitRef {
 }
 
 pub type TraitRef = Path;
-
-head_fn!(path_head, global, "::", "");
 
 #[derive(Debug)]
 pub struct Path {
@@ -432,10 +430,64 @@ impl Type {
 
 #[derive(Debug)]
 pub enum TypeKind {
+    Path(Box<PathType>),
+    Ptr(Box<PtrType>),
+    Ref(Box<RefType>),
     Array(Box<ArrayType>),
     FixedSizeArray(Box<FixedSizeArrayType>),
-    Ptr(Box<PtrType>),
-    Path(Box<PathType>),
+    Tuple(Box<TupleType>),
+    BareFn(Box<BareFnType>),
+    Sum(Box<SumType>),
+    PolyTraitRef(Box<PolyTraitRefType>),
+    Macro(Box<MacroType>),
+    Infer
+}
+
+#[derive(Debug)]
+pub struct PathType {
+    pub qself: Option<Type>,
+    pub path: Path,
+}
+
+impl PathType {
+    pub fn new(qself: Option<Type>, path: Path) -> PathType {
+        PathType {
+            qself: qself,
+            path: path,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct PtrType {
+    pub head: &'static str,
+    pub ty: Type,
+}
+
+impl PtrType {
+    pub fn new(is_mut: bool, ty: Type) -> PtrType {
+        PtrType {
+            head: ptr_head(is_mut),
+            ty: ty,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct RefType {
+    pub lifetime: Option<Lifetime>,
+    pub is_mut: bool,
+    pub ty: Type,
+}
+
+impl RefType {
+    pub fn new(lifetime: Option<Lifetime>, is_mut: bool, ty: Type) -> RefType {
+        RefType {
+            lifetime: lifetime,
+            is_mut: is_mut,
+            ty: ty,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -467,36 +519,85 @@ impl FixedSizeArrayType {
 }
 
 #[derive(Debug)]
-pub struct PtrType {
-    pub head: &'static str,
-    pub ty: Type,
+pub struct TupleType {
+    pub types: Vec<Type>,
 }
 
-head_fn!(ptr_head, is_mut, "*mut", "*const");
-
-impl PtrType {
-    pub fn new(is_mut: bool, ty: Type) -> PtrType {
-        PtrType {
-            head: ptr_head(is_mut),
-            ty: ty,
+impl TupleType {
+    pub fn new(types: Vec<Type>) -> TupleType {
+        TupleType {
+            types: types,
         }
     }
 }
 
 #[derive(Debug)]
-pub struct PathType {
-    pub qself: Option<Type>,
-    pub path: Path,
+pub struct BareFnType {
+    pub head: String,
+    pub lifetimes: Vec<LifetimeDef>,
+    pub fn_decl: FnDecl,
 }
 
-impl PathType {
-    pub fn new(qself: Option<Type>, path: Path) -> PathType {
-        PathType {
-            qself: qself,
-            path: path,
+impl BareFnType {
+    pub fn new(is_unsafe: bool, abi: String, lifetimes: Vec<LifetimeDef>, fn_decl: FnDecl) -> BareFnType {
+        BareFnType {
+            head: fn_head(is_unsafe, false, &abi),
+            lifetimes: lifetimes,
+            fn_decl: fn_decl,
         }
     }
 }
+
+#[derive(Debug)]
+pub struct SumType {
+    pub ty: Type,
+    pub bounds: Vec<TypeParamBound>,
+}
+
+impl SumType {
+    pub fn new(ty: Type, bounds: Vec<TypeParamBound>) -> SumType {
+        SumType {
+            ty: ty,
+            bounds: bounds,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct PolyTraitRefType {
+    pub bounds: Vec<TypeParamBound>,
+}
+
+impl PolyTraitRefType {
+    pub fn new(bounds: Vec<TypeParamBound>) -> PolyTraitRefType {
+        PolyTraitRefType {
+            bounds: bounds,
+        }
+    }
+}
+
+pub type MacroType = Macro;
+
+fn fn_head(is_unsafe: bool, is_const: bool, abi: &str) -> String {
+    let mut head = String::new();
+    if is_unsafe {
+        head.push_str("unsafe ");
+    }
+    if is_const {
+        head.push_str("const ");
+    }
+    if abi != "Rust" {
+        head.push_str(abi);
+        head.push_str(" ");
+    }
+    head
+}
+
+#[derive(Debug)]
+pub struct FnDecl;
+
+#[derive(Debug)]
+pub struct Macro;
 
 #[derive(Debug)]
 pub struct Expr;
