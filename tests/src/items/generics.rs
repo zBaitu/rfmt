@@ -8,10 +8,8 @@ type a<'a,
 //type a<'a, T: 'a> = bool;
 //type a<T: Sized> = bool;
 //type a<T: ?Sized> = bool;
-/*
-type a<T: ::iter<bool>::Iterator<A, 
+type a<T: for<'a> ::iter<bool>::Iterator<A, 
     B=A> 
     + Sized> = bool;
-*/
-type a<T: Fn(A, B) -> ()> = bool;
+//type a<T: Fn(A, B) -> ()> = bool;
 //type a<T=u8> = bool;

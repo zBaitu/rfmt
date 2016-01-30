@@ -30,6 +30,14 @@ fn is_pub(vis: rst::Visibility) -> bool {
 }
 
 #[inline]
+fn is_mut(mutbl: rst::Mutability) -> bool {
+    match mutbl {
+        rst::Mutability::MutMutable => true,
+        _ => false,
+    }
+}
+
+#[inline]
 fn name_to_string(name: &rst::Name) -> String {
     name.as_str().to_string()
 }
@@ -222,7 +230,7 @@ impl Trans {
                 }
             }
             rst::ItemTy(ref ty, ref generics) => {
-                ItemKind::TypeAlias(self.trans_type_alias(generics, ty))
+                ItemKind::TypeAlias(self.trans_type_alias(item, generics, ty))
             }
             _ => unreachable!(),
         };
@@ -298,8 +306,10 @@ impl Trans {
         ModDecl::new(is_pub(item.vis), ident_to_string(&item.ident))
     }
 
-    fn trans_type_alias(&self, generics: &rst::Generics, ty: &rst::Ty) -> TypeAlias {
-        TypeAlias::new(self.trans_generics(generics), self.trans_type(ty))
+    fn trans_type_alias(&self, item: &rst::Item, generics: &rst::Generics, ty: &rst::Ty) -> TypeAlias {
+        TypeAlias::new(ident_to_string(&item.ident),
+                       self.trans_generics(generics),
+                       self.trans_type(ty))
     }
 
     fn trans_generics(&self, generics: &rst::Generics) -> Generics {
@@ -337,7 +347,7 @@ impl Trans {
         let bounds = self.trans_type_param_bounds(&type_param.bounds);
         let default = match type_param.default {
             Some(ref ty) => Some(self.trans_type(ty)),
-            None => None
+            None => None,
         };
         self.set_loc(&loc);
         TypeParam::new(loc, name, bounds, default)
@@ -434,6 +444,46 @@ impl Trans {
     }
 
     fn trans_type(&self, ty: &rst::Ty) -> Type {
-        Type::new()
+        let loc = self.loc(&ty.span);
+
+        let ty = match ty.node {
+            rst::TyVec(ref ty) => TypeKind::Array(Box::new(self.trans_array_type(ty))),
+            rst::TyFixedLengthVec(ref ty, ref expr) => {
+                TypeKind::FixedSizeArray(Box::new(self.trans_fixed_size_array_type(ty, expr)))
+            }
+            rst::TyPtr(ref mut_type) => TypeKind::Ptr(Box::new(self.trans_ptr_type(mut_type))),
+            rst::TyPath(ref qself, ref path) => {
+                TypeKind::Path(Box::new(self.trans_path_type(qself, path)))
+            }
+            _ => unreachable!(),
+        };
+
+        self.set_loc(&loc);
+        Type::new(loc, ty)
+    }
+
+    fn trans_array_type(&self, ty: &rst::Ty) -> ArrayType {
+        ArrayType::new(self.trans_type(ty))
+    }
+
+    fn trans_fixed_size_array_type(&self, ty: &rst::Ty, expr: &rst::Expr) -> FixedSizeArrayType {
+        FixedSizeArrayType::new(self.trans_type(ty), self.trans_expr(expr))
+    }
+
+    fn trans_ptr_type(&self, mut_type: &rst::MutTy) -> PtrType {
+        PtrType::new(is_mut(mut_type.mutbl), self.trans_type(&mut_type.ty))
+    }
+
+    fn trans_path_type(&self, qself: &Option<rst::QSelf>, path: &rst::Path) -> PathType {
+        let qself = match qself {
+            &Some(ref qself) => Some(self.trans_type(&qself.ty)),
+            &None => None,
+        };
+        let path = self.trans_path(path);
+        PathType::new(qself, path)
+    }
+
+    fn trans_expr(&self, expr: &rst::Expr) -> Expr {
+        Expr
     }
 }

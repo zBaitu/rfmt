@@ -1,5 +1,21 @@
 use std::fmt::{self, Debug, Display};
 
+macro_rules! head_fn {
+    ($fn_name:ident, $flag:ident, $true_value:expr, $false_value:expr) => (
+        #[inline]
+        fn $fn_name($flag: bool) -> &'static str {
+            static TRUE_HEAD: &'static str = $true_value;
+            static FALSE_HEAD: &'static str = $false_value;
+
+            if $flag {
+                TRUE_HEAD
+            } else {
+                FALSE_HEAD
+            }
+        }
+    );
+}
+
 #[derive(Clone, Copy, Default)]
 pub struct Loc {
     pub start: u32,
@@ -84,17 +100,7 @@ pub enum MetaItem {
     List(Loc, String, Vec<MetaItem>),
 }
 
-#[inline]
-fn attr_head(is_outer: bool) -> &'static str {
-    static HASH: &'static str = "#";
-    static HASH_BANG: &'static str = "#!";
-
-    if is_outer {
-        HASH
-    } else {
-        HASH_BANG
-    }
-}
+head_fn!(attr_head, is_outer, "#", "#!");
 
 impl Attr {
     pub fn new(loc: Loc, is_outer: bool, meta_item: MetaItem) -> Attr {
@@ -172,17 +178,7 @@ pub struct Use {
     pub used_items: Vec<Chunk>,
 }
 
-#[inline]
-fn use_head(is_pub: bool) -> &'static str {
-    static HEAD: &'static str = "use";
-    static PUB_HEAD: &'static str = "pub use";
-
-    if is_pub {
-        PUB_HEAD
-    } else {
-        HEAD
-    }
-}
+head_fn!(use_head, is_pub, "pub use", "use");
 
 impl Use {
     pub fn new(is_pub: bool, path: String, used_items: Vec<Chunk>) -> Use {
@@ -194,17 +190,7 @@ impl Use {
     }
 }
 
-#[inline]
-fn mod_head(is_pub: bool) -> &'static str {
-    static HEAD: &'static str = "mod";
-    static PUB_HEAD: &'static str = "pub mod";
-
-    if is_pub {
-        PUB_HEAD
-    } else {
-        HEAD
-    }
-}
+head_fn!(mod_head, is_pub, "pub mod", "mod");
 
 #[derive(Debug)]
 pub struct ModDecl {
@@ -223,13 +209,15 @@ impl ModDecl {
 
 #[derive(Debug)]
 pub struct TypeAlias {
+    pub name: String,
     pub generics: Generics,
     pub ty: Type,
 }
 
 impl TypeAlias {
-    pub fn new(generics: Generics, ty: Type) -> TypeAlias {
+    pub fn new(name: String, generics: Generics, ty: Type) -> TypeAlias {
         TypeAlias {
+            name: name,
             generics: generics,
             ty: ty,
         }
@@ -321,17 +309,7 @@ impl PolyTraitRef {
 
 pub type TraitRef = Path;
 
-#[inline]
-fn path_head(global: bool) -> &'static str {
-    static HEAD: &'static str = "";
-    static GLOBAL_HEAD: &'static str = "::";
-
-    if global {
-        GLOBAL_HEAD
-    } else {
-        HEAD
-    }
-}
+head_fn!(path_head, global, "::", "");
 
 #[derive(Debug)]
 pub struct Path {
@@ -438,10 +416,87 @@ impl ParenParam {
 }
 
 #[derive(Debug)]
-pub struct Type;
+pub struct Type {
+    loc: Loc,
+    ty: TypeKind,
+}
 
 impl Type {
-    pub fn new() -> Type {
-        Type
+    pub fn new(loc: Loc, ty: TypeKind) -> Type {
+        Type {
+            loc: loc,
+            ty: ty,
+        }
     }
 }
+
+#[derive(Debug)]
+pub enum TypeKind {
+    Array(Box<ArrayType>),
+    FixedSizeArray(Box<FixedSizeArrayType>),
+    Ptr(Box<PtrType>),
+    Path(Box<PathType>),
+}
+
+#[derive(Debug)]
+pub struct ArrayType {
+    pub ty: Type,
+}
+
+impl ArrayType {
+    pub fn new(ty: Type) -> ArrayType {
+        ArrayType {
+            ty: ty,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct FixedSizeArrayType {
+    pub ty: Type,
+    pub expr: Expr,
+}
+
+impl FixedSizeArrayType {
+    pub fn new(ty: Type, expr: Expr) -> FixedSizeArrayType {
+        FixedSizeArrayType {
+            ty: ty,
+            expr: expr,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct PtrType {
+    pub head: &'static str,
+    pub ty: Type,
+}
+
+head_fn!(ptr_head, is_mut, "*mut", "*const");
+
+impl PtrType {
+    pub fn new(is_mut: bool, ty: Type) -> PtrType {
+        PtrType {
+            head: ptr_head(is_mut),
+            ty: ty,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct PathType {
+    pub qself: Option<Type>,
+    pub path: Path,
+}
+
+impl PathType {
+    pub fn new(qself: Option<Type>, path: Path) -> PathType {
+        PathType {
+            qself: qself,
+            path: path,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Expr;

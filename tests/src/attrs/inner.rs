@@ -1,2 +1,2 @@
 #![inline]
-fn f() {}
+type a = bool;
