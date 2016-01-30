@@ -34,6 +34,8 @@ fn main() {
     println!("{:#?}", krate);
 
     println!("\n----------");
+    println!("{:?}", session.codemap().files);
+    println!("\n----------");
     println!("{:#?}", session.codemap().span_to_snippet(krate.span));
     println!("{:#?}", session.codemap().span_to_string(krate.span));
     println!("{:#?}", session.codemap().span_to_expanded_string(krate.span));

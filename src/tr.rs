@@ -112,6 +112,20 @@ impl Trans {
         self.last_loc.set(*loc)
     }
 
+    #[inline]
+    fn file_name(&self) -> String {
+        self.sess.codemap().files.borrow().first().unwrap().name.clone()
+    }
+
+    #[inline]
+    fn mod_name(&self) -> String {
+        let mut name = self.file_name();
+        if let Some(dot_pos) = name.rfind('.') {
+            name.truncate(dot_pos);
+        }
+        name
+    }
+
     fn is_wrapped(&self, sp: &rst::Span) -> bool {
         let start = self.last_loc.get().end;
         let end = sp.lo.0;
@@ -157,7 +171,7 @@ impl Trans {
     fn trans_crate(&self) -> Crate {
         let loc = self.loc(&self.krate.span);
         let attrs = self.trans_attrs(&self.krate.attrs);
-        let module = self.trans_mod(&self.krate.module);
+        let module = self.trans_mod(self.mod_name(), &self.krate.module);
         Crate::new(loc, attrs, module)
     }
 
@@ -217,11 +231,11 @@ impl Trans {
         trans_list!(self, meta_items, trans_meta_item)
     }
 
-    fn trans_mod(&self, module: &rst::Mod) -> Mod {
+    fn trans_mod(&self, name: String, module: &rst::Mod) -> Mod {
         let loc = self.loc(&module.inner);
         let items = self.trans_items(&module.items);
         self.set_loc(&loc);
-        Mod::new(loc, items)
+        Mod::new(loc, name, items)
     }
 
     #[inline]
@@ -237,20 +251,20 @@ impl Trans {
             rst::ItemExternCrate(ref name) => {
                 ItemKind::ExternCrate(self.trans_extren_crate(item, name))
             }
-            rst::ItemUse(ref view_path) => ItemKind::Use(self.trans_use(is_pub(item.vis), view_path)),
+            rst::ItemUse(ref view_path) => {
+                ItemKind::Use(self.trans_use(is_pub(item.vis), view_path))
+            }
             rst::ItemMod(ref module) => {
                 if self.is_mod_decl(&module.inner) {
                     ItemKind::ModDecl(self.trans_mod_decl(&item))
                 } else {
-                    ItemKind::Mod(self.trans_mod(module))
+                    ItemKind::Mod(self.trans_mod(ident_to_string(&item.ident), module))
                 }
             }
             rst::ItemTy(ref ty, ref generics) => {
                 ItemKind::TypeAlias(self.trans_type_alias(item, generics, ty))
             }
-            rst::ItemForeignMod(ref module) => {
-                ItemKind::ForeignMod(self.trans_foreign_mod(module))
-            }
+            rst::ItemForeignMod(ref module) => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
             _ => unreachable!(),
         };
 
@@ -566,7 +580,7 @@ impl Trans {
 
         let item = match item.node {
             rst::ForeignItemStatic(ref ty, is_mut) => {
-                ForeignKind::Static(self.trans_foreign_static(is_pub(item.vis), is_mut, ty))
+                ForeignKind::Static(self.trans_foreign_static(item, is_mut, ty))
             }
             rst::ForeignItemFn(ref fn_decl, ref generics) => {
                 ForeignKind::Fn(self.trans_foreign_fn(is_pub(item.vis), generics, fn_decl))
@@ -577,11 +591,15 @@ impl Trans {
         Foreign::new(loc, attrs, item)
     }
 
-    fn trans_foreign_static(&self, is_pub: bool, is_mut: bool, ty: &rst::Ty) -> ForeignStatic {
-        ForeignStatic::new(is_pub, is_mut, self.trans_type(ty))
+    fn trans_foreign_static(&self, item: &rst::ForeignItem, is_mut: bool, ty: &rst::Ty) -> ForeignStatic {
+        ForeignStatic::new(is_pub(item.vis),
+                           is_mut,
+                           ident_to_string(&item.ident),
+                           self.trans_type(ty))
     }
 
-    fn trans_foreign_fn(&self, is_pub: bool, generics: &rst::Generics, fn_decl: &rst::FnDecl) -> ForeignFn {
+    fn trans_foreign_fn(&self, is_pub: bool, generics: &rst::Generics, fn_decl: &rst::FnDecl)
+        -> ForeignFn {
         ForeignFn::new(is_pub, self.trans_generics(generics), self.trans_fn_decl(fn_decl))
     }
 

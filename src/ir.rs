@@ -159,13 +159,15 @@ pub type Doc = Chunk;
 #[derive(Debug)]
 pub struct Mod {
     pub loc: Loc,
+    pub name: String,
     pub items: Vec<Item>,
 }
 
 impl Mod {
-    pub fn new(loc: Loc, items: Vec<Item>) -> Mod {
+    pub fn new(loc: Loc, name: String, items: Vec<Item>) -> Mod {
         Mod {
             loc: loc,
+            name: name,
             items: items,
         }
     }
@@ -658,13 +660,15 @@ pub enum ForeignKind {
 #[derive(Debug)]
 pub struct ForeignStatic {
     pub head: String,
+    pub name: String,
     pub ty: Type,
 }
 
 impl ForeignStatic {
-    pub fn new(is_pub: bool, is_mut: bool, ty: Type) -> ForeignStatic {
+    pub fn new(is_pub: bool, is_mut: bool, name: String, ty: Type) -> ForeignStatic {
         ForeignStatic {
             head: static_head(is_pub, is_mut),
+            name: name,
             ty: ty,
         }
     }
