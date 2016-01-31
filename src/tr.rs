@@ -247,24 +247,30 @@ impl Trans {
         let loc = self.loc(&item.span);
         let attrs = self.trans_attrs(&item.attrs);
 
+        let is_pub = is_pub(item.vis);
+        let ident = ident_to_string(&item.ident);
         let item = match item.node {
             rst::ItemExternCrate(ref name) => {
-                ItemKind::ExternCrate(self.trans_extren_crate(item, name))
+                ItemKind::ExternCrate(self.trans_extren_crate(ident, name))
             }
-            rst::ItemUse(ref view_path) => {
-                ItemKind::Use(self.trans_use(is_pub(item.vis), view_path))
-            }
+            rst::ItemUse(ref view_path) => ItemKind::Use(self.trans_use(is_pub, view_path)),
             rst::ItemMod(ref module) => {
                 if self.is_mod_decl(&module.inner) {
-                    ItemKind::ModDecl(self.trans_mod_decl(&item))
+                    ItemKind::ModDecl(self.trans_mod_decl(is_pub, ident))
                 } else {
-                    ItemKind::Mod(self.trans_mod(ident_to_string(&item.ident), module))
+                    ItemKind::Mod(self.trans_mod(ident, module))
                 }
             }
             rst::ItemTy(ref ty, ref generics) => {
-                ItemKind::TypeAlias(self.trans_type_alias(item, generics, ty))
+                ItemKind::TypeAlias(self.trans_type_alias(ident, generics, ty))
             }
             rst::ItemForeignMod(ref module) => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
+            rst::ItemStatic(ref ty, mutbl, ref expr) => {
+                ItemKind::Static(self.trans_static(is_pub, is_mut(mutbl), ident, ty, expr))
+            }
+            rst::ItemConst(ref ty, ref expr) => {
+                ItemKind::Const(self.trans_const(is_pub, ident, ty, expr))
+            }
             _ => unreachable!(),
         };
 
@@ -272,8 +278,8 @@ impl Trans {
         Item::new(loc, attrs, item)
     }
 
-    fn trans_extren_crate(&self, item: &rst::Item, name: &Option<rst::Name>) -> ExternCrate {
-        let mut krate = ident_to_string(&item.ident);
+    fn trans_extren_crate(&self, ident: String, name: &Option<rst::Name>) -> ExternCrate {
+        let mut krate = ident;
         if let Some(ref rename) = *name {
             krate = format!("{} as {}", krate, name_to_string(rename));
         }
@@ -333,12 +339,12 @@ impl Trans {
         Chunk::new(loc, s)
     }
 
-    fn trans_mod_decl(&self, item: &rst::Item) -> ModDecl {
-        ModDecl::new(is_pub(item.vis), ident_to_string(&item.ident))
+    fn trans_mod_decl(&self, is_pub: bool, ident: String) -> ModDecl {
+        ModDecl::new(is_pub, ident)
     }
 
-    fn trans_type_alias(&self, item: &rst::Item, generics: &rst::Generics, ty: &rst::Ty) -> TypeAlias {
-        TypeAlias::new(ident_to_string(&item.ident),
+    fn trans_type_alias(&self, ident: String, generics: &rst::Generics, ty: &rst::Ty) -> TypeAlias {
+        TypeAlias::new(ident,
                        self.trans_generics(generics),
                        self.trans_type(ty))
     }
@@ -591,7 +597,8 @@ impl Trans {
         Foreign::new(loc, attrs, item)
     }
 
-    fn trans_foreign_static(&self, item: &rst::ForeignItem, is_mut: bool, ty: &rst::Ty) -> ForeignStatic {
+    fn trans_foreign_static(&self, item: &rst::ForeignItem, is_mut: bool, ty: &rst::Ty)
+        -> ForeignStatic {
         ForeignStatic::new(is_pub(item.vis),
                            is_mut,
                            ident_to_string(&item.ident),
@@ -601,6 +608,14 @@ impl Trans {
     fn trans_foreign_fn(&self, is_pub: bool, generics: &rst::Generics, fn_decl: &rst::FnDecl)
         -> ForeignFn {
         ForeignFn::new(is_pub, self.trans_generics(generics), self.trans_fn_decl(fn_decl))
+    }
+
+    fn trans_static(&self, is_pub: bool, is_mut: bool, ident: String, ty: &rst::Ty, expr: &rst::Expr) -> Static {
+        Static::new(is_pub, is_mut, ident, self.trans_type(ty), self.trans_expr(expr))
+    }
+
+    fn trans_const(&self, is_pub: bool, ident: String, ty: &rst::Ty, expr: &rst::Expr) -> Const {
+        Const::new(is_pub, ident, self.trans_type(ty), self.trans_expr(expr))
     }
 
     fn trans_fn_decl(&self, fn_decl: &rst::FnDecl) -> FnDecl {

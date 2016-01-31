@@ -20,6 +20,7 @@ head_fn!(use_head, is_pub, "pub use", "use");
 head_fn!(mod_head, is_pub, "pub mod", "mod");
 head_fn!(path_head, global, "::", "");
 head_fn!(ptr_head, is_mut, "*mut", "*const");
+head_fn!(const_head, is_pub, "pub const", "const");
 
 #[inline]
 fn foreign_head(abi: String) -> String {
@@ -198,6 +199,8 @@ pub enum ItemKind {
     Mod(Mod),
     TypeAlias(TypeAlias),
     ForeignMod(ForeignMod),
+    Static(Static),
+    Const(Const),
 }
 
 #[derive(Debug)]
@@ -687,6 +690,44 @@ impl ForeignFn {
             head: fn_head(is_pub, false, false, None),
             generics: generics,
             fn_decl: fn_decl,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Static {
+    pub head: String,
+    pub name: String,
+    pub ty: Type,
+    pub expr: Expr,
+}
+
+impl Static {
+    pub fn new(is_pub: bool, is_mut: bool, name: String, ty: Type, expr: Expr) -> Static {
+        Static {
+            head: static_head(is_pub, is_mut),
+            name: name,
+            ty: ty,
+            expr: Expr,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Const {
+    pub head: &'static str,
+    pub name: String,
+    pub ty: Type,
+    pub expr: Expr,
+}
+
+impl Const {
+    pub fn new(is_pub: bool, name: String, ty: Type, expr: Expr) -> Const {
+        Const {
+            head: const_head(is_pub),
+            name: name,
+            ty: ty,
+            expr: Expr,
         }
     }
 }
