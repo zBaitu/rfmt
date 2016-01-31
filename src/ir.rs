@@ -23,6 +23,7 @@ head_fn!(path_head, global, "::", "");
 head_fn!(ptr_head, is_mut, "*mut", "*const");
 head_fn!(const_head, is_pub, "pub const", "const");
 head_fn!(struct_head, is_pub, "pub struct", "struct");
+head_fn!(enum_head, is_pub, "pub enum", "enum");
 
 #[inline]
 fn foreign_head(abi: String) -> String {
@@ -204,6 +205,7 @@ pub enum ItemKind {
     Const(Const),
     Static(Static),
     Struct(Struct),
+    Enum(Enum),
 }
 
 #[derive(Debug)]
@@ -797,6 +799,60 @@ impl TupleField {
             attrs: attrs,
             head: pub_head(is_pub),
             ty: ty,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Enum {
+    pub head: &'static str,
+    pub name: String,
+    pub generics: Generics,
+    pub body: EnumBody,
+}
+
+impl Enum {
+    pub fn new(is_pub: bool, name: String, generics: Generics, body: EnumBody) -> Enum {
+        Enum {
+            head: enum_head(is_pub),
+            name: name,
+            generics: generics,
+            body: body,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct EnumBody {
+    pub fields: Vec<EnumField>,
+}
+
+impl EnumBody {
+    pub fn new(fields: Vec<EnumField>) -> EnumBody {
+        EnumBody {
+            fields: fields,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct EnumField {
+    pub loc: Loc,
+    pub attrs: Vec<AttrKind>,
+    pub name: String,
+    pub body: StructBody,
+    pub expr: Option<Expr>,
+}
+
+impl EnumField {
+    pub fn new(loc: Loc, attrs: Vec<AttrKind>, name: String, body: StructBody, expr: Option<Expr>)
+        -> EnumField {
+        EnumField {
+            loc: loc,
+            attrs: attrs,
+            name: name,
+            body: body,
+            expr: expr,
         }
     }
 }

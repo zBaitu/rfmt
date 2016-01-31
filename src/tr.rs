@@ -274,6 +274,9 @@ impl Trans {
             rst::ItemStruct(ref variant, ref generics) => {
                 ItemKind::Struct(self.trans_struct(is_pub, ident, generics, variant))
             }
+            rst::ItemEnum(ref enum_def, ref generics) => {
+                ItemKind::Enum(self.trans_enum(is_pub, ident, generics, enum_def))
+            }
             _ => unreachable!(),
         };
 
@@ -667,6 +670,32 @@ impl Trans {
         let ty = self.trans_type(&field.node.ty);
         self.set_loc(&loc);
         TupleField::new(loc, attrs, is_pub, ty)
+    }
+
+    fn trans_enum(&self, is_pub: bool, ident: String, generics: &rst::Generics, enum_def: &rst::EnumDef) -> Enum {
+        Enum::new(is_pub, ident, self.trans_generics(generics), self.trans_enum_body(enum_def))
+    }
+
+    fn trans_enum_body(&self, enum_def: &rst::EnumDef) -> EnumBody {
+        EnumBody::new(self.trans_enum_fields(&enum_def.variants))
+    }
+
+    #[inline]
+    fn trans_enum_fields(&self, variants: &Vec<rst::P<rst::Variant>>) -> Vec<EnumField> {
+        trans_list!(self, variants, trans_enum_field) 
+    }
+
+    fn trans_enum_field(&self, variant: &rst::Variant) -> EnumField {
+        let loc = self.loc(&variant.span);
+        let attrs = self.trans_attrs(&variant.node.attrs); 
+        let name = ident_to_string(&variant.node.name);
+        let body = self.trans_struct_body(&variant.node.data);
+        let expr = match variant.node.disr_expr {
+            Some(ref expr) => Some(self.trans_expr(expr)),
+            None => None,
+        };
+        self.set_loc(&loc);
+        EnumField::new(loc, attrs, name, body, expr)
     }
 
     fn trans_fn_decl(&self, fn_decl: &rst::FnDecl) -> FnDecl {
