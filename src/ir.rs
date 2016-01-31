@@ -16,11 +16,13 @@ macro_rules! head_fn {
         );
 }
 head_fn!(attr_head, is_outer, "#", "#!");
+head_fn!(pub_head, is_pub, "pub ", "");
 head_fn!(use_head, is_pub, "pub use", "use");
 head_fn!(mod_head, is_pub, "pub mod", "mod");
 head_fn!(path_head, global, "::", "");
 head_fn!(ptr_head, is_mut, "*mut", "*const");
 head_fn!(const_head, is_pub, "pub const", "const");
+head_fn!(struct_head, is_pub, "pub struct", "struct");
 
 #[inline]
 fn foreign_head(abi: String) -> String {
@@ -199,8 +201,9 @@ pub enum ItemKind {
     Mod(Mod),
     TypeAlias(TypeAlias),
     ForeignMod(ForeignMod),
-    Static(Static),
     Const(Const),
+    Static(Static),
+    Struct(Struct),
 }
 
 #[derive(Debug)]
@@ -695,6 +698,25 @@ impl ForeignFn {
 }
 
 #[derive(Debug)]
+pub struct Const {
+    pub head: &'static str,
+    pub name: String,
+    pub ty: Type,
+    pub expr: Expr,
+}
+
+impl Const {
+    pub fn new(is_pub: bool, name: String, ty: Type, expr: Expr) -> Const {
+        Const {
+            head: const_head(is_pub),
+            name: name,
+            ty: ty,
+            expr: Expr,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Static {
     pub head: String,
     pub name: String,
@@ -714,20 +736,67 @@ impl Static {
 }
 
 #[derive(Debug)]
-pub struct Const {
+pub struct Struct {
+    pub head: &'static str,
+    pub name: String,
+    pub generics: Generics,
+    pub body: StructBody,
+}
+
+impl Struct {
+    pub fn new(is_pub: bool, name: String, generics: Generics, body: StructBody) -> Struct {
+        Struct {
+            head: struct_head(is_pub),
+            name: name,
+            generics: generics,
+            body: body,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum StructBody {
+    Struct(Vec<StructField>),
+    Tuple(Vec<TupleField>),
+    Unit,
+}
+
+#[derive(Debug)]
+pub struct StructField {
+    pub loc: Loc,
+    pub attrs: Vec<AttrKind>,
     pub head: &'static str,
     pub name: String,
     pub ty: Type,
-    pub expr: Expr,
 }
 
-impl Const {
-    pub fn new(is_pub: bool, name: String, ty: Type, expr: Expr) -> Const {
-        Const {
-            head: const_head(is_pub),
+impl StructField {
+    pub fn new(loc: Loc, attrs: Vec<AttrKind>, is_pub: bool, name: String, ty: Type) -> StructField {
+        StructField {
+            loc: loc,
+            attrs: attrs,
+            head: pub_head(is_pub),
             name: name,
             ty: ty,
-            expr: Expr,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct TupleField {
+    pub loc: Loc,
+    pub attrs: Vec<AttrKind>,
+    pub head: &'static str,
+    pub ty: Type,
+}
+
+impl TupleField {
+    pub fn new(loc: Loc, attrs: Vec<AttrKind>, is_pub: bool, ty: Type) -> TupleField {
+        TupleField {
+            loc: loc,
+            attrs: attrs,
+            head: pub_head(is_pub),
+            ty: ty,
         }
     }
 }

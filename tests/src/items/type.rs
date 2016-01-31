@@ -16,5 +16,5 @@
 //type a = _;
 //type a = unsafe extern "C" fn(bool) -> usize;
 //type a = Result + Iterator<T> + 'static + Sized;
-//type a = for<'a, 'b: 'a> Foo<&'a Bar>;
-type a = a!("a");
+type a = for<'a, 'b: 'a> Foo<&'a Bar>;
+//type a = a!("a");

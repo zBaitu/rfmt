@@ -265,11 +265,14 @@ impl Trans {
                 ItemKind::TypeAlias(self.trans_type_alias(ident, generics, ty))
             }
             rst::ItemForeignMod(ref module) => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
+            rst::ItemConst(ref ty, ref expr) => {
+                ItemKind::Const(self.trans_const(is_pub, ident, ty, expr))
+            }
             rst::ItemStatic(ref ty, mutbl, ref expr) => {
                 ItemKind::Static(self.trans_static(is_pub, is_mut(mutbl), ident, ty, expr))
             }
-            rst::ItemConst(ref ty, ref expr) => {
-                ItemKind::Const(self.trans_const(is_pub, ident, ty, expr))
+            rst::ItemStruct(ref variant, ref generics) => {
+                ItemKind::Struct(self.trans_struct(is_pub, ident, generics, variant))
             }
             _ => unreachable!(),
         };
@@ -610,12 +613,60 @@ impl Trans {
         ForeignFn::new(is_pub, self.trans_generics(generics), self.trans_fn_decl(fn_decl))
     }
 
+    fn trans_const(&self, is_pub: bool, ident: String, ty: &rst::Ty, expr: &rst::Expr) -> Const {
+        Const::new(is_pub, ident, self.trans_type(ty), self.trans_expr(expr))
+    }
+
     fn trans_static(&self, is_pub: bool, is_mut: bool, ident: String, ty: &rst::Ty, expr: &rst::Expr) -> Static {
         Static::new(is_pub, is_mut, ident, self.trans_type(ty), self.trans_expr(expr))
     }
 
-    fn trans_const(&self, is_pub: bool, ident: String, ty: &rst::Ty, expr: &rst::Expr) -> Const {
-        Const::new(is_pub, ident, self.trans_type(ty), self.trans_expr(expr))
+    fn trans_struct(&self, is_pub: bool, ident: String, generics: &rst::Generics, variant: &rst::VariantData) -> Struct {
+        Struct::new(is_pub, ident, self.trans_generics(generics), self.trans_struct_body(variant))
+    }
+
+    fn trans_struct_body(&self, variant: &rst::VariantData) -> StructBody {
+        match variant {
+            &rst::VariantData::Struct(ref fields, _) => StructBody::Struct(self.trans_struct_fields(fields)),
+            &rst::VariantData::Tuple(ref fields, _) => StructBody::Tuple(self.trans_tuple_fields(fields)),
+            &rst::VariantData::Unit(_) => StructBody::Unit,
+        }
+    }
+
+    #[inline]
+    fn trans_struct_fields(&self, fields: &Vec<rst::StructField>) -> Vec<StructField> {
+        trans_list!(self, fields, trans_struct_field)
+    }
+
+    fn trans_struct_field(&self, field: &rst::StructField) -> StructField {
+        let (is_pub, name) = match field.node.kind {
+            rst::StructFieldKind::NamedField(ref ident, vis) => (is_pub(vis), ident_to_string(ident)),
+            _ => unreachable!(),
+        };
+
+        let loc = self.loc(&field.span);
+        let attrs = self.trans_attrs(&field.node.attrs); 
+        let ty = self.trans_type(&field.node.ty);
+        self.set_loc(&loc);
+        StructField::new(loc, attrs, is_pub, name, ty)
+    }
+
+    #[inline]
+    fn trans_tuple_fields(&self, fields: &Vec<rst::StructField>) -> Vec<TupleField> {
+        trans_list!(self, fields, trans_tuple_field)
+    }
+
+    fn trans_tuple_field(&self, field: &rst::StructField) -> TupleField {
+        let is_pub = match field.node.kind {
+            rst::StructFieldKind::UnnamedField(vis) => is_pub(vis),
+            _ => unreachable!(),
+        };
+
+        let loc = self.loc(&field.span);
+        let attrs = self.trans_attrs(&field.node.attrs); 
+        let ty = self.trans_type(&field.node.ty);
+        self.set_loc(&loc);
+        TupleField::new(loc, attrs, is_pub, ty)
     }
 
     fn trans_fn_decl(&self, fn_decl: &rst::FnDecl) -> FnDecl {
