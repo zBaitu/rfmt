@@ -1,4 +1,5 @@
 trait Trait {
-    fn static_f();
-    fn f(&self);
+    //const a: bool = true;
+    //type A;
+    fn f();
 }

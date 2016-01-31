@@ -26,7 +26,7 @@ head_fn!(struct_head, is_pub, "pub struct", "struct");
 head_fn!(enum_head, is_pub, "pub enum", "enum");
 
 #[inline]
-fn foreign_head(abi: String) -> String {
+fn foreign_head(abi: &str) -> String {
     format!("extern {}", abi)
 }
 
@@ -57,10 +57,11 @@ fn fn_head(is_pub: bool, is_unsafe: bool, is_const: bool, abi: Option<&str>) -> 
     }
     if let Some(abi) = abi {
         if abi != "Rust" {
-            head.push_str(abi);
+            head.push_str(&foreign_head(abi));
             head.push_str(" ");
         }
     }
+    head.push_str("fn ");
     head
 }
 
@@ -206,6 +207,7 @@ pub enum ItemKind {
     Static(Static),
     Struct(Struct),
     Enum(Enum),
+    Fn(Fn),
 }
 
 #[derive(Debug)]
@@ -636,7 +638,7 @@ pub struct ForeignMod {
 impl ForeignMod {
     pub fn new(abi: String, items: Vec<Foreign>) -> ForeignMod {
         ForeignMod {
-            head: foreign_head(abi),
+            head: foreign_head(&abi),
             items: items,
         }
     }
@@ -685,14 +687,16 @@ impl ForeignStatic {
 #[derive(Debug)]
 pub struct ForeignFn {
     pub head: String,
+    pub name: String,
     pub generics: Generics,
     pub fn_decl: FnDecl,
 }
 
 impl ForeignFn {
-    pub fn new(is_pub: bool, generics: Generics, fn_decl: FnDecl) -> ForeignFn {
+    pub fn new(is_pub: bool, name: String, generics: Generics, fn_decl: FnDecl) -> ForeignFn {
         ForeignFn {
             head: fn_head(is_pub, false, false, None),
+            name: name,
             generics: generics,
             fn_decl: fn_decl,
         }
@@ -857,13 +861,39 @@ impl EnumField {
     }
 }
 
-pub type MacroType = Macro;
+#[derive(Debug)]
+pub struct Fn {
+    pub head: String,
+    pub name: String,
+    pub generics: Generics,
+    pub fn_decl: FnDecl,
+    pub block: Block,
+}
+
+impl Fn {
+    pub fn new(is_pub: bool, is_unsafe: bool, is_const: bool, abi: String, name: String,
+               generics: Generics, fn_decl: FnDecl, block: Block)
+        -> Fn {
+        Fn {
+            head: fn_head(is_pub, is_unsafe, is_const, Some(&abi)),
+            name: name,
+            generics: generics,
+            fn_decl: fn_decl,
+            block: block,
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct FnDecl;
 
 #[derive(Debug)]
-pub struct Macro;
+pub struct Block;
 
 #[derive(Debug)]
 pub struct Expr;
+
+#[derive(Debug)]
+pub struct Macro;
+
+pub type MacroType = Macro;

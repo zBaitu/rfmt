@@ -46,6 +46,14 @@ fn is_unsafe(safety: rst::Unsafety) -> bool {
 }
 
 #[inline]
+fn is_const(constness: rst::Constness) -> bool {
+    match constness {
+        rst::Constness::Const => true,
+        _ => false,
+    }
+}
+
+#[inline]
 fn name_to_string(name: &rst::Name) -> String {
     name.as_str().to_string()
 }
@@ -57,7 +65,7 @@ fn ident_to_string(ident: &rst::Ident) -> String {
 
 #[inline]
 fn abi_to_string(abi: rst::abi::Abi) -> String {
-    format!("{:?}", abi)
+    format!(r#""{:?}""#, abi)
 }
 
 struct Trans {
@@ -277,6 +285,16 @@ impl Trans {
             rst::ItemEnum(ref enum_def, ref generics) => {
                 ItemKind::Enum(self.trans_enum(is_pub, ident, generics, enum_def))
             }
+            rst::ItemFn(ref fn_decl, unsafety, constness, abi, ref generics, ref block) => {
+                ItemKind::Fn(self.trans_fn(is_pub,
+                                           is_unsafe(unsafety),
+                                           is_const(constness),
+                                           abi_to_string(abi),
+                                           ident,
+                                           generics,
+                                           fn_decl,
+                                           block))
+            }
             _ => unreachable!(),
         };
 
@@ -350,9 +368,7 @@ impl Trans {
     }
 
     fn trans_type_alias(&self, ident: String, generics: &rst::Generics, ty: &rst::Ty) -> TypeAlias {
-        TypeAlias::new(ident,
-                       self.trans_generics(generics),
-                       self.trans_type(ty))
+        TypeAlias::new(ident, self.trans_generics(generics), self.trans_type(ty))
     }
 
     fn trans_generics(&self, generics: &rst::Generics) -> Generics {
@@ -590,12 +606,14 @@ impl Trans {
         let loc = self.loc(&item.span);
         let attrs = self.trans_attrs(&item.attrs);
 
+        let is_pub = is_pub(item.vis);
+        let ident = ident_to_string(&item.ident);
         let item = match item.node {
             rst::ForeignItemStatic(ref ty, is_mut) => {
-                ForeignKind::Static(self.trans_foreign_static(item, is_mut, ty))
+                ForeignKind::Static(self.trans_foreign_static(is_pub, is_mut, ident, ty))
             }
             rst::ForeignItemFn(ref fn_decl, ref generics) => {
-                ForeignKind::Fn(self.trans_foreign_fn(is_pub(item.vis), generics, fn_decl))
+                ForeignKind::Fn(self.trans_foreign_fn(is_pub, ident, generics, fn_decl))
             }
         };
 
@@ -603,35 +621,41 @@ impl Trans {
         Foreign::new(loc, attrs, item)
     }
 
-    fn trans_foreign_static(&self, item: &rst::ForeignItem, is_mut: bool, ty: &rst::Ty)
+    fn trans_foreign_static(&self, is_pub: bool, is_mut: bool, ident: String, ty: &rst::Ty)
         -> ForeignStatic {
-        ForeignStatic::new(is_pub(item.vis),
-                           is_mut,
-                           ident_to_string(&item.ident),
-                           self.trans_type(ty))
+        ForeignStatic::new(is_pub, is_mut, ident, self.trans_type(ty))
     }
 
-    fn trans_foreign_fn(&self, is_pub: bool, generics: &rst::Generics, fn_decl: &rst::FnDecl)
+    fn trans_foreign_fn(&self, is_pub: bool, ident: String, generics: &rst::Generics,
+                        fn_decl: &rst::FnDecl)
         -> ForeignFn {
-        ForeignFn::new(is_pub, self.trans_generics(generics), self.trans_fn_decl(fn_decl))
+        ForeignFn::new(is_pub, ident, self.trans_generics(generics), self.trans_fn_decl(fn_decl))
     }
 
     fn trans_const(&self, is_pub: bool, ident: String, ty: &rst::Ty, expr: &rst::Expr) -> Const {
         Const::new(is_pub, ident, self.trans_type(ty), self.trans_expr(expr))
     }
 
-    fn trans_static(&self, is_pub: bool, is_mut: bool, ident: String, ty: &rst::Ty, expr: &rst::Expr) -> Static {
+    fn trans_static(&self, is_pub: bool, is_mut: bool, ident: String, ty: &rst::Ty,
+                    expr: &rst::Expr)
+        -> Static {
         Static::new(is_pub, is_mut, ident, self.trans_type(ty), self.trans_expr(expr))
     }
 
-    fn trans_struct(&self, is_pub: bool, ident: String, generics: &rst::Generics, variant: &rst::VariantData) -> Struct {
+    fn trans_struct(&self, is_pub: bool, ident: String, generics: &rst::Generics,
+                    variant: &rst::VariantData)
+        -> Struct {
         Struct::new(is_pub, ident, self.trans_generics(generics), self.trans_struct_body(variant))
     }
 
     fn trans_struct_body(&self, variant: &rst::VariantData) -> StructBody {
         match variant {
-            &rst::VariantData::Struct(ref fields, _) => StructBody::Struct(self.trans_struct_fields(fields)),
-            &rst::VariantData::Tuple(ref fields, _) => StructBody::Tuple(self.trans_tuple_fields(fields)),
+            &rst::VariantData::Struct(ref fields, _) => {
+                StructBody::Struct(self.trans_struct_fields(fields))
+            }
+            &rst::VariantData::Tuple(ref fields, _) => {
+                StructBody::Tuple(self.trans_tuple_fields(fields))
+            }
             &rst::VariantData::Unit(_) => StructBody::Unit,
         }
     }
@@ -643,12 +667,14 @@ impl Trans {
 
     fn trans_struct_field(&self, field: &rst::StructField) -> StructField {
         let (is_pub, name) = match field.node.kind {
-            rst::StructFieldKind::NamedField(ref ident, vis) => (is_pub(vis), ident_to_string(ident)),
+            rst::StructFieldKind::NamedField(ref ident, vis) => {
+                (is_pub(vis), ident_to_string(ident))
+            }
             _ => unreachable!(),
         };
 
         let loc = self.loc(&field.span);
-        let attrs = self.trans_attrs(&field.node.attrs); 
+        let attrs = self.trans_attrs(&field.node.attrs);
         let ty = self.trans_type(&field.node.ty);
         self.set_loc(&loc);
         StructField::new(loc, attrs, is_pub, name, ty)
@@ -666,13 +692,15 @@ impl Trans {
         };
 
         let loc = self.loc(&field.span);
-        let attrs = self.trans_attrs(&field.node.attrs); 
+        let attrs = self.trans_attrs(&field.node.attrs);
         let ty = self.trans_type(&field.node.ty);
         self.set_loc(&loc);
         TupleField::new(loc, attrs, is_pub, ty)
     }
 
-    fn trans_enum(&self, is_pub: bool, ident: String, generics: &rst::Generics, enum_def: &rst::EnumDef) -> Enum {
+    fn trans_enum(&self, is_pub: bool, ident: String, generics: &rst::Generics,
+                  enum_def: &rst::EnumDef)
+        -> Enum {
         Enum::new(is_pub, ident, self.trans_generics(generics), self.trans_enum_body(enum_def))
     }
 
@@ -682,12 +710,12 @@ impl Trans {
 
     #[inline]
     fn trans_enum_fields(&self, variants: &Vec<rst::P<rst::Variant>>) -> Vec<EnumField> {
-        trans_list!(self, variants, trans_enum_field) 
+        trans_list!(self, variants, trans_enum_field)
     }
 
     fn trans_enum_field(&self, variant: &rst::Variant) -> EnumField {
         let loc = self.loc(&variant.span);
-        let attrs = self.trans_attrs(&variant.node.attrs); 
+        let attrs = self.trans_attrs(&variant.node.attrs);
         let name = ident_to_string(&variant.node.name);
         let body = self.trans_struct_body(&variant.node.data);
         let expr = match variant.node.disr_expr {
@@ -698,8 +726,25 @@ impl Trans {
         EnumField::new(loc, attrs, name, body, expr)
     }
 
+    fn trans_fn(&self, is_pub: bool, is_unsafe: bool, is_const: bool, abi: String, ident: String,
+                generics: &rst::Generics, fn_decl: &rst::FnDecl, block: &rst::Block)
+        -> Fn {
+        Fn::new(is_pub,
+                is_unsafe,
+                is_const,
+                abi,
+                ident,
+                self.trans_generics(generics),
+                self.trans_fn_decl(fn_decl),
+                self.trans_block(block))
+    }
+
     fn trans_fn_decl(&self, fn_decl: &rst::FnDecl) -> FnDecl {
         FnDecl
+    }
+
+    fn trans_block(&self, block: &rst::Block) -> Block {
+        Block
     }
 
     fn trans_macro(&self, mac: &rst::Mac) -> Macro {

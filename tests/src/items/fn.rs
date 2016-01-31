@@ -1,2 +1,2 @@
-extern fn f<>(t: Result + Sized + Eq) {
+pub unsafe extern "C" fn f() {
 }
