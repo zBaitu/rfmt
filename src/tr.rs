@@ -22,35 +22,33 @@ fn span(s: u32, e: u32) -> rst::Span {
 }
 
 #[inline]
+fn is_outer(style: rst::AttrStyle) -> bool {
+    style == rst::AttrStyle::Outer
+}
+
+#[inline]
 fn is_pub(vis: rst::Visibility) -> bool {
-    match vis {
-        rst::Visibility::Public => true,
-        _ => false,
-    }
+    vis == rst::Visibility::Public
+}
+
+#[inline]
+fn is_sized(modifier: rst::TraitBoundModifier) -> bool {
+    modifier == rst::TraitBoundModifier::Maybe
 }
 
 #[inline]
 fn is_mut(mutbl: rst::Mutability) -> bool {
-    match mutbl {
-        rst::Mutability::MutMutable => true,
-        _ => false,
-    }
+    mutbl == rst::Mutability::MutMutable
 }
 
 #[inline]
 fn is_unsafe(safety: rst::Unsafety) -> bool {
-    match safety {
-        rst::Unsafety::Unsafe => true,
-        _ => false,
-    }
+    safety == rst::Unsafety::Unsafe
 }
 
 #[inline]
 fn is_const(constness: rst::Constness) -> bool {
-    match constness {
-        rst::Constness::Const => true,
-        _ => false,
-    }
+    constness == rst::Constness::Const
 }
 
 #[inline]
@@ -76,6 +74,79 @@ struct Trans {
     lits: HashMap<rst::BytePos, String>,
 
     last_loc: Cell<Loc>,
+}
+
+macro_rules! head_fn {
+    ($fn_name:ident, $flag:ident, $true_value:expr, $false_value:expr) => (
+        #[inline]
+        fn $fn_name($flag: bool) -> &'static str {
+            static TRUE_HEAD: &'static str = $true_value;
+            static FALSE_HEAD: &'static str = $false_value;
+
+            if $flag {
+                TRUE_HEAD
+            } else {
+                FALSE_HEAD
+            }
+        }
+    );
+}
+head_fn!(attr_head, is_outer, "#", "#!");
+head_fn!(pub_head, is_pub, "pub ", "");
+head_fn!(mut_head, is_mut, "mut ", "");
+head_fn!(use_head, is_pub, "pub use", "use");
+head_fn!(mod_head, is_pub, "pub mod", "mod");
+head_fn!(type_head, is_pub, "pub type", "type");
+head_fn!(path_head, global, "::", "");
+head_fn!(ptr_head, is_mut, "*mut", "*const");
+head_fn!(const_head, is_pub, "pub const", "const");
+head_fn!(struct_head, is_pub, "pub struct", "struct");
+head_fn!(enum_head, is_pub, "pub enum", "enum");
+head_fn!(unsafe_head, is_unsafe, "unsafe ", "");
+
+#[inline]
+fn ref_head(lifetime: Option<Lifetime>, is_mut: bool) -> String {
+    let mut head = String::new();
+    head.push_str("&");
+
+    if let Some(lifetime) = lifetime {
+        head.push_str(&lifetime.s);
+        head.push_str(" ");
+    }
+
+    head.push_str(mut_head(is_mut));
+    head
+}
+
+#[inline]
+fn static_head(is_pub: bool, is_mut: bool) -> String {
+    format!("{}{}static ", pub_head(is_pub), mut_head(is_mut))
+}
+
+#[inline]
+fn foreign_head(abi: &str) -> String {
+    format!("extern {}", abi)
+}
+
+#[inline]
+fn fn_head(is_pub: bool, is_unsafe: bool, is_const: bool, abi: Option<&str>) -> String {
+    let mut head = format!("{}{}{}",
+                           pub_head(is_pub),
+                           unsafe_head(is_unsafe),
+                           const_head(is_const));
+    if let Some(abi) = abi {
+        if abi != "Rust" {
+            head.push_str(&foreign_head(abi));
+            head.push_str(" ");
+        }
+    }
+    head.push_str("fn ");
+    head
+}
+
+#[inline]
+fn trait_head(is_pub: bool, is_unsafe: bool) -> String {
+    format!("{}{}trait ", pub_head(is_pub), unsafe_head(is_unsafe))
 }
 
 macro_rules! trans_list {
@@ -105,12 +176,16 @@ impl Trans {
 
     #[inline]
     fn loc(&self, sp: &rst::Span) -> Loc {
-        Loc::new(sp.lo.0, sp.hi.0, self.is_wrapped(sp))
+        Loc {
+            start: sp.lo.0,
+            end: sp.hi.0,
+            wrapped: self.is_wrapped(sp),
+        }
     }
 
     #[inline]
     fn loc_leaf(&self, sp: &rst::Span) -> Loc {
-        let loc = Loc::new(sp.lo.0, sp.hi.0, self.is_wrapped(sp));
+        let loc = self.loc(sp);
         self.set_loc(&loc);
         loc
     }
@@ -180,7 +255,12 @@ impl Trans {
         let loc = self.loc(&self.krate.span);
         let attrs = self.trans_attrs(&self.krate.attrs);
         let module = self.trans_mod(self.mod_name(), &self.krate.module);
-        Crate::new(loc, attrs, module)
+
+        Crate {
+            loc: loc,
+            attrs: attrs,
+            module: module,
+        }
     }
 
     #[inline]
@@ -199,7 +279,10 @@ impl Trans {
     fn trans_attr_doc(&self, attr: &rst::Attribute) -> Doc {
         if let rst::MetaNameValue(_, ref value) = attr.node.value.node {
             if let rst::LitStr(ref s, _) = value.node {
-                return Doc::new(self.loc_leaf(&attr.span), s.to_string());
+                return Doc {
+                    loc: self.loc_leaf(&attr.span),
+                    s: s.to_string(),
+                };
             }
         }
 
@@ -208,20 +291,33 @@ impl Trans {
 
     fn trans_attr_attr(&self, attr: &rst::Attribute) -> Attr {
         let loc = self.loc(&attr.span);
-        let is_outer = attr.node.style == rst::AttrStyle::Outer;
-        let meta_item = self.trans_meta_item(&attr.node.value);
+        let is_outer = is_outer(attr.node.style);
+        let item = self.trans_meta_item(&attr.node.value);
         self.set_loc(&loc);
-        Attr::new(loc, is_outer, meta_item)
+
+        Attr {
+            loc: loc,
+            head: attr_head(is_outer),
+            item: item,
+        }
     }
 
     fn trans_meta_item(&self, meta_item: &rst::MetaItem) -> MetaItem {
         match meta_item.node {
             rst::MetaWord(ref ident) => {
-                MetaItem::Single(Chunk::new(self.loc_leaf(&meta_item.span), ident.to_string()))
+                // MetaItem::Single(Chunk::new(self.loc_leaf(&meta_item.span), ident.to_string()))
+                MetaItem::Single(Chunk {
+                    loc: self.loc_leaf(&meta_item.span),
+                    s: ident.to_string(),
+                })
             }
             rst::MetaNameValue(ref ident, ref lit) => {
                 let s = format!("{} = {}", ident, self.lit(lit.span.lo));
-                MetaItem::Single(Chunk::new(self.loc_leaf(&meta_item.span), s))
+                // MetaItem::Single(Chunk::new(self.loc_leaf(&meta_item.span), s))
+                MetaItem::Single(Chunk {
+                    loc: self.loc_leaf(&meta_item.span),
+                    s: s,
+                })
             }
             rst::MetaList(ref ident, ref meta_items) => {
                 let loc = self.loc(&meta_item.span);
@@ -243,7 +339,12 @@ impl Trans {
         let loc = self.loc(&module.inner);
         let items = self.trans_items(&module.items);
         self.set_loc(&loc);
-        Mod::new(loc, name, items)
+
+        Mod {
+            loc: loc,
+            name: name,
+            items: items,
+        }
     }
 
     #[inline]
@@ -270,7 +371,7 @@ impl Trans {
                 }
             }
             rst::ItemTy(ref ty, ref generics) => {
-                ItemKind::TypeAlias(self.trans_type_alias(ident, generics, ty))
+                ItemKind::TypeAlias(self.trans_type_alias(is_pub, ident, generics, ty))
             }
             rst::ItemForeignMod(ref module) => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
             rst::ItemConst(ref ty, ref expr) => {
@@ -299,39 +400,53 @@ impl Trans {
         };
 
         self.set_loc(&loc);
-        Item::new(loc, attrs, item)
+        Item {
+            loc: loc,
+            attrs: attrs,
+            item: item,
+        }
     }
 
-    fn trans_extren_crate(&self, ident: String, name: &Option<rst::Name>) -> ExternCrate {
-        let mut krate = ident;
-        if let Some(ref rename) = *name {
-            krate = format!("{} as {}", krate, name_to_string(rename));
+    fn trans_extren_crate(&self, ident: String, rename: &Option<rst::Name>) -> ExternCrate {
+        let name = match *rename {
+            Some(ref name) => format!("{} as {}", ident, name_to_string(name)),
+            None => ident,
+        };
+
+        ExternCrate {
+            head: "extern crate ",
+            name: name,
         }
-        ExternCrate::new(krate)
     }
 
     fn trans_use(&self, is_pub: bool, view_path: &rst::ViewPath) -> Use {
-        match view_path.node {
+        let (full_path, items) = match view_path.node {
             rst::ViewPathSimple(ref ident, ref path) => {
                 self.loc_leaf(&path.span);
-                let mut fullpath = self.use_path_to_string(path);
+                let mut full_path = self.use_path_to_string(path);
                 if path.segments.last().unwrap().identifier.name != ident.name {
-                    fullpath = format!("{} as {}", fullpath, ident_to_string(ident));
+                    full_path = format!("{} as {}", full_path, ident_to_string(ident));
                 }
-                Use::new(is_pub, fullpath, Vec::new())
+                (full_path, Vec::new())
             }
             rst::ViewPathGlob(ref path) => {
                 self.loc_leaf(&path.span);
-                let fullpath = format!("{}::*", self.use_path_to_string(path));
-                Use::new(is_pub, fullpath, Vec::new())
+                let full_path = format!("{}::*", self.use_path_to_string(path));
+                (full_path, Vec::new())
             }
-            rst::ViewPathList(ref path, ref used_items) => {
+            rst::ViewPathList(ref path, ref items) => {
                 let loc = self.loc(&path.span);
-                let fullpath = self.use_path_to_string(path);
-                let use_item = Use::new(is_pub, fullpath, self.trans_used_items(used_items));
+                let full_path = self.use_path_to_string(path);
+                let items = self.trans_use_items(items);
                 self.set_loc(&loc);
-                use_item
+                (full_path, items)
             }
+        };
+
+        Use {
+            head: use_head(is_pub),
+            path: full_path,
+            items: items,
         }
     }
 
@@ -346,13 +461,13 @@ impl Trans {
     }
 
     #[inline]
-    fn trans_used_items(&self, used_items: &Vec<rst::PathListItem>) -> Vec<Chunk> {
-        trans_list!(self, used_items, trans_used_item)
+    fn trans_use_items(&self, items: &Vec<rst::PathListItem>) -> Vec<Chunk> {
+        trans_list!(self, items, trans_use_item)
     }
 
-    fn trans_used_item(&self, used_item: &rst::PathListItem) -> Chunk {
-        let loc = self.loc_leaf(&used_item.span);
-        let (mut s, rename) = match used_item.node {
+    fn trans_use_item(&self, item: &rst::PathListItem) -> Chunk {
+        let loc = self.loc_leaf(&item.span);
+        let (mut s, rename) = match item.node {
             rst::PathListIdent{ ref name, ref rename, .. } => (ident_to_string(name), rename),
             rst::PathListMod{ ref rename, .. } => ("self".to_string(), rename),
         };
@@ -360,20 +475,34 @@ impl Trans {
             s = format!("{} as {}", s, ident_to_string(ident));
         };
 
-        Chunk::new(loc, s)
+        Chunk {
+            loc: loc,
+            s: s,
+        }
     }
 
     fn trans_mod_decl(&self, is_pub: bool, ident: String) -> ModDecl {
-        ModDecl::new(is_pub, ident)
+        ModDecl {
+            head: mod_head(is_pub),
+            name: ident,
+        }
     }
 
-    fn trans_type_alias(&self, ident: String, generics: &rst::Generics, ty: &rst::Ty) -> TypeAlias {
-        TypeAlias::new(ident, self.trans_generics(generics), self.trans_type(ty))
+    fn trans_type_alias(&self, is_pub: bool, ident: String, generics: &rst::Generics, ty: &rst::Ty)
+        -> TypeAlias {
+        TypeAlias {
+            head: type_head(is_pub),
+            name: ident,
+            generics: self.trans_generics(generics),
+            ty: self.trans_type(ty),
+        }
     }
 
     fn trans_generics(&self, generics: &rst::Generics) -> Generics {
-        Generics::new(self.trans_lifetime_defs(&generics.lifetimes),
-                      self.trans_type_params(&generics.ty_params))
+        Generics {
+            lifetime_defs: self.trans_lifetime_defs(&generics.lifetimes),
+            type_params: self.trans_type_params(&generics.ty_params),
+        }
     }
 
     #[inline]
@@ -382,8 +511,10 @@ impl Trans {
     }
 
     fn trans_lifetime_def(&self, lifetime_def: &rst::LifetimeDef) -> LifetimeDef {
-        LifetimeDef::new(self.trans_lifetime(&lifetime_def.lifetime),
-                         self.trans_lifetimes(&lifetime_def.bounds))
+        LifetimeDef {
+            lifetime: self.trans_lifetime(&lifetime_def.lifetime),
+            bounds: self.trans_lifetimes(&lifetime_def.bounds),
+        }
     }
 
     #[inline]
@@ -392,7 +523,10 @@ impl Trans {
     }
 
     fn trans_lifetime(&self, lifetime: &rst::Lifetime) -> Lifetime {
-        Lifetime::new(self.loc_leaf(&lifetime.span), name_to_string(&lifetime.name))
+        Lifetime {
+            loc: self.loc_leaf(&lifetime.span),
+            s: name_to_string(&lifetime.name),
+        }
     }
 
     #[inline]
@@ -409,7 +543,13 @@ impl Trans {
             None => None,
         };
         self.set_loc(&loc);
-        TypeParam::new(loc, name, bounds, default)
+
+        TypeParam {
+            loc: loc,
+            name: name,
+            bounds: bounds,
+            default: default,
+        }
     }
 
     #[inline]
@@ -422,24 +562,29 @@ impl Trans {
             &rst::RegionTyParamBound(ref lifetime) => {
                 TypeParamBound::Lifetime(self.trans_lifetime(lifetime))
             }
-            &rst::TraitTyParamBound(ref poly_trait_ref, is_sized) => {
-                TypeParamBound::PolyTraitRef(self.trans_poly_trait_ref(poly_trait_ref, is_sized))
+            &rst::TraitTyParamBound(ref poly_trait_ref, modifier) => {
+                TypeParamBound::PolyTraitRef(self.trans_poly_trait_ref(poly_trait_ref, modifier))
             }
         }
     }
 
     fn trans_poly_trait_ref(&self, poly_trait_ref: &rst::PolyTraitRef,
-                            is_sized: rst::TraitBoundModifier)
+                            modifier: rst::TraitBoundModifier)
         -> PolyTraitRef {
-        if let rst::TraitBoundModifier::Maybe = is_sized {
-            return PolyTraitRef::new_maybe_sized(self.loc_leaf(&poly_trait_ref.span));
+        if is_sized(modifier) {
+            return PolyTraitRef::new_sized(self.loc_leaf(&poly_trait_ref.span));
         }
 
         let loc = self.loc(&poly_trait_ref.span);
         let lifetime_defs = self.trans_lifetime_defs(&poly_trait_ref.bound_lifetimes);
         let trait_ref = self.trans_trait_ref(&poly_trait_ref.trait_ref);
         self.set_loc(&loc);
-        PolyTraitRef::new(loc, lifetime_defs, trait_ref)
+
+        PolyTraitRef {
+            loc: loc,
+            lifetime_defs: lifetime_defs,
+            trait_ref: trait_ref,
+        }
     }
 
     fn trans_trait_ref(&self, trait_ref: &rst::TraitRef) -> TraitRef {
@@ -450,7 +595,12 @@ impl Trans {
         let loc = self.loc(&path.span);
         let segs = self.trans_path_segments(&path.segments);
         self.set_loc(&loc);
-        Path::new(loc, path.global, segs)
+
+        Path {
+            loc: loc,
+            head: path_head(path.global),
+            segs: segs,
+        }
     }
 
     #[inline]
@@ -459,20 +609,25 @@ impl Trans {
     }
 
     fn trans_path_segment(&self, seg: &rst::PathSegment) -> PathSegment {
-        PathSegment::new(ident_to_string(&seg.identifier), self.trans_path_param(&seg.parameters))
+        PathSegment {
+            name: ident_to_string(&seg.identifier),
+            param: self.trans_path_param(&seg.parameters),
+        }
     }
 
-    fn trans_path_param(&self, param: &rst::PathParameters) -> PathParam {
-        match param {
+    fn trans_path_param(&self, params: &rst::PathParameters) -> PathParam {
+        match params {
             &rst::AngleBracketed(ref param) => PathParam::Angle(self.trans_angle_param(param)),
             &rst::Parenthesized(ref param) => PathParam::Paren(self.trans_paren_param(param)),
         }
     }
 
     fn trans_angle_param(&self, param: &rst::AngleBracketedParameterData) -> AngleParam {
-        AngleParam::new(self.trans_lifetimes(&param.lifetimes),
-                        self.trans_types(&param.types),
-                        self.trans_type_bindings(&param.bindings))
+        AngleParam {
+            lifetimes: self.trans_lifetimes(&param.lifetimes),
+            types: self.trans_types(&param.types),
+            bindings: self.trans_type_bindings(&param.bindings),
+        }
     }
 
     #[inline]
@@ -481,9 +636,11 @@ impl Trans {
     }
 
     fn trans_type_binding(&self, binding: &rst::TypeBinding) -> TypeBinding {
-        TypeBinding::new(self.loc_leaf(&binding.span),
-                         ident_to_string(&binding.ident),
-                         self.trans_type(&binding.ty))
+        TypeBinding {
+            loc: self.loc_leaf(&binding.span),
+            name: ident_to_string(&binding.ident),
+            ty: self.trans_type(&binding.ty),
+        }
     }
 
     fn trans_paren_param(&self, param: &rst::ParenthesizedParameterData) -> ParenParam {
@@ -494,7 +651,12 @@ impl Trans {
             None => None,
         };
         self.set_loc(&loc);
-        ParenParam::new(loc, inputs, output)
+
+        ParenParam {
+            loc: loc,
+            inputs: inputs,
+            output: output,
+        }
     }
 
     #[inline]
@@ -536,7 +698,10 @@ impl Trans {
         };
 
         self.set_loc(&loc);
-        Type::new(loc, ty)
+        Type {
+            loc: loc,
+            ty: ty,
+        }
     }
 
     fn trans_path_type(&self, qself: &Option<rst::QSelf>, path: &rst::Path) -> PathType {
@@ -545,11 +710,18 @@ impl Trans {
             &None => None,
         };
         let path = self.trans_path(path);
-        PathType::new(qself, path)
+
+        PathType {
+            qself: qself,
+            path: path,
+        }
     }
 
     fn trans_ptr_type(&self, mut_type: &rst::MutTy) -> PtrType {
-        PtrType::new(is_mut(mut_type.mutbl), self.trans_type(&mut_type.ty))
+        PtrType {
+            head: ptr_head(is_mut(mut_type.mutbl)),
+            ty: self.trans_type(&mut_type.ty),
+        }
     }
 
     fn trans_ref_type(&self, lifetime: &Option<rst::Lifetime>, mut_type: &rst::MutTy) -> RefType {
@@ -559,42 +731,61 @@ impl Trans {
         };
         let is_mut = is_mut(mut_type.mutbl);
         let ty = self.trans_type(&mut_type.ty);
-        RefType::new(lifetime, is_mut, ty)
+
+        RefType {
+            head: ref_head(lifetime, is_mut),
+            ty: ty,
+        }
     }
 
     fn trans_array_type(&self, ty: &rst::Ty) -> ArrayType {
-        ArrayType::new(self.trans_type(ty))
+        ArrayType {
+            ty: self.trans_type(ty),
+        }
     }
 
     fn trans_fixed_size_array_type(&self, ty: &rst::Ty, expr: &rst::Expr) -> FixedSizeArrayType {
-        FixedSizeArrayType::new(self.trans_type(ty), self.trans_expr(expr))
+        FixedSizeArrayType {
+            ty: self.trans_type(ty),
+            expr: self.trans_expr(expr),
+        }
     }
 
     fn trans_tuple_type(&self, types: &Vec<rst::P<rst::Ty>>) -> TupleType {
-        TupleType::new(self.trans_types(types))
+        TupleType {
+            types: self.trans_types(types),
+        }
     }
 
     fn trans_bare_fn_type(&self, bare_fn: &rst::BareFnTy) -> BareFnType {
-        BareFnType::new(is_unsafe(bare_fn.unsafety),
-                        abi_to_string(bare_fn.abi),
-                        self.trans_lifetime_defs(&bare_fn.lifetimes),
-                        self.trans_fn_decl(&bare_fn.decl))
+        BareFnType {
+            head: fn_head(false,
+                          is_unsafe(bare_fn.unsafety),
+                          false,
+                          Some(&abi_to_string(bare_fn.abi))),
+            lifetime_defs: self.trans_lifetime_defs(&bare_fn.lifetimes),
+            fn_sig: self.trans_fn_sig(&bare_fn.decl),
+        }
     }
 
     fn trans_sum_type(&self, ty: &rst::Ty, bounds: &rst::TyParamBounds) -> SumType {
-        SumType::new(self.trans_type(ty), self.trans_type_param_bounds(bounds))
+        SumType {
+            ty: self.trans_type(ty),
+            bounds: self.trans_type_param_bounds(bounds),
+        }
     }
 
     fn trans_poly_trait_ref_type(&self, bounds: &rst::TyParamBounds) -> PolyTraitRefType {
-        PolyTraitRefType::new(self.trans_type_param_bounds(bounds))
-    }
-
-    fn trans_macro_type(&self, mac: &rst::Mac) -> MacroType {
-        self.trans_macro(mac)
+        PolyTraitRefType {
+            bounds: self.trans_type_param_bounds(bounds),
+        }
     }
 
     fn trans_foreign_mod(&self, module: &rst::ForeignMod) -> ForeignMod {
-        ForeignMod::new(abi_to_string(module.abi), self.trans_foreign_items(&module.items))
+        ForeignMod {
+            head: foreign_head(&abi_to_string(module.abi)),
+            items: self.trans_foreign_items(&module.items),
+        }
     }
 
     #[inline]
@@ -618,34 +809,62 @@ impl Trans {
         };
 
         self.set_loc(&loc);
-        Foreign::new(loc, attrs, item)
+        Foreign {
+            loc: loc,
+            attrs: attrs,
+            item: item,
+        }
     }
 
     fn trans_foreign_static(&self, is_pub: bool, is_mut: bool, ident: String, ty: &rst::Ty)
         -> ForeignStatic {
-        ForeignStatic::new(is_pub, is_mut, ident, self.trans_type(ty))
+        ForeignStatic {
+            head: static_head(is_pub, is_mut),
+            name: ident,
+            ty: self.trans_type(ty),
+        }
     }
 
     fn trans_foreign_fn(&self, is_pub: bool, ident: String, generics: &rst::Generics,
                         fn_decl: &rst::FnDecl)
         -> ForeignFn {
-        ForeignFn::new(is_pub, ident, self.trans_generics(generics), self.trans_fn_decl(fn_decl))
+        ForeignFn {
+            head: fn_head(is_pub, false, false, None),
+            name: ident,
+            generics: self.trans_generics(generics),
+            fn_sig: self.trans_fn_sig(fn_decl),
+        }
     }
 
     fn trans_const(&self, is_pub: bool, ident: String, ty: &rst::Ty, expr: &rst::Expr) -> Const {
-        Const::new(is_pub, ident, self.trans_type(ty), self.trans_expr(expr))
+        Const {
+            head: const_head(is_pub),
+            name: ident,
+            ty: self.trans_type(ty),
+            expr: self.trans_expr(expr),
+        }
     }
 
     fn trans_static(&self, is_pub: bool, is_mut: bool, ident: String, ty: &rst::Ty,
                     expr: &rst::Expr)
         -> Static {
-        Static::new(is_pub, is_mut, ident, self.trans_type(ty), self.trans_expr(expr))
+        Static {
+            head: static_head(is_pub, is_mut),
+            name: ident,
+            ty: self.trans_type(ty),
+            expr: self.trans_expr(expr),
+        }
     }
 
     fn trans_struct(&self, is_pub: bool, ident: String, generics: &rst::Generics,
                     variant: &rst::VariantData)
         -> Struct {
-        Struct::new(is_pub, ident, self.trans_generics(generics), self.trans_struct_body(variant))
+        Struct {
+            head: struct_head(is_pub),
+            name: ident,
+            generics: self.trans_generics(generics),
+            body: self.trans_struct_body(variant),
+        }
     }
 
     fn trans_struct_body(&self, variant: &rst::VariantData) -> StructBody {
@@ -677,7 +896,14 @@ impl Trans {
         let attrs = self.trans_attrs(&field.node.attrs);
         let ty = self.trans_type(&field.node.ty);
         self.set_loc(&loc);
-        StructField::new(loc, attrs, is_pub, name, ty)
+
+        StructField {
+            loc: loc,
+            attrs: attrs,
+            head: pub_head(is_pub),
+            name: name,
+            ty: ty,
+        }
     }
 
     #[inline]
@@ -695,17 +921,30 @@ impl Trans {
         let attrs = self.trans_attrs(&field.node.attrs);
         let ty = self.trans_type(&field.node.ty);
         self.set_loc(&loc);
-        TupleField::new(loc, attrs, is_pub, ty)
+
+        TupleField {
+            loc: loc,
+            attrs: attrs,
+            head: pub_head(is_pub),
+            ty: ty,
+        }
     }
 
     fn trans_enum(&self, is_pub: bool, ident: String, generics: &rst::Generics,
                   enum_def: &rst::EnumDef)
         -> Enum {
-        Enum::new(is_pub, ident, self.trans_generics(generics), self.trans_enum_body(enum_def))
+        Enum {
+            head: enum_head(is_pub),
+            name: ident,
+            generics: self.trans_generics(generics),
+            body: self.trans_enum_body(enum_def),
+        }
     }
 
     fn trans_enum_body(&self, enum_def: &rst::EnumDef) -> EnumBody {
-        EnumBody::new(self.trans_enum_fields(&enum_def.variants))
+        EnumBody {
+            fields: self.trans_enum_fields(&enum_def.variants),
+        }
     }
 
     #[inline]
@@ -723,24 +962,30 @@ impl Trans {
             None => None,
         };
         self.set_loc(&loc);
-        EnumField::new(loc, attrs, name, body, expr)
+
+        EnumField {
+            loc: loc,
+            attrs: attrs,
+            name: name,
+            body: body,
+            expr: expr,
+        }
     }
 
     fn trans_fn(&self, is_pub: bool, is_unsafe: bool, is_const: bool, abi: String, ident: String,
                 generics: &rst::Generics, fn_decl: &rst::FnDecl, block: &rst::Block)
         -> Fn {
-        Fn::new(is_pub,
-                is_unsafe,
-                is_const,
-                abi,
-                ident,
-                self.trans_generics(generics),
-                self.trans_fn_decl(fn_decl),
-                self.trans_block(block))
+        Fn {
+            head: fn_head(is_pub, is_unsafe, is_const, Some(&abi)),
+            name: ident,
+            generics: self.trans_generics(generics),
+            fn_sig: self.trans_fn_sig(fn_decl),
+            block: self.trans_block(block),
+        }
     }
 
-    fn trans_fn_decl(&self, fn_decl: &rst::FnDecl) -> FnDecl {
-        FnDecl
+    fn trans_fn_sig(&self, fn_decl: &rst::FnDecl) -> FnSig {
+        FnSig
     }
 
     fn trans_block(&self, block: &rst::Block) -> Block {
@@ -753,5 +998,9 @@ impl Trans {
 
     fn trans_expr(&self, expr: &rst::Expr) -> Expr {
         Expr
+    }
+
+    fn trans_macro_type(&self, mac: &rst::Mac) -> MacroType {
+        self.trans_macro(mac)
     }
 }
