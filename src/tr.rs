@@ -52,6 +52,11 @@ fn is_const(constness: rst::Constness) -> bool {
 }
 
 #[inline]
+fn is_neg(polarity: rst::ImplPolarity) -> bool {
+    polarity == rst::ImplPolarity::Negative
+}
+
+#[inline]
 fn name_to_string(name: &rst::Name) -> String {
     name.as_str().to_string()
 }
@@ -76,7 +81,7 @@ struct Trans {
     last_loc: Cell<Loc>,
 }
 
-macro_rules! head_fn {
+macro_rules! select_str {
     ($fn_name:ident, $flag:ident, $true_value:expr, $false_value:expr) => (
         #[inline]
         fn $fn_name($flag: bool) -> &'static str {
@@ -91,19 +96,20 @@ macro_rules! head_fn {
         }
     );
 }
-head_fn!(attr_head, is_outer, "#", "#!");
-head_fn!(pub_head, is_pub, "pub ", "");
-head_fn!(mut_head, is_mut, "mut ", "");
-head_fn!(use_head, is_pub, "pub use", "use");
-head_fn!(mod_head, is_pub, "pub mod", "mod");
-head_fn!(type_head, is_pub, "pub type", "type");
-head_fn!(path_head, global, "::", "");
-head_fn!(ptr_head, is_mut, "*mut", "*const");
-head_fn!(const_head, is_pub, "pub const", "const");
-head_fn!(struct_head, is_pub, "pub struct", "struct");
-head_fn!(enum_head, is_pub, "pub enum", "enum");
-head_fn!(unsafe_head, is_unsafe, "unsafe ", "");
-head_fn!(fn_const_head, is_const, "const ", "");
+select_str!(attr_head, is_outer, "#", "#!");
+select_str!(pub_head, is_pub, "pub ", "");
+select_str!(mut_head, is_mut, "mut ", "");
+select_str!(use_head, is_pub, "pub use", "use");
+select_str!(mod_head, is_pub, "pub mod", "mod");
+select_str!(type_head, is_pub, "pub type", "type");
+select_str!(path_head, global, "::", "");
+select_str!(ptr_head, is_mut, "*mut", "*const");
+select_str!(const_head, is_pub, "pub const", "const");
+select_str!(struct_head, is_pub, "pub struct", "struct");
+select_str!(enum_head, is_pub, "pub enum", "enum");
+select_str!(unsafe_str, is_unsafe, "unsafe ", "");
+select_str!(fn_const_str, is_const, "const ", "");
+select_str!(polarity_str, is_neg, "!", "");
 
 #[inline]
 fn ref_head(lifetime: Option<Lifetime>, is_mut: bool) -> String {
@@ -133,8 +139,8 @@ fn foreign_head(abi: &str) -> String {
 fn fn_head(is_pub: bool, is_unsafe: bool, is_const: bool, abi: Option<&str>) -> String {
     let mut head = format!("{}{}{}",
                            pub_head(is_pub),
-                           unsafe_head(is_unsafe),
-                           fn_const_head(is_const));
+                           unsafe_str(is_unsafe),
+                           fn_const_str(is_const));
     if let Some(abi) = abi {
         if abi != r#""Rust""# {
             head.push_str(&foreign_head(abi));
@@ -147,7 +153,12 @@ fn fn_head(is_pub: bool, is_unsafe: bool, is_const: bool, abi: Option<&str>) -> 
 
 #[inline]
 fn trait_head(is_pub: bool, is_unsafe: bool) -> String {
-    format!("{}{}trait ", pub_head(is_pub), unsafe_head(is_unsafe))
+    format!("{}{}trait ", pub_head(is_pub), unsafe_str(is_unsafe))
+}
+
+#[inline]
+fn impl_head(is_pub: bool, is_unsafe: bool) -> String {
+    format!("{}{}impl ", pub_head(is_pub), unsafe_str(is_unsafe))
 }
 
 macro_rules! trans_list {
@@ -405,7 +416,21 @@ impl Trans {
                                                  bounds,
                                                  items))
             }
-            _ => unreachable!(),
+            rst::ItemDefaultImpl(unsafety, ref trait_ref) => {
+                ItemKind::ImplDefault(self.trans_impl_default(is_pub,
+                                                              is_unsafe(unsafety),
+                                                              trait_ref))
+            }
+            rst::ItemImpl(unsafety, polarity, ref generics, ref trait_ref, ref ty, ref items) => {
+                ItemKind::Impl(self.trans_impl(is_pub,
+                                               is_unsafe(unsafety),
+                                               is_neg(polarity),
+                                               generics,
+                                               trait_ref,
+                                               ty,
+                                               items))
+            }
+            rst::ItemMac(ref mac) => ItemKind::Macro(self.trans_macro(mac)),
         };
 
         self.set_loc(&loc);
@@ -1084,10 +1109,6 @@ impl Trans {
         }
     }
 
-    fn trans_fn_sig(&self, fn_decl: &rst::FnDecl) -> FnSig {
-        FnSig
-    }
-
     fn trans_method_sig(&self, method_sig: &rst::MethodSig) -> MethodSig {
         MethodSig {
             generics: self.trans_generics(&method_sig.generics),
@@ -1121,6 +1142,104 @@ impl Trans {
         }
     }
 
+    fn trans_impl_default(&self, is_pub: bool, is_unsafe: bool, trait_ref: &rst::TraitRef)
+        -> ImplDefault {
+        ImplDefault {
+            head: impl_head(is_pub, is_unsafe),
+            trait_ref: self.trans_trait_ref(trait_ref),
+            tail: " for .. {}",
+        }
+    }
+
+    fn trans_impl(&self, is_pub: bool, is_unsafe: bool, is_neg: bool, generics: &rst::Generics,
+                  trait_ref: &Option<rst::TraitRef>, ty: &rst::Ty,
+                  items: &Vec<rst::P<rst::ImplItem>>)
+        -> Impl {
+        let trait_ref = match *trait_ref {
+            Some(ref trait_ref) => Some(self.trans_trait_ref(trait_ref)),
+            None => None,
+        };
+
+        Impl {
+            head: impl_head(is_pub, is_unsafe),
+            polarity: polarity_str(is_neg),
+            generics: self.trans_generics(generics),
+            trait_ref: trait_ref,
+            ty: self.trans_type(ty),
+            items: self.trans_impl_items(items),
+        }
+    }
+
+    #[inline]
+    fn trans_impl_items(&self, items: &Vec<rst::P<rst::ImplItem>>) -> Vec<ImplItem> {
+        trans_list!(self, items, trans_impl_item)
+    }
+
+    fn trans_impl_item(&self, item: &rst::ImplItem) -> ImplItem {
+        let loc = self.loc(&item.span);
+        let attrs = self.trans_attrs(&item.attrs);
+
+        let is_pub = is_pub(item.vis);
+        let ident = ident_to_string(&item.ident);
+        let item = match item.node {
+            rst::ImplItemKind::Const(ref ty, ref expr) => {
+                ImplItemKind::Const(self.trans_const_impl_item(is_pub, ident, ty, expr))
+            }
+            rst::ImplItemKind::Type(ref ty) => {
+                ImplItemKind::Type(self.trans_type_impl_item(is_pub, ident, ty))
+            }
+            rst::ImplItemKind::Method(ref method_sig, ref block) => {
+                ImplItemKind::Method(self.trans_method_impl_item(is_pub, ident, method_sig, block))
+            }
+            rst::ImplItemKind::Macro(ref mac) => {
+                ImplItemKind::Macro(self.trans_macro_impl_item(mac))
+            }
+        };
+        self.set_loc(&loc);
+
+        ImplItem {
+            loc: loc,
+            attrs: attrs,
+            item: item,
+        }
+    }
+
+    fn trans_const_impl_item(&self, is_pub: bool, ident: String, ty: &rst::Ty, expr: &rst::Expr)
+        -> ConstImplItem {
+        ConstImplItem {
+            head: const_head(is_pub),
+            name: ident,
+            ty: self.trans_type(ty),
+            expr: self.trans_expr(expr),
+        }
+    }
+
+    fn trans_type_impl_item(&self, is_pub: bool, ident: String, ty: &rst::Ty) -> TypeImplItem {
+        TypeImplItem {
+            head: type_head(is_pub),
+            name: ident,
+            ty: self.trans_type(ty),
+        }
+    }
+
+    fn trans_method_impl_item(&self, is_pub: bool, ident: String, method_sig: &rst::MethodSig,
+                              block: &rst::P<rst::Block>)
+        -> MethodImplItem {
+        MethodImplItem {
+            head: fn_head(is_pub,
+                          is_unsafe(method_sig.unsafety),
+                          is_const(method_sig.constness),
+                          Some(&abi_to_string(method_sig.abi))),
+            name: ident,
+            method_sig: self.trans_method_sig(method_sig),
+            block: self.trans_block(block),
+        }
+    }
+
+    fn trans_fn_sig(&self, fn_decl: &rst::FnDecl) -> FnSig {
+        FnSig
+    }
+
     fn trans_block(&self, block: &rst::Block) -> Block {
         Block
     }
@@ -1129,11 +1248,15 @@ impl Trans {
         Expr
     }
 
-    fn trans_macro(&self, mac: &rst::Mac) -> Macro {
-        Macro
-    }
-
     fn trans_macro_type(&self, mac: &rst::Mac) -> MacroType {
         self.trans_macro(mac)
+    }
+
+    fn trans_macro_impl_item(&self, mac: &rst::Mac) -> MacroImplItem {
+        self.trans_macro(mac)
+    }
+
+    fn trans_macro(&self, mac: &rst::Mac) -> Macro {
+        Macro
     }
 }

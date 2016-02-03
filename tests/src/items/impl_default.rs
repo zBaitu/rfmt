@@ -1,5 +1,1 @@
-impl Shape for Foo {
-    fn area(&self) -> f64 {
-        0.0
-    }
-}
+pub unsafe impl !Shape for .. {}

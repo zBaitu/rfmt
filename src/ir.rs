@@ -85,6 +85,9 @@ pub enum ItemKind {
     Enum(Enum),
     Fn(Fn),
     Trait(Trait),
+    ImplDefault(ImplDefault),
+    Impl(Impl),
+    Macro(Macro),
 }
 
 #[derive(Debug)]
@@ -454,9 +457,6 @@ pub struct MethodTraitItem {
 }
 
 #[derive(Debug)]
-pub struct FnSig;
-
-#[derive(Debug)]
 pub struct MethodSig {
     pub generics: Generics,
     pub fn_sig: FnSig,
@@ -464,12 +464,71 @@ pub struct MethodSig {
 }
 
 #[derive(Debug)]
+pub struct ImplDefault {
+    pub head: String,
+    pub trait_ref: TraitRef,
+    pub tail: &'static str,
+}
+
+#[derive(Debug)]
+pub struct Impl {
+    pub head: String,
+    pub polarity: &'static str,
+    pub generics: Generics,
+    pub trait_ref: Option<TraitRef>,
+    pub ty: Type,
+    pub items: Vec<ImplItem>,
+}
+
+#[derive(Debug)]
+pub struct ImplItem {
+    pub loc: Loc,
+    pub attrs: Vec<AttrKind>,
+    pub item: ImplItemKind,
+}
+
+#[derive(Debug)]
+pub enum ImplItemKind {
+    Const(ConstImplItem),
+    Type(TypeImplItem),
+    Method(MethodImplItem),
+    Macro(MacroImplItem),
+}
+
+#[derive(Debug)]
+pub struct ConstImplItem {
+    pub head: &'static str,
+    pub name: String,
+    pub ty: Type,
+    pub expr: Expr,
+}
+
+#[derive(Debug)]
+pub struct TypeImplItem {
+    pub head: &'static str,
+    pub name: String,
+    pub ty: Type,
+}
+
+#[derive(Debug)]
+pub struct MethodImplItem {
+    pub head: String,
+    pub name: String,
+    pub method_sig: MethodSig,
+    pub block: Block,
+}
+
+#[derive(Debug)]
+pub struct FnSig;
+
+#[derive(Debug)]
 pub struct Block;
 
 #[derive(Debug)]
 pub struct Expr;
 
+pub type MacroType = Macro;
+pub type MacroImplItem = Macro;
+
 #[derive(Debug)]
 pub struct Macro;
-
-pub type MacroType = Macro;

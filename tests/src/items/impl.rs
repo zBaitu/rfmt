@@ -1,11 +1,9 @@
-impl<T> Container for Vec<T> {
-    type E = T;
-
-    fn empty() -> Vec<T> {
-        Vec::new()
-    }
-
-    fn insert(&mut self, x: T) {
-        self.push(x);
-    }
+//impl A{}
+//impl<T> !A for B{}
+//pub unsafe impl A for B{}
+impl<T> A for B<T> {
+    //const a: bool = true;
+    //type E = T;
+    //fn f(&self) {}
+    a!();
 }
