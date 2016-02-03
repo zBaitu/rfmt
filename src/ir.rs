@@ -426,7 +426,7 @@ pub struct TraitItem {
 pub enum TraitItemKind {
     Const(ConstTraitItem),
     Type(TypeTraitItem),
-    //Method(MethodTraitItem),
+    Method(MethodTraitItem),
 }
 
 #[derive(Debug)]
@@ -446,7 +446,22 @@ pub struct TypeTraitItem {
 }
 
 #[derive(Debug)]
+pub struct MethodTraitItem {
+    pub head: String,
+    pub name: String,
+    pub method_sig: MethodSig,
+    pub block: Option<Block>,
+}
+
+#[derive(Debug)]
 pub struct FnSig;
+
+#[derive(Debug)]
+pub struct MethodSig {
+    pub generics: Generics,
+    pub fn_sig: FnSig,
+    pub slf: Option<String>,
+}
 
 #[derive(Debug)]
 pub struct Block;

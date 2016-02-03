@@ -103,6 +103,7 @@ head_fn!(const_head, is_pub, "pub const", "const");
 head_fn!(struct_head, is_pub, "pub struct", "struct");
 head_fn!(enum_head, is_pub, "pub enum", "enum");
 head_fn!(unsafe_head, is_unsafe, "unsafe ", "");
+head_fn!(fn_const_head, is_const, "const ", "");
 
 #[inline]
 fn ref_head(lifetime: Option<Lifetime>, is_mut: bool) -> String {
@@ -133,9 +134,9 @@ fn fn_head(is_pub: bool, is_unsafe: bool, is_const: bool, abi: Option<&str>) -> 
     let mut head = format!("{}{}{}",
                            pub_head(is_pub),
                            unsafe_head(is_unsafe),
-                           const_head(is_const));
+                           fn_const_head(is_const));
     if let Some(abi) = abi {
-        if abi != "Rust" {
+        if abi != r#""Rust""# {
             head.push_str(&foreign_head(abi));
             head.push_str(" ");
         }
@@ -395,6 +396,14 @@ impl Trans {
                                            generics,
                                            fn_decl,
                                            block))
+            }
+            rst::ItemTrait(unsafety, ref generics, ref bounds, ref items) => {
+                ItemKind::Trait(self.trans_trait(is_pub,
+                                                 is_unsafe(unsafety),
+                                                 ident,
+                                                 generics,
+                                                 bounds,
+                                                 items))
             }
             _ => unreachable!(),
         };
@@ -984,20 +993,144 @@ impl Trans {
         }
     }
 
+    fn trans_trait(&self, is_pub: bool, is_unsafe: bool, ident: String, generics: &rst::Generics,
+                   bounds: &rst::TyParamBounds, items: &Vec<rst::P<rst::TraitItem>>)
+        -> Trait {
+        Trait {
+            head: trait_head(is_pub, is_unsafe),
+            name: ident,
+            generics: self.trans_generics(generics),
+            bounds: self.trans_type_param_bounds(bounds),
+            items: self.trans_trait_items(items),
+        }
+    }
+
+    #[inline]
+    fn trans_trait_items(&self, items: &Vec<rst::P<rst::TraitItem>>) -> Vec<TraitItem> {
+        trans_list!(self, items, trans_trait_item)
+    }
+
+    fn trans_trait_item(&self, item: &rst::TraitItem) -> TraitItem {
+        let loc = self.loc(&item.span);
+        let attrs = self.trans_attrs(&item.attrs);
+        let ident = ident_to_string(&item.ident);
+        let item = match item.node {
+            rst::ConstTraitItem(ref ty, ref expr) => {
+                TraitItemKind::Const(self.trans_const_trait_item(ident, ty, expr))
+            }
+            rst::TypeTraitItem(ref bounds, ref ty) => {
+                TraitItemKind::Type(self.trans_type_trait_item(ident, bounds, ty))
+            }
+            rst::MethodTraitItem(ref method_sig, ref block) => {
+                TraitItemKind::Method(self.trans_method_trait_item(ident, method_sig, block))
+            }
+        };
+        self.set_loc(&loc);
+
+        TraitItem {
+            loc: loc,
+            attrs: attrs,
+            item: item,
+        }
+    }
+
+    fn trans_const_trait_item(&self, ident: String, ty: &rst::Ty, expr: &Option<rst::P<rst::Expr>>)
+        -> ConstTraitItem {
+        let expr = match *expr {
+            Some(ref expr) => Some(self.trans_expr(expr)),
+            None => None,
+        };
+
+        ConstTraitItem {
+            head: const_head(false),
+            name: ident,
+            ty: self.trans_type(ty),
+            expr: expr,
+        }
+    }
+
+    fn trans_type_trait_item(&self, ident: String, bounds: &rst::TyParamBounds,
+                             ty: &Option<rst::P<rst::Ty>>)
+        -> TypeTraitItem {
+        let ty = match *ty {
+            Some(ref ty) => Some(self.trans_type(ty)),
+            None => None,
+        };
+
+        TypeTraitItem {
+            head: type_head(false),
+            name: ident,
+            bounds: self.trans_type_param_bounds(bounds),
+            ty: ty,
+        }
+    }
+
+    fn trans_method_trait_item(&self, ident: String, method_sig: &rst::MethodSig,
+                               block: &Option<rst::P<rst::Block>>)
+        -> MethodTraitItem {
+        let block = match *block {
+            Some(ref block) => Some(self.trans_block(block)),
+            None => None,
+        };
+
+        MethodTraitItem {
+            head: fn_head(false,
+                          is_unsafe(method_sig.unsafety),
+                          is_const(method_sig.constness),
+                          Some(&abi_to_string(method_sig.abi))),
+            name: ident,
+            method_sig: self.trans_method_sig(method_sig),
+            block: block,
+        }
+    }
+
     fn trans_fn_sig(&self, fn_decl: &rst::FnDecl) -> FnSig {
         FnSig
+    }
+
+    fn trans_method_sig(&self, method_sig: &rst::MethodSig) -> MethodSig {
+        MethodSig {
+            generics: self.trans_generics(&method_sig.generics),
+            fn_sig: self.trans_fn_sig(&method_sig.decl),
+            slf: self.trans_self(&method_sig.explicit_self.node),
+        }
+    }
+
+    fn trans_self(&self, explicit_self: &rst::ExplicitSelf_) -> Option<String> {
+        match *explicit_self {
+            rst::SelfStatic => None,
+            rst::SelfValue(_) => Some("self".to_string()),
+            rst::SelfRegion(lifetime, mutbl, _) => {
+                let mut s = String::new();
+                s.push_str("&");
+
+                if let Some(ref lifetime) = lifetime {
+                    let lifetime = self.trans_lifetime(lifetime);
+                    s.push_str(&lifetime.s);
+                    s.push_str(" ");
+                }
+
+                if is_mut(mutbl) {
+                    s.push_str("mut ");
+                }
+
+                s.push_str("self");
+                Some(s)
+            }
+            _ => unreachable!(),
+        }
     }
 
     fn trans_block(&self, block: &rst::Block) -> Block {
         Block
     }
 
-    fn trans_macro(&self, mac: &rst::Mac) -> Macro {
-        Macro
-    }
-
     fn trans_expr(&self, expr: &rst::Expr) -> Expr {
         Expr
+    }
+
+    fn trans_macro(&self, mac: &rst::Mac) -> Macro {
+        Macro
     }
 
     fn trans_macro_type(&self, mac: &rst::Mac) -> MacroType {
