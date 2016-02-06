@@ -519,7 +519,43 @@ pub struct MethodImplItem {
 }
 
 #[derive(Debug)]
-pub struct FnSig;
+pub struct FnSig {
+    pub arg: FnArg,
+    pub ret: FnReturn,
+}
+
+#[derive(Debug)]
+pub struct FnArg {
+    pub args: Vec<Arg>,
+    pub va: bool,
+}
+
+#[derive(Debug)]
+pub enum FnReturn {
+    Diverge,
+    Unit,
+    Normal(Type),
+}
+
+#[derive(Debug)]
+pub struct Arg {
+    pub pat: Patten,
+    pub ty: Type,
+}
+
+#[derive(Debug)]
+pub struct Patten;
+
+/*
+#[derive(Debug)]
+pub struct Patten {
+    pub loc: Loc,
+    pub pat: PattenKind,
+}
+
+#[derive(Debug)]
+pub enum PattenKind;
+*/
 
 #[derive(Debug)]
 pub struct Block;

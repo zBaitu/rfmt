@@ -592,11 +592,11 @@ impl Trans {
     }
 
     fn trans_type_param_bound(&self, bound: &rst::TyParamBound) -> TypeParamBound {
-        match bound {
-            &rst::RegionTyParamBound(ref lifetime) => {
+        match *bound {
+            rst::RegionTyParamBound(ref lifetime) => {
                 TypeParamBound::Lifetime(self.trans_lifetime(lifetime))
             }
-            &rst::TraitTyParamBound(ref poly_trait_ref, modifier) => {
+            rst::TraitTyParamBound(ref poly_trait_ref, modifier) => {
                 TypeParamBound::PolyTraitRef(self.trans_poly_trait_ref(poly_trait_ref, modifier))
             }
         }
@@ -650,9 +650,9 @@ impl Trans {
     }
 
     fn trans_path_param(&self, params: &rst::PathParameters) -> PathParam {
-        match params {
-            &rst::AngleBracketed(ref param) => PathParam::Angle(self.trans_angle_param(param)),
-            &rst::Parenthesized(ref param) => PathParam::Paren(self.trans_paren_param(param)),
+        match *params {
+            rst::AngleBracketed(ref param) => PathParam::Angle(self.trans_angle_param(param)),
+            rst::Parenthesized(ref param) => PathParam::Paren(self.trans_paren_param(param)),
         }
     }
 
@@ -739,9 +739,9 @@ impl Trans {
     }
 
     fn trans_path_type(&self, qself: &Option<rst::QSelf>, path: &rst::Path) -> PathType {
-        let qself = match qself {
-            &Some(ref qself) => Some(self.trans_type(&qself.ty)),
-            &None => None,
+        let qself = match *qself {
+            Some(ref qself) => Some(self.trans_type(&qself.ty)),
+            None => None,
         };
         let path = self.trans_path(path);
 
@@ -759,9 +759,9 @@ impl Trans {
     }
 
     fn trans_ref_type(&self, lifetime: &Option<rst::Lifetime>, mut_type: &rst::MutTy) -> RefType {
-        let lifetime = match lifetime {
-            &Some(ref lifetime) => Some(self.trans_lifetime(lifetime)),
-            &None => None,
+        let lifetime = match *lifetime {
+            Some(ref lifetime) => Some(self.trans_lifetime(lifetime)),
+            None => None,
         };
         let is_mut = is_mut(mut_type.mutbl);
         let ty = self.trans_type(&mut_type.ty);
@@ -902,14 +902,14 @@ impl Trans {
     }
 
     fn trans_struct_body(&self, variant: &rst::VariantData) -> StructBody {
-        match variant {
-            &rst::VariantData::Struct(ref fields, _) => {
+        match *variant {
+            rst::VariantData::Struct(ref fields, _) => {
                 StructBody::Struct(self.trans_struct_fields(fields))
             }
-            &rst::VariantData::Tuple(ref fields, _) => {
+            rst::VariantData::Tuple(ref fields, _) => {
                 StructBody::Tuple(self.trans_tuple_fields(fields))
             }
-            &rst::VariantData::Unit(_) => StructBody::Unit,
+            rst::VariantData::Unit(_) => StructBody::Unit,
         }
     }
 
@@ -1237,8 +1237,54 @@ impl Trans {
     }
 
     fn trans_fn_sig(&self, fn_decl: &rst::FnDecl) -> FnSig {
-        FnSig
+        FnSig {
+            arg: self.trans_fn_arg(&fn_decl.inputs, fn_decl.variadic),
+            ret: self.trans_fn_return(&fn_decl.output),
+        }
     }
+
+    fn trans_fn_arg(&self, inputs: &Vec<rst::Arg>, variadic: bool) -> FnArg {
+        FnArg {
+            args: self.trans_args(inputs),
+            va: variadic,
+        }
+    }
+
+    #[inline]
+    fn trans_args(&self, inputs: &Vec<rst::Arg>) -> Vec<Arg> {
+        trans_list!(self, inputs, trans_arg)
+    }
+
+    fn trans_arg(&self, arg: &rst::Arg) -> Arg {
+        Arg {
+            pat: self.trans_patten(&arg.pat),
+            ty: self.trans_type(&arg.ty),
+        }
+    }
+
+    fn trans_fn_return(&self, output: &rst::FunctionRetTy) -> FnReturn {
+        match *output {
+            rst::FunctionRetTy::NoReturn(_) => FnReturn::Diverge,
+            rst::FunctionRetTy::DefaultReturn(_) => FnReturn::Unit,
+            rst::FunctionRetTy::Return(ref ty) => FnReturn::Normal(self.trans_type(ty)),
+        }
+    }
+
+    fn trans_patten(&self, pat: &rst::P<rst::Pat>) -> Patten {
+        Patten
+    }
+    /*
+    fn trans_patten(&self, pat: &rst::Pat) -> Patten {
+        let loc = self.loc(&pat.span);
+        let pat = PattenKind;
+        self.set_loc(&loc);
+
+        Patten {
+            loc: loc,
+            pat: pat,
+        }
+    }
+    */
 
     fn trans_block(&self, block: &rst::Block) -> Block {
         Block
