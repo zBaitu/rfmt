@@ -565,7 +565,26 @@ pub enum StmtKind {
 }
 
 #[derive(Debug)]
-pub struct Decl;
+pub struct Decl {
+    pub loc: Loc,
+    pub decl: DeclKind,
+}
+
+#[derive(Debug)]
+pub enum DeclKind {
+    Local(Local),
+    Item(Item),
+}
+
+#[derive(Debug)]
+pub struct Local {
+    pub loc: Loc,
+    pub attrs: Vec<AttrKind>,
+    pub head: &'static str,
+    pub pat: Patten,
+    pub ty: Option<Type>,
+    pub init: Option<Expr>,
+}
 
 #[derive(Debug)]
 pub struct Patten;

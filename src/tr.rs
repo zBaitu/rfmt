@@ -1321,7 +1321,47 @@ impl Trans {
     }
 
     fn trans_decl(&self, decl: &rst::Decl) -> Decl {
-        Decl
+        let loc = self.loc(&decl.span);
+        let decl = match decl.node {
+            rst::DeclLocal(ref local) => DeclKind::Local(self.trans_local(local)),
+            rst::DeclItem(ref item) => DeclKind::Item(self.trans_item(item)),
+        };
+        self.set_loc(&loc);
+
+        Decl {
+            loc: loc,
+            decl: decl,
+        }
+    }
+
+    fn trans_local(&self, local: &rst::Local) -> Local {
+        let loc = self.loc(&local.span);
+        let attrs = self.trans_thin_attrs(&local.attrs);
+        let pat = self.trans_patten(&local.pat);
+        let ty = match local.ty {
+            Some(ref ty) => Some(self.trans_type(ty)),
+            None => None,
+        };
+        let init = match local.init {
+            Some(ref init) => Some(self.trans_expr(init)),
+            None => None,
+        };
+
+        Local {
+            loc: loc,
+            attrs: attrs,
+            head: "let ",
+            pat: pat,
+            ty: ty,
+            init: init,
+        }
+    }
+
+    fn trans_thin_attrs(&self, attrs: &rst::ThinAttributes) -> Vec<AttrKind> {
+        match *attrs {
+            Some(ref attrs) => self.trans_attrs(attrs),
+            None => Vec::new(),
+        }
     }
 
     fn trans_patten(&self, pat: &rst::P<rst::Pat>) -> Patten {
