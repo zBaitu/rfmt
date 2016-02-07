@@ -29,6 +29,15 @@ pub struct Chunk {
     pub s: String,
 }
 
+impl Chunk {
+    pub fn new(s: String) -> Chunk {
+        Chunk {
+            loc: Default::default(),
+            s: s,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Crate {
     pub loc: Loc,
@@ -601,7 +610,32 @@ pub enum PattenKind;
 */
 
 #[derive(Debug)]
-pub struct Expr;
+pub struct Expr {
+    pub loc: Loc,
+    pub attrs: Vec<AttrKind>,
+    pub expr: ExprKind,
+}
+
+#[derive(Debug)]
+pub enum ExprKind {
+    Path(Box<PathExpr>),
+    Box(Box<BoxExpr>),
+    List(Box<ListExpr>),
+}
+
+pub type PathExpr = PathType;
+
+#[derive(Debug)]
+pub struct BoxExpr {
+    pub head: &'static str,
+    pub expr: Expr,
+}
+
+#[derive(Debug)]
+pub struct ListExpr {
+    pub exprs: Vec<Expr>,
+    pub sep: Chunk,
+}
 
 pub type MacroType = Macro;
 pub type MacroImplItem = Macro;

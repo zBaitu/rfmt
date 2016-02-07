@@ -59,10 +59,8 @@ fn is_neg(polarity: rst::ImplPolarity) -> bool {
 #[inline]
 fn is_block_unsafe(rules: rst::BlockCheckMode) -> bool {
     match rules {
-        rst::BlockCheckMode::UnsafeBlock(source) => {
-            source == rst::UnsafeSource::UserProvided
-        }
-        _ => false
+        rst::BlockCheckMode::UnsafeBlock(source) => source == rst::UnsafeSource::UserProvided,
+        _ => false,
     }
 }
 
@@ -1367,18 +1365,18 @@ impl Trans {
     fn trans_patten(&self, pat: &rst::P<rst::Pat>) -> Patten {
         Patten
     }
-    /*
-    fn trans_patten(&self, pat: &rst::Pat) -> Patten {
-        let loc = self.loc(&pat.span);
-        let pat = PattenKind;
-        self.set_loc(&loc);
-
-        Patten {
-            loc: loc,
-            pat: pat,
-        }
-    }
-    */
+    //
+    // fn trans_patten(&self, pat: &rst::Pat) -> Patten {
+    // let loc = self.loc(&pat.span);
+    // let pat = PattenKind;
+    // self.set_loc(&loc);
+    //
+    // Patten {
+    // loc: loc,
+    // pat: pat,
+    // }
+    // }
+    //
 
     fn expr_to_stmt(&self, expr: Expr) -> Stmt {
         Stmt {
@@ -1388,8 +1386,49 @@ impl Trans {
         }
     }
 
+    #[inline]
+    fn trans_exprs(&self, exprs: &Vec<rst::Expr>) -> Vec<Expr> {
+        trans_list!(self, exprs, trans_expr)
+    }
+
     fn trans_expr(&self, expr: &rst::Expr) -> Expr {
-        Expr
+        let loc = self.loc(&expr.span);
+        let attrs = self.trans_thin_attrs(&expr.attrs);
+        let expr = match expr.node {
+            rst::ExprPath(ref qself, ref path) => {
+                ExprKind::Path(Box::new(self.trans_path_type(qself, path)))
+            }
+            rst::ExprBox(ref expr) => ExprKind::Box(Box::new(self.trans_box_expr(expr))),
+            rst::ExprInPlace(ref left, ref right) => {
+                ExprKind::List(Box::new(self.trans_in_place_expr(lef, reight)))
+            }
+            _ => unreachable!(),
+        };
+        self.set_loc(&loc);
+
+        Expr {
+            loc: loc,
+            attrs: attrs,
+            expr: expr,
+        }
+    }
+
+    fn trans_box_expr(&self, expr: &rst::Expr) -> BoxExpr {
+        BoxExpr {
+            head: "box ",
+            expr: self.trans_expr(expr),
+        }
+    }
+
+    fn trans_in_place_expr(&self, left: &rst::Expr, right: &rst::Expr) -> ListExpr {
+        self.trans_list_expr(&vec![left, right], Chunk::new(" <- "))
+    }
+
+    fn trans_list_expr(&self, exprs: &Vec<rst::Expr, sep: Chunk) -> ListExpr {
+        ListExpr {
+            exprs: self.trans_exprs(exprs),
+            sep: sep,
+        }
     }
 
     fn trans_macro_type(&self, mac: &rst::Mac) -> MacroType {
