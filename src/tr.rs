@@ -57,6 +57,16 @@ fn is_neg(polarity: rst::ImplPolarity) -> bool {
 }
 
 #[inline]
+fn is_block_unsafe(rules: rst::BlockCheckMode) -> bool {
+    match rules {
+        rst::BlockCheckMode::UnsafeBlock(source) => {
+            source == rst::UnsafeSource::UserProvided
+        }
+        _ => false
+    }
+}
+
+#[inline]
 fn name_to_string(name: &rst::Name) -> String {
     name.as_str().to_string()
 }
@@ -110,6 +120,7 @@ select_str!(enum_head, is_pub, "pub enum", "enum");
 select_str!(unsafe_str, is_unsafe, "unsafe ", "");
 select_str!(fn_const_str, is_const, "const ", "");
 select_str!(polarity_str, is_neg, "!", "");
+select_str!(block_head, is_unsafe, "unsafe", "");
 
 #[inline]
 fn ref_head(lifetime: Option<Lifetime>, is_mut: bool) -> String {
@@ -1270,6 +1281,49 @@ impl Trans {
         }
     }
 
+    fn trans_block(&self, block: &rst::Block) -> Block {
+        let loc = self.loc(&block.span);
+        let mut stmts = self.trans_stmts(&block.stmts);
+        if let Some(ref expr) = block.expr {
+            let expr = self.trans_expr(expr);
+            stmts.push(self.expr_to_stmt(expr));
+        }
+        self.set_loc(&loc);
+
+        Block {
+            loc: loc,
+            head: block_head(is_block_unsafe(block.rules)),
+            stmts: stmts,
+        }
+    }
+
+    #[inline]
+    fn trans_stmts(&self, stmts: &Vec<rst::P<rst::Stmt>>) -> Vec<Stmt> {
+        trans_list!(self, stmts, trans_stmt)
+    }
+
+    #[inline]
+    fn trans_stmt(&self, stmt: &rst::P<rst::Stmt>) -> Stmt {
+        let loc = self.loc(&stmt.span);
+        let (stmt, tail) = match stmt.node {
+            rst::StmtDecl(ref decl, _) => (StmtKind::Decl(self.trans_decl(decl)), ";"),
+            rst::StmtSemi(ref expr, _) => (StmtKind::Expr(self.trans_expr(expr)), ";"),
+            rst::StmtExpr(ref expr, _) => (StmtKind::Expr(self.trans_expr(expr)), ""),
+            rst::StmtMac(ref mac, _, _) => (StmtKind::Macro(self.trans_macro(mac)), ""),
+        };
+        self.set_loc(&loc);
+
+        Stmt {
+            loc: loc,
+            stmt: stmt,
+            tail: tail,
+        }
+    }
+
+    fn trans_decl(&self, decl: &rst::Decl) -> Decl {
+        Decl
+    }
+
     fn trans_patten(&self, pat: &rst::P<rst::Pat>) -> Patten {
         Patten
     }
@@ -1286,8 +1340,12 @@ impl Trans {
     }
     */
 
-    fn trans_block(&self, block: &rst::Block) -> Block {
-        Block
+    fn expr_to_stmt(&self, expr: Expr) -> Stmt {
+        Stmt {
+            loc: Default::default(),
+            stmt: StmtKind::Expr(expr),
+            tail: "",
+        }
     }
 
     fn trans_expr(&self, expr: &rst::Expr) -> Expr {

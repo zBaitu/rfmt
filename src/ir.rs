@@ -544,6 +544,30 @@ pub struct Arg {
 }
 
 #[derive(Debug)]
+pub struct Block {
+    pub loc: Loc,
+    pub head: &'static str,
+    pub stmts: Vec<Stmt>,
+}
+
+#[derive(Debug)]
+pub struct Stmt {
+    pub loc: Loc,
+    pub stmt: StmtKind,
+    pub tail: &'static str,
+}
+
+#[derive(Debug)]
+pub enum StmtKind {
+    Decl(Decl),
+    Expr(Expr),
+    Macro(Macro),
+}
+
+#[derive(Debug)]
+pub struct Decl;
+
+#[derive(Debug)]
 pub struct Patten;
 
 /*
@@ -556,9 +580,6 @@ pub struct Patten {
 #[derive(Debug)]
 pub enum PattenKind;
 */
-
-#[derive(Debug)]
-pub struct Block;
 
 #[derive(Debug)]
 pub struct Expr;
