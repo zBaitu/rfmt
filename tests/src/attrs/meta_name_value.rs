@@ -1,1 +1,1 @@
-#![crate_type = "lib"]
+#![crate_type = r#"lib"#]

@@ -30,10 +30,10 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn new(s: String) -> Chunk {
+    pub fn new(s: &str) -> Chunk {
         Chunk {
             loc: Default::default(),
-            s: s,
+            s: s.to_string(),
         }
     }
 }
@@ -618,9 +618,14 @@ pub struct Expr {
 
 #[derive(Debug)]
 pub enum ExprKind {
+    Literal(Chunk),
     Path(Box<PathExpr>),
     Box(Box<BoxExpr>),
     List(Box<ListExpr>),
+    Vec(Box<ListExpr>),
+    Tuple(Box<ListExpr>),
+    FnCall(Box<FnCallExpr>),
+    MethodCall(Box<MethodCallExpr>),
 }
 
 pub type PathExpr = PathType;
@@ -635,6 +640,19 @@ pub struct BoxExpr {
 pub struct ListExpr {
     pub exprs: Vec<Expr>,
     pub sep: Chunk,
+}
+
+#[derive(Debug)]
+pub struct FnCallExpr {
+    pub name: Expr,
+    pub args: Vec<Expr>,
+}
+
+#[derive(Debug)]
+pub struct MethodCallExpr {
+    pub obj: Expr,
+    pub name: Chunk,
+    pub args: Vec<Expr>,
 }
 
 pub type MacroType = Macro;

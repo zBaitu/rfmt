@@ -259,8 +259,11 @@ impl Trans {
     }
 
     #[inline]
-    fn lit(&self, pos: rst::BytePos) -> String {
-        self.lits[&pos].clone()
+    fn lit_to_string(&self, lit: &rst::Lit) -> String {
+        match lit.node {
+            rst::LitBool(b) => format!("{}", b),
+            _ => self.lits[&lit.span.lo].clone(),
+        }
     }
 
     #[inline]
@@ -326,15 +329,13 @@ impl Trans {
     fn trans_meta_item(&self, meta_item: &rst::MetaItem) -> MetaItem {
         match meta_item.node {
             rst::MetaWord(ref ident) => {
-                // MetaItem::Single(Chunk::new(self.loc_leaf(&meta_item.span), ident.to_string()))
                 MetaItem::Single(Chunk {
                     loc: self.loc_leaf(&meta_item.span),
                     s: ident.to_string(),
                 })
             }
             rst::MetaNameValue(ref ident, ref lit) => {
-                let s = format!("{} = {}", ident, self.lit(lit.span.lo));
-                // MetaItem::Single(Chunk::new(self.loc_leaf(&meta_item.span), s))
+                let s = format!("{} = {}", ident, self.lit_to_string(lit));
                 MetaItem::Single(Chunk {
                     loc: self.loc_leaf(&meta_item.span),
                     s: s,
@@ -1387,7 +1388,8 @@ impl Trans {
     }
 
     #[inline]
-    fn trans_exprs(&self, exprs: &Vec<rst::Expr>) -> Vec<Expr> {
+    //fn trans_exprs(&self, exprs: &Vec<rst::P<rst::Expr>>) -> Vec<Expr> {
+    fn trans_exprs(&self, exprs: &[rst::P<rst::Expr>]) -> Vec<Expr> {
         trans_list!(self, exprs, trans_expr)
     }
 
@@ -1395,12 +1397,21 @@ impl Trans {
         let loc = self.loc(&expr.span);
         let attrs = self.trans_thin_attrs(&expr.attrs);
         let expr = match expr.node {
+            rst::ExprLit(ref lit) => ExprKind::Literal(self.trans_literal_expr(lit)),
             rst::ExprPath(ref qself, ref path) => {
                 ExprKind::Path(Box::new(self.trans_path_type(qself, path)))
             }
             rst::ExprBox(ref expr) => ExprKind::Box(Box::new(self.trans_box_expr(expr))),
             rst::ExprInPlace(ref left, ref right) => {
-                ExprKind::List(Box::new(self.trans_in_place_expr(lef, reight)))
+                ExprKind::List(Box::new(self.trans_in_place_expr(left, right)))
+            }
+            rst::ExprVec(ref exprs) => ExprKind::Vec(Box::new(self.trans_vec_expr(exprs))),
+            rst::ExprTup(ref exprs) => ExprKind::Tuple(Box::new(self.trans_tuple_expr(exprs))),
+            rst::ExprCall(ref fn_name, ref args) => {
+                ExprKind::FnCall(Box::new(self.trans_fn_call_expr(fn_name, args)))
+            }
+            rst::ExprMethodCall(ref ident, ref types, ref args) => {
+                ExprKind::MethodCall(Box::new(self.trans_method_call_expr(ident, types, args)))
             }
             _ => unreachable!(),
         };
@@ -1413,6 +1424,34 @@ impl Trans {
         }
     }
 
+    fn trans_ident(&self, ident: &rst::SpannedIdent) -> Chunk {
+        Chunk {
+            loc: self.loc_leaf(&ident.span),
+            s: ident_to_string(&ident.node),
+        }
+    }
+
+    fn trans_literal_expr(&self, lit: &rst::Lit) -> Chunk {
+        Chunk {
+            loc: self.loc_leaf(&lit.span),
+            s: self.lit_to_string(lit),
+        }
+    }
+
+    fn trans_binary_expr(&self, left: &rst::Expr, right: &rst::Expr, sep: Chunk) -> ListExpr {
+        ListExpr {
+            exprs: vec![self.trans_expr(left), self.trans_expr(right)],
+            sep: sep,
+        }
+    }
+
+    fn trans_list_expr(&self, exprs: &Vec<rst::P<rst::Expr>>, sep: Chunk) -> ListExpr {
+        ListExpr {
+            exprs: self.trans_exprs(exprs),
+            sep: sep,
+        }
+    }
+
     fn trans_box_expr(&self, expr: &rst::Expr) -> BoxExpr {
         BoxExpr {
             head: "box ",
@@ -1421,13 +1460,31 @@ impl Trans {
     }
 
     fn trans_in_place_expr(&self, left: &rst::Expr, right: &rst::Expr) -> ListExpr {
-        self.trans_list_expr(&vec![left, right], Chunk::new(" <- "))
+        self.trans_binary_expr(left, right, Chunk::new(" <- "))
     }
 
-    fn trans_list_expr(&self, exprs: &Vec<rst::Expr, sep: Chunk) -> ListExpr {
-        ListExpr {
-            exprs: self.trans_exprs(exprs),
-            sep: sep,
+    fn trans_vec_expr(&self, exprs: &Vec<rst::P<rst::Expr>>) -> ListExpr {
+        self.trans_list_expr(exprs, Chunk::new(", "))
+    }
+
+    fn trans_tuple_expr(&self, exprs: &Vec<rst::P<rst::Expr>>) -> ListExpr {
+        self.trans_list_expr(exprs, Chunk::new(", "))
+    }
+
+    fn trans_fn_call_expr(&self, fn_name: &rst::Expr, args: &Vec<rst::P<rst::Expr>>) -> FnCallExpr {
+        FnCallExpr {
+            name: self.trans_expr(fn_name),
+            args: self.trans_exprs(args),
+        }
+    }
+
+    fn trans_method_call_expr(&self, ident: &rst::SpannedIdent, types: &Vec<rst::P<rst::Ty>>,
+                              args: &Vec<rst::P<rst::Expr>>)
+        -> MethodCallExpr {
+        MethodCallExpr {
+            obj: self.trans_expr(&args[0]),
+            name: self.trans_ident(ident),
+            args: self.trans_exprs(&args[1..]),
         }
     }
 
