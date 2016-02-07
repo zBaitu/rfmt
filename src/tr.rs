@@ -79,6 +79,16 @@ fn abi_to_string(abi: rst::abi::Abi) -> String {
     format!(r#""{:?}""#, abi)
 }
 
+#[inline]
+fn bop_to_string(op: &rst::BinOp_) -> String {
+    format!(" {} ", op.to_string())
+}
+
+#[inline]
+fn uop_to_string(op: rst::UnOp) -> &'static str {
+    rst::UnOp::to_string(op)
+}
+
 struct Trans {
     sess: rst::ParseSess,
     krate: rst::Crate,
@@ -1388,7 +1398,6 @@ impl Trans {
     }
 
     #[inline]
-    //fn trans_exprs(&self, exprs: &Vec<rst::P<rst::Expr>>) -> Vec<Expr> {
     fn trans_exprs(&self, exprs: &[rst::P<rst::Expr>]) -> Vec<Expr> {
         trans_list!(self, exprs, trans_expr)
     }
@@ -1401,12 +1410,31 @@ impl Trans {
             rst::ExprPath(ref qself, ref path) => {
                 ExprKind::Path(Box::new(self.trans_path_type(qself, path)))
             }
-            rst::ExprBox(ref expr) => ExprKind::Box(Box::new(self.trans_box_expr(expr))),
+            rst::ExprBinary(ref op, ref left, ref right) => {
+                ExprKind::List(Box::new(self.trans_binary_expr(left, right, self.trans_bop(op))))
+            }
+            rst::ExprUnary(op, ref expr) => {
+                ExprKind::Unary(Box::new(self.trans_unary_expr(op, expr)))
+            }
             rst::ExprInPlace(ref left, ref right) => {
                 ExprKind::List(Box::new(self.trans_in_place_expr(left, right)))
             }
             rst::ExprVec(ref exprs) => ExprKind::Vec(Box::new(self.trans_vec_expr(exprs))),
             rst::ExprTup(ref exprs) => ExprKind::Tuple(Box::new(self.trans_tuple_expr(exprs))),
+            rst::ExprBox(ref expr) => ExprKind::Box(Box::new(self.trans_box_expr(expr))),
+            rst::ExprCast(ref expr, ref ty) => {
+                ExprKind::Cast(Box::new(self.trans_cast_expr(expr, ty)))
+            }
+            rst::ExprType(ref expr, ref ty) => {
+                ExprKind::Type(Box::new(self.trans_type_expr(expr, ty)))
+            }
+            rst::ExprBlock(ref block) => ExprKind::Block(Box::new(self.trans_block(block))),
+            rst::ExprIf(ref expr, ref block, ref left) => {
+                ExprKind::If(Box::new(self.trans_if_expr(expr, block, left)))
+            }
+            rst::ExprIfLet(ref pat, ref expr, ref block, ref left) => {
+                ExprKind::IfLet(Box::new(self.trans_if_let_expr(pat, expr, block, left)))
+            }
             rst::ExprCall(ref fn_name, ref args) => {
                 ExprKind::FnCall(Box::new(self.trans_fn_call_expr(fn_name, args)))
             }
@@ -1438,6 +1466,13 @@ impl Trans {
         }
     }
 
+    fn trans_bop(&self, op: &rst::BinOp) -> Chunk {
+        Chunk {
+            loc: self.loc_leaf(&op.span),
+            s: bop_to_string(&op.node),
+        }
+    }
+
     fn trans_binary_expr(&self, left: &rst::Expr, right: &rst::Expr, sep: Chunk) -> ListExpr {
         ListExpr {
             exprs: vec![self.trans_expr(left), self.trans_expr(right)],
@@ -1445,17 +1480,21 @@ impl Trans {
         }
     }
 
+    fn trans_uop(&self, op: rst::UnOp) -> Chunk {
+        Chunk::new(uop_to_string(op))
+    }
+
+    fn trans_unary_expr(&self, op: rst::UnOp, expr: &rst::Expr) -> UnaryExpr {
+        UnaryExpr {
+            op: self.trans_uop(op),
+            expr: self.trans_expr(expr),
+        }
+    }
+
     fn trans_list_expr(&self, exprs: &Vec<rst::P<rst::Expr>>, sep: Chunk) -> ListExpr {
         ListExpr {
             exprs: self.trans_exprs(exprs),
             sep: sep,
-        }
-    }
-
-    fn trans_box_expr(&self, expr: &rst::Expr) -> BoxExpr {
-        BoxExpr {
-            head: "box ",
-            expr: self.trans_expr(expr),
         }
     }
 
@@ -1471,6 +1510,58 @@ impl Trans {
         self.trans_list_expr(exprs, Chunk::new(", "))
     }
 
+    fn trans_box_expr(&self, expr: &rst::Expr) -> BoxExpr {
+        BoxExpr {
+            head: "box ",
+            expr: self.trans_expr(expr),
+        }
+    }
+
+    fn trans_cast_expr(&self, expr: &rst::Expr, ty: &rst::Ty) -> CastExpr {
+        CastExpr {
+            expr: self.trans_expr(expr),
+            op: " as ",
+            ty: self.trans_type(ty),
+        }
+    }
+
+    fn trans_type_expr(&self, expr: &rst::Expr, ty: &rst::Ty) -> TypeExpr {
+        TypeExpr {
+            expr: self.trans_expr(expr),
+            op: ": ",
+            ty: self.trans_type(ty),
+        }
+    }
+
+    fn trans_if_expr(&self, expr: &rst::Expr, block: &rst::Block, left: &Option<rst::P<rst::Expr>>) -> IfExpr {
+        let (tail, left) = match *left {
+            Some(ref expr) => (" else ", Some(self.trans_expr(expr))),
+            None => ("", None),
+        };
+
+        IfExpr {
+            head: "if ",
+            expr: self.trans_expr(expr),
+            block: self.trans_block(block),
+            tail: tail,
+            left: left,
+        }
+    }
+
+    fn trans_if_let_expr(&self, pat: &rst::P<rst::Pat>, expr: &rst::Expr, block: &rst::Block, left: &Option<rst::P<rst::Expr>>) -> IfLetExpr {
+        let left = match *left {
+            Some(ref expr) => (Some(self.trans_expr(expr))),
+            None => None,
+        };
+
+        IfLetExpr {
+            pat: self.trans_patten(pat),
+            expr: self.trans_expr(expr),
+            block: self.trans_block(block),
+            left: left,
+        }
+    }
+
     fn trans_fn_call_expr(&self, fn_name: &rst::Expr, args: &Vec<rst::P<rst::Expr>>) -> FnCallExpr {
         FnCallExpr {
             name: self.trans_expr(fn_name),
@@ -1484,6 +1575,7 @@ impl Trans {
         MethodCallExpr {
             obj: self.trans_expr(&args[0]),
             name: self.trans_ident(ident),
+            types: self.trans_types(types),
             args: self.trans_exprs(&args[1..]),
         }
     }

@@ -30,10 +30,11 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn new(s: &str) -> Chunk {
+    pub fn new<S>(s: S) -> Chunk
+    where S: Into<String> {
         Chunk {
             loc: Default::default(),
-            s: s.to_string(),
+            s: s.into(),
         }
     }
 }
@@ -598,16 +599,16 @@ pub struct Local {
 #[derive(Debug)]
 pub struct Patten;
 
-/*
-#[derive(Debug)]
-pub struct Patten {
-    pub loc: Loc,
-    pub pat: PattenKind,
-}
-
-#[derive(Debug)]
-pub enum PattenKind;
-*/
+//
+// #[derive(Debug)]
+// pub struct Patten {
+// pub loc: Loc,
+// pub pat: PattenKind,
+// }
+//
+// #[derive(Debug)]
+// pub enum PattenKind;
+//
 
 #[derive(Debug)]
 pub struct Expr {
@@ -620,15 +621,33 @@ pub struct Expr {
 pub enum ExprKind {
     Literal(Chunk),
     Path(Box<PathExpr>),
-    Box(Box<BoxExpr>),
+    Unary(Box<UnaryExpr>),
     List(Box<ListExpr>),
     Vec(Box<ListExpr>),
     Tuple(Box<ListExpr>),
+    Box(Box<BoxExpr>),
+    Cast(Box<CastExpr>),
+    Type(Box<TypeExpr>),
+    Block(Box<Block>),
+    If(Box<IfExpr>),
+    IfLet(Box<IfLetExpr>),
     FnCall(Box<FnCallExpr>),
     MethodCall(Box<MethodCallExpr>),
 }
 
 pub type PathExpr = PathType;
+
+#[derive(Debug)]
+pub struct UnaryExpr {
+    pub op: Chunk,
+    pub expr: Expr,
+}
+
+#[derive(Debug)]
+pub struct ListExpr {
+    pub exprs: Vec<Expr>,
+    pub sep: Chunk,
+}
 
 #[derive(Debug)]
 pub struct BoxExpr {
@@ -637,9 +656,34 @@ pub struct BoxExpr {
 }
 
 #[derive(Debug)]
-pub struct ListExpr {
-    pub exprs: Vec<Expr>,
-    pub sep: Chunk,
+pub struct CastExpr {
+    pub expr: Expr,
+    pub op: &'static str,
+    pub ty: Type,
+}
+
+#[derive(Debug)]
+pub struct TypeExpr {
+    pub expr: Expr,
+    pub op: &'static str,
+    pub ty: Type,
+}
+
+#[derive(Debug)]
+pub struct IfExpr {
+    pub head: &'static str,
+    pub expr: Expr,
+    pub block: Block,
+    pub tail: &'static str,
+    pub left: Option<Expr>,
+}
+
+#[derive(Debug)]
+pub struct IfLetExpr {
+    pub pat: Patten,
+    pub expr: Expr,
+    pub block: Block,
+    pub left: Option<Expr>,
 }
 
 #[derive(Debug)]
@@ -652,6 +696,7 @@ pub struct FnCallExpr {
 pub struct MethodCallExpr {
     pub obj: Expr,
     pub name: Chunk,
+    pub types: Vec<Type>,
     pub args: Vec<Expr>,
 }
 

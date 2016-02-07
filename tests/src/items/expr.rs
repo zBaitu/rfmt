@@ -8,15 +8,19 @@ fn f() {
 
     //ff(0, bool)
 
-    a.f::<i32>(0, bool)
+    //a.f::<i32>(0, bool)
 
     //a + b
+
     // !a
+
     //true
+
     //a as bool
     //a: bool
+
     //if true {} else if false {} else {}
-    //if let a = b {} else {}
+    if let a = b {} else {}
 
     /*
     'label:
