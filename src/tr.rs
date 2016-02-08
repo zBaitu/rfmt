@@ -1,6 +1,7 @@
 use std::cell::Cell;
 use std::collections::HashMap;
 
+use zbase::zopt;
 use rst;
 
 use ir::*;
@@ -65,6 +66,11 @@ fn is_block_unsafe(rules: rst::BlockCheckMode) -> bool {
 }
 
 #[inline]
+fn is_move(capture: rst::CaptureClause) -> bool {
+    capture == rst::CaptureClause::CaptureByValue
+}
+
+#[inline]
 fn name_to_string(name: &rst::Name) -> String {
     name.as_str().to_string()
 }
@@ -77,11 +83,6 @@ fn ident_to_string(ident: &rst::Ident) -> String {
 #[inline]
 fn abi_to_string(abi: rst::abi::Abi) -> String {
     format!(r#""{:?}""#, abi)
-}
-
-#[inline]
-fn bop_to_string(op: &rst::BinOp_) -> String {
-    format!(" {} ", op.to_string())
 }
 
 #[inline]
@@ -271,7 +272,7 @@ impl Trans {
     #[inline]
     fn lit_to_string(&self, lit: &rst::Lit) -> String {
         match lit.node {
-            rst::LitBool(b) => format!("{}", b),
+            rst::LitBool(b) => b.to_string(),
             _ => self.lits[&lit.span.lo].clone(),
         }
     }
@@ -1410,17 +1411,35 @@ impl Trans {
             rst::ExprPath(ref qself, ref path) => {
                 ExprKind::Path(Box::new(self.trans_path_type(qself, path)))
             }
-            rst::ExprBinary(ref op, ref left, ref right) => {
-                ExprKind::List(Box::new(self.trans_binary_expr(left, right, self.trans_bop(op))))
-            }
             rst::ExprUnary(op, ref expr) => {
                 ExprKind::Unary(Box::new(self.trans_unary_expr(op, expr)))
+            }
+            rst::ExprBinary(ref op, ref left, ref right) => {
+                ExprKind::List(Box::new(self.trans_binary_expr(left, op, right)))
+            }
+            rst::ExprAssign(ref left, ref right) => {
+                ExprKind::List(Box::new(self.trans_assign_expr(left, right)))
+            }
+            rst::ExprAssignOp(ref op, ref left, ref right) => {
+                ExprKind::List(Box::new(self.trans_op_assign_expr(left, op, right)))
             }
             rst::ExprInPlace(ref left, ref right) => {
                 ExprKind::List(Box::new(self.trans_in_place_expr(left, right)))
             }
             rst::ExprVec(ref exprs) => ExprKind::Vec(Box::new(self.trans_vec_expr(exprs))),
             rst::ExprTup(ref exprs) => ExprKind::Tuple(Box::new(self.trans_tuple_expr(exprs))),
+            rst::ExprField(ref expr, ref ident) => {
+                ExprKind::StructField(Box::new(self.trans_struct_field_expr(expr, ident)))
+            }
+            rst::ExprTupField(ref expr, ref pos) => {
+                ExprKind::TupleField(Box::new(self.trans_tuple_field_expr(expr, pos)))
+            }
+            rst::ExprIndex(ref obj, ref index) => {
+                ExprKind::Index(Box::new(self.trans_index_expr(obj, index)))
+            }
+            rst::ExprRange(ref start, ref end) => {
+                ExprKind::Range(Box::new(self.trans_range_expr(start, end)))
+            }
             rst::ExprBox(ref expr) => ExprKind::Box(Box::new(self.trans_box_expr(expr))),
             rst::ExprCast(ref expr, ref ty) => {
                 ExprKind::Cast(Box::new(self.trans_cast_expr(expr, ty)))
@@ -1435,11 +1454,29 @@ impl Trans {
             rst::ExprIfLet(ref pat, ref expr, ref block, ref left) => {
                 ExprKind::IfLet(Box::new(self.trans_if_let_expr(pat, expr, block, left)))
             }
+            rst::ExprWhile(ref expr, ref block, ref label) => {
+                ExprKind::While(Box::new(self.trans_while_expr(expr, block, label)))
+            }
+            rst::ExprWhileLet(ref pat, ref expr, ref block, ref label) => {
+                ExprKind::WhileLet(Box::new(self.trans_while_let_expr(pat, expr, block, label)))
+            }
+            rst::ExprForLoop(ref pat, ref expr, ref block, ref label) => {
+                ExprKind::For(Box::new(self.trans_for_expr(pat, expr, block, label)))
+            }
+            rst::ExprLoop(ref block, ref label) => {
+                ExprKind::Loop(Box::new(self.trans_loop_expr(block, label)))
+            }
+            rst::ExprMatch(ref expr, ref arms) => {
+                ExprKind::Match(Box::new(self.trans_match_expr(expr, arms)))
+            }
             rst::ExprCall(ref fn_name, ref args) => {
                 ExprKind::FnCall(Box::new(self.trans_fn_call_expr(fn_name, args)))
             }
             rst::ExprMethodCall(ref ident, ref types, ref args) => {
                 ExprKind::MethodCall(Box::new(self.trans_method_call_expr(ident, types, args)))
+            }
+            rst::ExprClosure(capture, ref fn_decl, ref block) => {
+                ExprKind::Closure(Box::new(self.trans_closure_expr(capture, fn_decl, block)))
             }
             _ => unreachable!(),
         };
@@ -1459,24 +1496,17 @@ impl Trans {
         }
     }
 
+    fn trans_pos(&self, pos: &rst::Spanned<usize>) -> Chunk {
+        Chunk {
+            loc: self.loc_leaf(&pos.span),
+            s: pos.node.to_string(),
+        }
+    }
+
     fn trans_literal_expr(&self, lit: &rst::Lit) -> Chunk {
         Chunk {
             loc: self.loc_leaf(&lit.span),
             s: self.lit_to_string(lit),
-        }
-    }
-
-    fn trans_bop(&self, op: &rst::BinOp) -> Chunk {
-        Chunk {
-            loc: self.loc_leaf(&op.span),
-            s: bop_to_string(&op.node),
-        }
-    }
-
-    fn trans_binary_expr(&self, left: &rst::Expr, right: &rst::Expr, sep: Chunk) -> ListExpr {
-        ListExpr {
-            exprs: vec![self.trans_expr(left), self.trans_expr(right)],
-            sep: sep,
         }
     }
 
@@ -1491,15 +1521,53 @@ impl Trans {
         }
     }
 
+    fn trans_bop(&self, op: &rst::BinOp) -> Chunk {
+        Chunk {
+            loc: self.loc_leaf(&op.span),
+            s: format!(" {} ", op.node.to_string()),
+        }
+    }
+
+    fn trans_bop_assign(&self, op: &rst::BinOp) -> Chunk {
+        Chunk {
+            loc: self.loc_leaf(&op.span),
+            s: format!(" {}= ", op.node.to_string()),
+        }
+    }
+
+    fn trans_binary_expr(&self, left: &rst::Expr, op: &rst::BinOp, right: &rst::Expr) -> ListExpr {
+        ListExpr {
+            exprs: vec![self.trans_expr(left), self.trans_expr(right)],
+            sep: self.trans_bop(op),
+        }
+    }
+
+    fn trans_assign_expr(&self, left: &rst::Expr, right: &rst::Expr) -> ListExpr {
+        ListExpr {
+            exprs: vec![self.trans_expr(left), self.trans_expr(right)],
+            sep: Chunk::new(" = "),
+        }
+    }
+
+    fn trans_op_assign_expr(&self, left: &rst::Expr, op: &rst::BinOp, right: &rst::Expr) -> ListExpr {
+        ListExpr {
+            exprs: vec![self.trans_expr(left), self.trans_expr(right)],
+            sep: self.trans_bop_assign(op),
+        }
+    }
+
+    fn trans_in_place_expr(&self, left: &rst::Expr, right: &rst::Expr) -> ListExpr {
+        ListExpr {
+            exprs: vec![self.trans_expr(left), self.trans_expr(right)],
+            sep: Chunk::new(" <- "),
+        }
+    }
+
     fn trans_list_expr(&self, exprs: &Vec<rst::P<rst::Expr>>, sep: Chunk) -> ListExpr {
         ListExpr {
             exprs: self.trans_exprs(exprs),
             sep: sep,
         }
-    }
-
-    fn trans_in_place_expr(&self, left: &rst::Expr, right: &rst::Expr) -> ListExpr {
-        self.trans_binary_expr(left, right, Chunk::new(" <- "))
     }
 
     fn trans_vec_expr(&self, exprs: &Vec<rst::P<rst::Expr>>) -> ListExpr {
@@ -1508,6 +1576,34 @@ impl Trans {
 
     fn trans_tuple_expr(&self, exprs: &Vec<rst::P<rst::Expr>>) -> ListExpr {
         self.trans_list_expr(exprs, Chunk::new(", "))
+    }
+
+    fn trans_struct_field_expr(&self, expr: &rst::Expr, ident: &rst::SpannedIdent) -> StructFieldExpr {
+        StructFieldExpr {
+            expr: self.trans_expr(expr),
+            field: self.trans_ident(ident),
+        }
+    }
+
+    fn trans_tuple_field_expr(&self, expr: &rst::Expr, pos: &rst::Spanned<usize>) -> TupleFieldExpr {
+        TupleFieldExpr {
+            expr: self.trans_expr(expr),
+            field: self.trans_pos(pos),
+        }
+    }
+
+    fn trans_index_expr(&self, obj: &rst::Expr, index: &rst::Expr) -> IndexExpr {
+        IndexExpr {
+            obj: self.trans_expr(obj),
+            index: self.trans_expr(index),
+        }
+    }
+
+    fn trans_range_expr(&self, start: &Option<rst::P<rst::Expr>>, end: &Option<rst::P<rst::Expr>>) -> RangeExpr {
+        RangeExpr {
+            start: zopt::map_ref(start, |v| self.trans_expr(v)),
+            end: zopt::map_ref(end, |v| self.trans_expr(v)),
+        }
     }
 
     fn trans_box_expr(&self, expr: &rst::Expr) -> BoxExpr {
@@ -1533,7 +1629,8 @@ impl Trans {
         }
     }
 
-    fn trans_if_expr(&self, expr: &rst::Expr, block: &rst::Block, left: &Option<rst::P<rst::Expr>>) -> IfExpr {
+    fn trans_if_expr(&self, expr: &rst::Expr, block: &rst::Block, left: &Option<rst::P<rst::Expr>>)
+        -> IfExpr {
         let (tail, left) = match *left {
             Some(ref expr) => (" else ", Some(self.trans_expr(expr))),
             None => ("", None),
@@ -1548,7 +1645,9 @@ impl Trans {
         }
     }
 
-    fn trans_if_let_expr(&self, pat: &rst::P<rst::Pat>, expr: &rst::Expr, block: &rst::Block, left: &Option<rst::P<rst::Expr>>) -> IfLetExpr {
+    fn trans_if_let_expr(&self, pat: &rst::P<rst::Pat>, expr: &rst::Expr, block: &rst::Block,
+                         left: &Option<rst::P<rst::Expr>>)
+        -> IfLetExpr {
         let left = match *left {
             Some(ref expr) => (Some(self.trans_expr(expr))),
             None => None,
@@ -1560,6 +1659,80 @@ impl Trans {
             block: self.trans_block(block),
             left: left,
         }
+    }
+
+    fn trans_while_expr(&self, expr: &rst::Expr, block: &rst::Block, label: &Option<rst::Ident>)
+        -> WhileExpr {
+        let label = match *label {
+            Some(ref ident) => Some(ident_to_string(ident)),
+            None => None,
+        };
+
+        WhileExpr {
+            label: label,
+            expr: self.trans_expr(expr),
+            block: self.trans_block(block),
+        }
+    }
+
+    fn trans_while_let_expr(&self, pat: &rst::P<rst::Pat>, expr: &rst::Expr, block: &rst::Block,
+                            label: &Option<rst::Ident>)
+        -> WhileLetExpr {
+        let label = match *label {
+            Some(ref ident) => Some(ident_to_string(ident)),
+            None => None,
+        };
+
+        WhileLetExpr {
+            label: label,
+            pat: self.trans_patten(pat),
+            expr: self.trans_expr(expr),
+            block: self.trans_block(block),
+        }
+    }
+
+    fn trans_for_expr(&self, pat: &rst::P<rst::Pat>, expr: &rst::Expr, block: &rst::Block,
+                      label: &Option<rst::Ident>)
+        -> ForExpr {
+        let label = match *label {
+            Some(ref ident) => Some(ident_to_string(ident)),
+            None => None,
+        };
+
+        ForExpr {
+            label: label,
+            pat: self.trans_patten(pat),
+            expr: self.trans_expr(expr),
+            block: self.trans_block(block),
+        }
+    }
+
+    fn trans_loop_expr(&self, block: &rst::Block, label: &Option<rst::Ident>) -> LoopExpr {
+        let label = match *label {
+            Some(ref ident) => Some(ident_to_string(ident)),
+            None => None,
+        };
+
+        LoopExpr {
+            label: label,
+            block: self.trans_block(block),
+        }
+    }
+
+    fn trans_match_expr(&self, expr: &rst::Expr, arms: &Vec<rst::Arm>) -> MatchExpr {
+        MatchExpr {
+            expr: self.trans_expr(expr),
+            arms: self.trans_arms(arms),
+        }
+    }
+
+    #[inline]
+    fn trans_arms(&self, arms: &Vec<rst::Arm>) -> Vec<Arm> {
+        trans_list!(self, arms, trans_arm)
+    }
+
+    fn trans_arm(&self, arm: &rst::Arm) -> Arm {
+        Arm
     }
 
     fn trans_fn_call_expr(&self, fn_name: &rst::Expr, args: &Vec<rst::P<rst::Expr>>) -> FnCallExpr {
@@ -1577,6 +1750,16 @@ impl Trans {
             name: self.trans_ident(ident),
             types: self.trans_types(types),
             args: self.trans_exprs(&args[1..]),
+        }
+    }
+
+    fn trans_closure_expr(&self, capture: rst::CaptureClause, fn_decl: &rst::FnDecl,
+                          block: &rst::Block)
+        -> ClosureExpr {
+        ClosureExpr {
+            moved: is_move(capture),
+            fn_sig: self.trans_fn_sig(fn_decl),
+            block: self.trans_block(block),
         }
     }
 

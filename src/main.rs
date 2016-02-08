@@ -1,6 +1,7 @@
 #![feature(rustc_private)]
 #![feature(custom_derive)]
 
+extern crate zbase;
 extern crate rst;
 
 use rst::ast::CrateConfig;

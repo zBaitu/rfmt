@@ -625,14 +625,24 @@ pub enum ExprKind {
     List(Box<ListExpr>),
     Vec(Box<ListExpr>),
     Tuple(Box<ListExpr>),
+    StructField(Box<StructFieldExpr>),
+    TupleField(Box<TupleFieldExpr>),
+    Index(Box<IndexExpr>),
+    Range(Box<RangeExpr>),
     Box(Box<BoxExpr>),
     Cast(Box<CastExpr>),
     Type(Box<TypeExpr>),
     Block(Box<Block>),
     If(Box<IfExpr>),
     IfLet(Box<IfLetExpr>),
+    While(Box<WhileExpr>),
+    WhileLet(Box<WhileLetExpr>),
+    For(Box<ForExpr>),
+    Loop(Box<LoopExpr>),
+    Match(Box<MatchExpr>),
     FnCall(Box<FnCallExpr>),
     MethodCall(Box<MethodCallExpr>),
+    Closure(Box<ClosureExpr>),
 }
 
 pub type PathExpr = PathType;
@@ -647,6 +657,30 @@ pub struct UnaryExpr {
 pub struct ListExpr {
     pub exprs: Vec<Expr>,
     pub sep: Chunk,
+}
+
+#[derive(Debug)]
+pub struct StructFieldExpr {
+    pub expr: Expr,
+    pub field: Chunk,
+}
+
+#[derive(Debug)]
+pub struct TupleFieldExpr {
+    pub expr: Expr,
+    pub field: Chunk,
+}
+
+#[derive(Debug)]
+pub struct IndexExpr {
+    pub obj: Expr,
+    pub index: Expr,
+}
+
+#[derive(Debug)]
+pub struct RangeExpr {
+    pub start: Option<Expr>,
+    pub end: Option<Expr>,
 }
 
 #[derive(Debug)]
@@ -687,6 +721,44 @@ pub struct IfLetExpr {
 }
 
 #[derive(Debug)]
+pub struct WhileExpr {
+    pub label: Option<String>,
+    pub expr: Expr,
+    pub block: Block,
+}
+
+#[derive(Debug)]
+pub struct WhileLetExpr {
+    pub label: Option<String>,
+    pub pat: Patten,
+    pub expr: Expr,
+    pub block: Block,
+}
+
+#[derive(Debug)]
+pub struct ForExpr {
+    pub label: Option<String>,
+    pub pat: Patten,
+    pub expr: Expr,
+    pub block: Block,
+}
+
+#[derive(Debug)]
+pub struct LoopExpr {
+    pub label: Option<String>,
+    pub block: Block,
+}
+
+#[derive(Debug)]
+pub struct MatchExpr {
+    pub expr: Expr,
+    pub arms: Vec<Arm>,
+}
+
+#[derive(Debug)]
+pub struct Arm;
+
+#[derive(Debug)]
 pub struct FnCallExpr {
     pub name: Expr,
     pub args: Vec<Expr>,
@@ -698,6 +770,13 @@ pub struct MethodCallExpr {
     pub name: Chunk,
     pub types: Vec<Type>,
     pub args: Vec<Expr>,
+}
+
+#[derive(Debug)]
+pub struct ClosureExpr {
+    pub moved: bool,
+    pub fn_sig: FnSig,
+    pub block: Block,
 }
 
 pub type MacroType = Macro;

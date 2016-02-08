@@ -19,21 +19,25 @@ fn f() {
     //a as bool
     //a: bool
 
+    //{}
     //if true {} else if false {} else {}
-    if let a = b {} else {}
+    //if let a = b {} else {}
 
     /*
     'label:
     while true {
-        //break 'label;
-        continue 'label;
     }
     */
     
     //while let a = b {}
-    //'label:
-    //for a in b {}
+
+    /*
+    'label:
+    for a in b {}
+    */
+
     //loop {}
+
     /*
     match a {
         aa => true,
@@ -42,13 +46,19 @@ fn f() {
     */
 
     //move |a| -> bool {a}
-    //{}
+
     //a = bool
     //a += 1
+
     //a.b
     //a.0
+
     //a[0]
+
     //1..2
+    //..2
+    1..
+
     //::a::b
     //<Vec<T> as SomeTrait>::SomeType
     //&a
