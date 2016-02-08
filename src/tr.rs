@@ -565,6 +565,7 @@ impl Trans {
         Generics {
             lifetime_defs: self.trans_lifetime_defs(&generics.lifetimes),
             type_params: self.trans_type_params(&generics.ty_params),
+            wh: self.trans_where(&generics.where_clause),
         }
     }
 
@@ -652,6 +653,57 @@ impl Trans {
 
     fn trans_trait_ref(&self, trait_ref: &rst::TraitRef) -> TraitRef {
         self.trans_path(&trait_ref.path)
+    }
+
+    fn trans_where(&self, where_clause: &rst::WhereClause) -> Where {
+        Where {
+            clauses: self.trans_where_clauses(&where_clause.predicates),
+        }
+    }
+
+    #[inline]
+    fn trans_where_clauses(&self, predicates: &Vec<rst::WherePredicate>) -> Vec<WhereClause> {
+        trans_list!(self, predicates, trans_where_clause)
+    }
+
+    fn trans_where_clause(&self, predicate: &rst::WherePredicate) -> WhereClause {
+        match *predicate {
+            rst::WherePredicate::RegionPredicate(ref region) => self.trans_where_lifetime(region),
+            rst::WherePredicate::BoundPredicate(ref bound) => self.trans_where_bound(bound),
+            _ => unreachable!(),
+        }
+    }
+
+    fn trans_where_lifetime(&self, region: &rst::WhereRegionPredicate) -> WhereClause {
+        let loc = self.loc(&region.span);
+        let lifetime = self.trans_lifetime(&region.lifetime);
+        let bounds = self.trans_lifetimes(&region.bounds);
+        self.set_loc(&loc);
+
+        WhereClause {
+            loc: loc,
+            clause: WhereKind::Lifetime(LifetimeDef {
+                lifetime: lifetime,
+                bounds: bounds,
+            }),
+        }
+    }
+
+    fn trans_where_bound(&self, bound: &rst::WhereBoundPredicate) -> WhereClause {
+        let loc = self.loc(&bound.span);
+        let lifetime_defs = self.trans_lifetime_defs(&bound.bound_lifetimes);
+        let ty = self.trans_type(&bound.bounded_ty);
+        let bounds = self.trans_type_param_bounds(&bound.bounds);
+        self.set_loc(&loc);
+
+        WhereClause {
+            loc: loc,
+            clause: WhereKind::Bound(WhereBound {
+                lifetime_defs: lifetime_defs,
+                ty: ty,
+                bounds: bounds,
+            }),
+        }
     }
 
     fn trans_path(&self, path: &rst::Path) -> Path {

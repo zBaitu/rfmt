@@ -131,6 +131,7 @@ pub struct TypeAlias {
 pub struct Generics {
     pub lifetime_defs: Vec<LifetimeDef>,
     pub type_params: Vec<TypeParam>,
+    pub wh: Where,
 }
 
 pub type Lifetime = Chunk;
@@ -173,6 +174,30 @@ impl PolyTraitRef {
 }
 
 pub type TraitRef = Path;
+
+#[derive(Debug)]
+pub struct Where {
+    pub clauses: Vec<WhereClause>,
+}
+
+#[derive(Debug)]
+pub struct WhereClause {
+    pub loc: Loc,
+    pub clause: WhereKind,
+}
+
+#[derive(Debug)]
+pub enum WhereKind {
+    Lifetime(LifetimeDef),
+    Bound(WhereBound),
+}
+
+#[derive(Debug)]
+pub struct WhereBound {
+    pub lifetime_defs: Vec<LifetimeDef>,
+    pub ty: Type,
+    pub bounds: Vec<TypeParamBound>,
+}
 
 #[derive(Debug)]
 pub struct Path {
