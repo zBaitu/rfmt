@@ -23,7 +23,7 @@ impl Debug for Loc {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Chunk {
     pub loc: Loc,
     pub s: String,
@@ -620,13 +620,14 @@ pub struct Expr {
 #[derive(Debug)]
 pub enum ExprKind {
     Literal(Chunk),
-    Path(Box<PathExpr>),
+    Path(PathExpr),
     Unary(Box<UnaryExpr>),
+    Ref(Box<RefExpr>),
     List(Box<ListExpr>),
     Vec(Box<ListExpr>),
     Tuple(Box<ListExpr>),
-    StructField(Box<StructFieldExpr>),
-    TupleField(Box<TupleFieldExpr>),
+    FieldAccess(Box<FieldAccessExpr>),
+    Struct(Box<StructExpr>),
     Index(Box<IndexExpr>),
     Range(Box<RangeExpr>),
     Box(Box<BoxExpr>),
@@ -639,10 +640,14 @@ pub enum ExprKind {
     WhileLet(Box<WhileLetExpr>),
     For(Box<ForExpr>),
     Loop(Box<LoopExpr>),
+    Break(Box<BreakExpr>),
+    Continue(Box<ContinueExpr>),
     Match(Box<MatchExpr>),
     FnCall(Box<FnCallExpr>),
     MethodCall(Box<MethodCallExpr>),
     Closure(Box<ClosureExpr>),
+    Return(Box<ReturnExpr>),
+    Macro(MacroExpr),
 }
 
 pub type PathExpr = PathType;
@@ -654,21 +659,35 @@ pub struct UnaryExpr {
 }
 
 #[derive(Debug)]
+pub struct RefExpr {
+    pub is_mut: bool,
+    pub expr: Expr,
+}
+
+#[derive(Debug)]
 pub struct ListExpr {
     pub exprs: Vec<Expr>,
     pub sep: Chunk,
 }
 
 #[derive(Debug)]
-pub struct StructFieldExpr {
+pub struct FieldAccessExpr {
     pub expr: Expr,
     pub field: Chunk,
 }
 
 #[derive(Debug)]
-pub struct TupleFieldExpr {
-    pub expr: Expr,
-    pub field: Chunk,
+pub struct StructExpr {
+    pub path: Path,
+    pub fields: Vec<StructFieldExpr>,
+    pub base: Option<Expr>,
+}
+
+#[derive(Debug)]
+pub struct StructFieldExpr {
+    pub loc: Loc,
+    pub name: Chunk,
+    pub value: Expr,
 }
 
 #[derive(Debug)]
@@ -750,6 +769,16 @@ pub struct LoopExpr {
 }
 
 #[derive(Debug)]
+pub struct BreakExpr {
+    pub label: Option<Chunk>,
+}
+
+#[derive(Debug)]
+pub struct ContinueExpr {
+    pub label: Option<Chunk>,
+}
+
+#[derive(Debug)]
 pub struct MatchExpr {
     pub expr: Expr,
     pub arms: Vec<Arm>,
@@ -779,8 +808,14 @@ pub struct ClosureExpr {
     pub block: Block,
 }
 
+#[derive(Debug)]
+pub struct ReturnExpr {
+    pub ret: Option<Expr>,
+}
+
 pub type MacroType = Macro;
 pub type MacroImplItem = Macro;
+pub type MacroExpr = Macro;
 
 #[derive(Debug)]
 pub struct Macro;

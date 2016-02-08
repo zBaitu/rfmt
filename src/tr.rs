@@ -1408,11 +1408,12 @@ impl Trans {
         let attrs = self.trans_thin_attrs(&expr.attrs);
         let expr = match expr.node {
             rst::ExprLit(ref lit) => ExprKind::Literal(self.trans_literal_expr(lit)),
-            rst::ExprPath(ref qself, ref path) => {
-                ExprKind::Path(Box::new(self.trans_path_type(qself, path)))
-            }
+            rst::ExprPath(ref qself, ref path) => ExprKind::Path(self.trans_path_type(qself, path)),
             rst::ExprUnary(op, ref expr) => {
                 ExprKind::Unary(Box::new(self.trans_unary_expr(op, expr)))
+            }
+            rst::ExprAddrOf(mutble, ref expr) => {
+                ExprKind::Ref(Box::new(self.trans_ref_expr(mutble, expr)))
             }
             rst::ExprBinary(ref op, ref left, ref right) => {
                 ExprKind::List(Box::new(self.trans_binary_expr(left, op, right)))
@@ -1427,12 +1428,19 @@ impl Trans {
                 ExprKind::List(Box::new(self.trans_in_place_expr(left, right)))
             }
             rst::ExprVec(ref exprs) => ExprKind::Vec(Box::new(self.trans_vec_expr(exprs))),
+            rst::ExprRepeat(ref init, ref len) => {
+                ExprKind::Vec(Box::new(self.trans_array_expr(init, len)))
+            }
             rst::ExprTup(ref exprs) => ExprKind::Tuple(Box::new(self.trans_tuple_expr(exprs))),
+            rst::ExprParen(ref expr) => ExprKind::Tuple(Box::new(self.trans_paren_expr(expr))),
             rst::ExprField(ref expr, ref ident) => {
-                ExprKind::StructField(Box::new(self.trans_struct_field_expr(expr, ident)))
+                ExprKind::FieldAccess(Box::new(self.trans_struct_field_access_expr(expr, ident)))
             }
             rst::ExprTupField(ref expr, ref pos) => {
-                ExprKind::TupleField(Box::new(self.trans_tuple_field_expr(expr, pos)))
+                ExprKind::FieldAccess(Box::new(self.trans_tuple_field_access_expr(expr, pos)))
+            }
+            rst::ExprStruct(ref path, ref fields, ref base) => {
+                ExprKind::Struct(Box::new(self.trans_struct_expr(path, fields, base)))
             }
             rst::ExprIndex(ref obj, ref index) => {
                 ExprKind::Index(Box::new(self.trans_index_expr(obj, index)))
@@ -1466,6 +1474,10 @@ impl Trans {
             rst::ExprLoop(ref block, ref label) => {
                 ExprKind::Loop(Box::new(self.trans_loop_expr(block, label)))
             }
+            rst::ExprBreak(ref ident) => ExprKind::Break(Box::new(self.trans_break_expr(ident))),
+            rst::ExprAgain(ref ident) => {
+                ExprKind::Continue(Box::new(self.trans_continue_expr(ident)))
+            }
             rst::ExprMatch(ref expr, ref arms) => {
                 ExprKind::Match(Box::new(self.trans_match_expr(expr, arms)))
             }
@@ -1478,6 +1490,10 @@ impl Trans {
             rst::ExprClosure(capture, ref fn_decl, ref block) => {
                 ExprKind::Closure(Box::new(self.trans_closure_expr(capture, fn_decl, block)))
             }
+            rst::ExprRet(ref expr) => ExprKind::Return(Box::new(self.trans_return_expr(expr))),
+            rst::ExprMac(ref mac) => ExprKind::Macro(self.trans_macro_expr(mac)),
+
+            // ExprInlineAsm
             _ => unreachable!(),
         };
         self.set_loc(&loc);
@@ -1517,6 +1533,13 @@ impl Trans {
     fn trans_unary_expr(&self, op: rst::UnOp, expr: &rst::Expr) -> UnaryExpr {
         UnaryExpr {
             op: self.trans_uop(op),
+            expr: self.trans_expr(expr),
+        }
+    }
+
+    fn trans_ref_expr(&self, mutble: rst::Mutability, expr: &rst::Expr) -> RefExpr {
+        RefExpr {
+            is_mut: is_mut(mutble),
             expr: self.trans_expr(expr),
         }
     }
@@ -1574,21 +1597,65 @@ impl Trans {
         self.trans_list_expr(exprs, Chunk::new(", "))
     }
 
+    fn trans_array_expr(&self, init: &rst::Expr, len: &rst::Expr) -> ListExpr {
+        ListExpr {
+            exprs: vec![self.trans_expr(init), self.trans_expr(len)],
+            sep: Chunk::new("; "),
+        }
+    }
+
     fn trans_tuple_expr(&self, exprs: &Vec<rst::P<rst::Expr>>) -> ListExpr {
         self.trans_list_expr(exprs, Chunk::new(", "))
     }
 
-    fn trans_struct_field_expr(&self, expr: &rst::Expr, ident: &rst::SpannedIdent) -> StructFieldExpr {
-        StructFieldExpr {
+    fn trans_paren_expr(&self, expr: &rst::P<rst::Expr>) -> ListExpr {
+        ListExpr {
+            exprs: vec![self.trans_expr(expr)],
+            sep: Default::default(),
+        }
+    }
+
+    fn trans_struct_field_access_expr(&self, expr: &rst::Expr, ident: &rst::SpannedIdent)
+        -> FieldAccessExpr {
+        FieldAccessExpr {
             expr: self.trans_expr(expr),
             field: self.trans_ident(ident),
         }
     }
 
-    fn trans_tuple_field_expr(&self, expr: &rst::Expr, pos: &rst::Spanned<usize>) -> TupleFieldExpr {
-        TupleFieldExpr {
+    fn trans_tuple_field_access_expr(&self, expr: &rst::Expr, pos: &rst::Spanned<usize>)
+        -> FieldAccessExpr {
+        FieldAccessExpr {
             expr: self.trans_expr(expr),
             field: self.trans_pos(pos),
+        }
+    }
+
+    fn trans_struct_expr(&self, path: &rst::Path, fields: &Vec<rst::Field>,
+                         base: &Option<rst::P<rst::Expr>>)
+        -> StructExpr {
+        StructExpr {
+            path: self.trans_path(path),
+            fields: self.trans_struct_field_exprs(fields),
+            base: zopt::map_ref(base, |expr| self.trans_expr(expr)),
+        }
+    }
+
+    #[inline]
+    fn trans_struct_field_exprs(&self, fields: &Vec<rst::Field>) -> Vec<StructFieldExpr> {
+        trans_list!(self, fields, trans_struct_field_expr)
+    }
+
+    fn trans_struct_field_expr(&self, field: &rst::Field) -> StructFieldExpr {
+        let loc = self.loc(&field.span);
+        let name = self.trans_ident(&field.ident);
+        let value = self.trans_expr(&field.expr);
+        self.set_loc(&loc);
+
+        StructFieldExpr {
+            loc: loc,
+            name: name,
+            value: value,
         }
     }
 
@@ -1599,10 +1666,11 @@ impl Trans {
         }
     }
 
-    fn trans_range_expr(&self, start: &Option<rst::P<rst::Expr>>, end: &Option<rst::P<rst::Expr>>) -> RangeExpr {
+    fn trans_range_expr(&self, start: &Option<rst::P<rst::Expr>>, end: &Option<rst::P<rst::Expr>>)
+        -> RangeExpr {
         RangeExpr {
-            start: zopt::map_ref(start, |v| self.trans_expr(v)),
-            end: zopt::map_ref(end, |v| self.trans_expr(v)),
+            start: zopt::map_ref(start, |expr| self.trans_expr(expr)),
+            end: zopt::map_ref(end, |expr| self.trans_expr(expr)),
         }
     }
 
@@ -1719,6 +1787,18 @@ impl Trans {
         }
     }
 
+    fn trans_break_expr(&self, ident: &Option<rst::SpannedIdent>) -> BreakExpr {
+        BreakExpr {
+            label: zopt::map_ref(ident, |ident| self.trans_ident(ident)),
+        }
+    }
+
+    fn trans_continue_expr(&self, ident: &Option<rst::SpannedIdent>) -> ContinueExpr {
+        ContinueExpr {
+            label: zopt::map_ref(ident, |ident| self.trans_ident(ident)),
+        }
+    }
+
     fn trans_match_expr(&self, expr: &rst::Expr, arms: &Vec<rst::Arm>) -> MatchExpr {
         MatchExpr {
             expr: self.trans_expr(expr),
@@ -1763,11 +1843,21 @@ impl Trans {
         }
     }
 
+    fn trans_return_expr(&self, expr: &Option<rst::P<rst::Expr>>) -> ReturnExpr {
+        ReturnExpr {
+            ret: zopt::map_ref(expr, |expr| self.trans_expr(expr)),
+        }
+    }
+
     fn trans_macro_type(&self, mac: &rst::Mac) -> MacroType {
         self.trans_macro(mac)
     }
 
     fn trans_macro_impl_item(&self, mac: &rst::Mac) -> MacroImplItem {
+        self.trans_macro(mac)
+    }
+
+    fn trans_macro_expr(&self, mac: &rst::Mac) -> MacroExpr {
         self.trans_macro(mac)
     }
 

@@ -50,22 +50,31 @@ fn f() {
     //a = bool
     //a += 1
 
-    //a.b
+    //a.b;
     //a.0
 
     //a[0]
 
     //1..2
     //..2
-    1..
+    //1..
 
     //::a::b
     //<Vec<T> as SomeTrait>::SomeType
+
     //&a
 
-    //return true
+   // break 'label;
+   // continue 'label;
+
+    //return;
+    //return true;
+
     //a!()
+
     //A { a: true, ..Default::default() }
+    //A::A(B)
+
     //[0; 8]
-    //(0)
+    (0)
 }
