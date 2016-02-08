@@ -71,6 +71,14 @@ fn is_move(capture: rst::CaptureClause) -> bool {
 }
 
 #[inline]
+fn is_ref_mut(mode: rst::BindingMode) -> (bool, bool) {
+    match mode {
+        rst::BindingMode::ByRef(mutbl) => (true, is_mut(mutbl)),
+        rst::BindingMode::ByValue(mutbl) => (false, is_mut(mutbl)),
+    }
+}
+
+#[inline]
 fn name_to_string(name: &rst::Name) -> String {
     name.as_str().to_string()
 }
@@ -1374,21 +1382,135 @@ impl Trans {
         }
     }
 
-    fn trans_patten(&self, pat: &rst::P<rst::Pat>) -> Patten {
-        Patten
+    #[inline]
+    fn trans_pattens(&self, pats: &Vec<rst::P<rst::Pat>>) -> Vec<Patten> {
+        trans_list!(self, pats, trans_patten)
     }
-    //
-    // fn trans_patten(&self, pat: &rst::Pat) -> Patten {
-    // let loc = self.loc(&pat.span);
-    // let pat = PattenKind;
-    // self.set_loc(&loc);
-    //
-    // Patten {
-    // loc: loc,
-    // pat: pat,
-    // }
-    // }
-    //
+
+    fn trans_patten(&self, pat: &rst::P<rst::Pat>) -> Patten {
+        let loc = self.loc(&pat.span);
+        let pat = match pat.node {
+            rst::PatWild => PattenKind::Wildcard,
+            rst::PatLit(ref expr) => PattenKind::Literal(self.trans_expr(expr)),
+            rst::PatRange(ref start, ref end) => {
+                PattenKind::Range(self.trans_range_patten(start, end))
+            }
+            rst::PatIdent(mode, ref ident, ref binding) => {
+                PattenKind::Ident(Box::new(self.trans_ident_patten(mode, ident, binding)))
+            }
+            rst::PatRegion(ref pat, mutbl) => {
+                PattenKind::Ref(Box::new(self.trans_ref_patten(is_mut(mutbl), pat)))
+            }
+            rst::PatQPath(ref qself, ref path) => {
+                PattenKind::Path(self.trans_path_patten(qself, path))
+            }
+            rst::PatEnum(ref path, ref pats) => {
+                PattenKind::Enum(self.trans_enum_patten(path, pats))
+            }
+            rst::PatStruct(ref path, ref fields, etc) => {
+                PattenKind::Struct(Box::new(self.trans_struct_patten(path, fields, etc)))
+            }
+            rst::PatVec(ref start, ref emit, ref end) => {
+                PattenKind::Vec(Box::new(self.trans_vec_patten(start, emit, end)))
+            }
+            rst::PatTup(ref pats) => PattenKind::Tuple(Box::new(self.trans_tuple_patten(pats))),
+            rst::PatBox(ref pat) => PattenKind::Box(Box::new(self.trans_patten(pat))),
+            rst::PatMac(ref mac) => PattenKind::Macro(self.trans_macro(mac)),
+        };
+        self.set_loc(&loc);
+
+        Patten {
+            loc: loc,
+            pat: pat,
+        }
+    }
+
+    fn trans_range_patten(&self, start: &rst::Expr, end: &rst::Expr) -> RangePatten {
+        RangePatten {
+            start: self.trans_expr(start),
+            end: self.trans_expr(end),
+        }
+    }
+
+    fn trans_ident_patten(&self, mode: rst::BindingMode, ident: &rst::SpannedIdent,
+                          binding: &Option<rst::P<rst::Pat>>)
+        -> IdentPatten {
+        let (is_ref, is_mut) = is_ref_mut(mode);
+        IdentPatten {
+            is_ref: is_ref,
+            is_mut: is_mut,
+            name: self.trans_ident(ident),
+            binding: zopt::map_ref(binding, |pat| self.trans_patten(pat)),
+        }
+    }
+
+    fn trans_ref_patten(&self, is_mut: bool, pat: &rst::P<rst::Pat>) -> RefPatten {
+        RefPatten {
+            is_mut: is_mut,
+            pat: self.trans_patten(pat),
+        }
+    }
+
+    fn trans_path_patten(&self, qself: &rst::QSelf, path: &rst::Path) -> PathPatten {
+        PathPatten {
+            qself: self.trans_type(&qself.ty),
+            path: self.trans_path(path),
+        }
+    }
+
+    fn trans_enum_patten(&self, path: &rst::Path, pats: &Option<Vec<rst::P<rst::Pat>>>) -> EnumPatten {
+        EnumPatten {
+            path: self.trans_path(path),
+            pats: zopt::map_ref(pats, |pats| self.trans_pattens(pats)),
+        }
+    }
+
+    fn trans_struct_patten(&self, path: &rst::Path, fields: &Vec<rst::Spanned<rst::FieldPat>>,
+                           etc: bool)
+        -> StructPatten {
+        StructPatten {
+            path: self.trans_path(path),
+            fields: self.trans_struct_field_pattens(fields),
+            etc: etc,
+        }
+    }
+
+    #[inline]
+    fn trans_struct_field_pattens(&self, fields: &Vec<rst::Spanned<rst::FieldPat>>)
+        -> Vec<StructFieldPatten> {
+        trans_list!(self, fields, trans_struct_field_patten)
+    }
+
+    fn trans_struct_field_patten(&self, field: &rst::Spanned<rst::FieldPat>) -> StructFieldPatten {
+        let loc = self.loc(&field.span);
+        let name = ident_to_string(&field.node.ident);
+        let pat = self.trans_patten(&field.node.pat);
+        let shorthand = field.node.is_shorthand;
+        self.set_loc(&loc);
+
+        StructFieldPatten {
+            loc: loc,
+            name: name,
+            pat: pat,
+            shorthand: shorthand,
+        }
+    }
+
+    fn trans_vec_patten(&self, start: &Vec<rst::P<rst::Pat>>, emit: &Option<rst::P<rst::Pat>>,
+                        end: &Vec<rst::P<rst::Pat>>)
+        -> VecPatten {
+        VecPatten {
+            start: self.trans_pattens(start),
+            emit: zopt::map_ref(emit, |pat| self.trans_patten(pat)),
+            end: self.trans_pattens(end),
+        }
+    }
+
+    fn trans_tuple_patten(&self, pats: &Vec<rst::P<rst::Pat>>) -> TuplePatten {
+        TuplePatten {
+            pats: self.trans_pattens(pats),
+        }
+    }
 
     fn expr_to_stmt(&self, expr: Expr) -> Stmt {
         Stmt {
@@ -1812,7 +1934,12 @@ impl Trans {
     }
 
     fn trans_arm(&self, arm: &rst::Arm) -> Arm {
-        Arm
+        Arm {
+            attrs: self.trans_attrs(&arm.attrs),
+            pats: self.trans_pattens(&arm.pats),
+            guard: zopt::map_ref(&arm.guard, |expr| self.trans_expr(expr)),
+            body: self.trans_expr(&arm.body),
+        }
     }
 
     fn trans_fn_call_expr(&self, fn_name: &rst::Expr, args: &Vec<rst::P<rst::Expr>>) -> FnCallExpr {

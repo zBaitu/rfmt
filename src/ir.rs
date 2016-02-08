@@ -597,18 +597,85 @@ pub struct Local {
 }
 
 #[derive(Debug)]
-pub struct Patten;
+pub struct Patten {
+    pub loc: Loc,
+    pub pat: PattenKind,
+}
 
-//
-// #[derive(Debug)]
-// pub struct Patten {
-// pub loc: Loc,
-// pub pat: PattenKind,
-// }
-//
-// #[derive(Debug)]
-// pub enum PattenKind;
-//
+#[derive(Debug)]
+pub enum PattenKind {
+    Wildcard,
+    Literal(Expr),
+    Range(RangePatten),
+    Ident(Box<IdentPatten>),
+    Ref(Box<RefPatten>),
+    Path(PathPatten),
+    Enum(EnumPatten),
+    Struct(Box<StructPatten>),
+    Vec(Box<VecPatten>),
+    Tuple(Box<TuplePatten>),
+    Box(Box<Patten>),
+    Macro(Macro),
+}
+
+#[derive(Debug)]
+pub struct IdentPatten {
+    pub is_ref: bool,
+    pub is_mut: bool,
+    pub name: Chunk,
+    pub binding: Option<Patten>,
+}
+
+#[derive(Debug)]
+pub struct RefPatten {
+    pub is_mut: bool,
+    pub pat: Patten,
+}
+
+#[derive(Debug)]
+pub struct RangePatten {
+    pub start: Expr,
+    pub end: Expr,
+}
+
+#[derive(Debug)]
+pub struct PathPatten {
+    pub qself: Type,
+    pub path: Path,
+}
+
+#[derive(Debug)]
+pub struct EnumPatten {
+    pub path: Path,
+    pub pats: Option<Vec<Patten>>,
+}
+
+#[derive(Debug)]
+pub struct StructPatten {
+    pub path: Path,
+    pub fields: Vec<StructFieldPatten>,
+    pub etc: bool,
+}
+
+#[derive(Debug)]
+pub struct StructFieldPatten {
+    pub loc: Loc,
+    pub name: String,
+    pub pat: Patten,
+    pub shorthand: bool,
+}
+
+#[derive(Debug)]
+pub struct VecPatten {
+    pub start: Vec<Patten>,
+    pub emit: Option<Patten>,
+    pub end: Vec<Patten>,
+}
+
+#[derive(Debug)]
+pub struct TuplePatten {
+    pub pats: Vec<Patten>,
+}
 
 #[derive(Debug)]
 pub struct Expr {
@@ -785,7 +852,12 @@ pub struct MatchExpr {
 }
 
 #[derive(Debug)]
-pub struct Arm;
+pub struct Arm {
+    pub attrs: Vec<AttrKind>,
+    pub pats: Vec<Patten>,
+    pub guard: Option<Expr>,
+    pub body: Expr,
+}
 
 #[derive(Debug)]
 pub struct FnCallExpr {

@@ -38,12 +38,10 @@ fn f() {
 
     //loop {}
 
-    /*
     match a {
-        aa => true,
-        bb => false,
+        aa if y => true,
+        bb | cc => false,
     }
-    */
 
     //move |a| -> bool {a}
 
@@ -76,5 +74,5 @@ fn f() {
     //A::A(B)
 
     //[0; 8]
-    (0)
+    //(0)
 }
