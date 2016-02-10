@@ -42,8 +42,8 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_comment(&self, cmnt: &Comment) {
-        println!("---------- comment ----------");
-        println!("{:#?}", cmnt);
+        p!("---------- comment ----------");
+        p!("{:#?}", cmnt);
     }
 
     fn fmt_crate(mut self, krate: &Crate) -> String {
@@ -78,13 +78,13 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_doc(&mut self, doc: &Doc) {
-        println!("---------- doc ----------");
-        println!("{:#?}", doc);
+        p!("---------- doc ----------");
+        p!("{:#?}", doc);
         self.try_fmt_comments(&doc.loc);
     }
 
     fn fmt_attr_group(&mut self, attr_group: &Vec<&Attr>) {
-        println!("---------- attr group ----------");
-        println!("{:#?}", attr_group);
+        p!("---------- attr group ----------");
+        p!("{:#?}", attr_group);
     }
 }

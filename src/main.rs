@@ -1,6 +1,7 @@
 #![feature(rustc_private)]
 #![feature(custom_derive)]
 
+#[macro_use]
 extern crate zbase;
 extern crate rst;
 
@@ -48,13 +49,13 @@ fn main() {
                                                                &mut input);
 
     let (krate, cmnts) = tr::trans(session, krate, lits, cmnts);
-    println!("{:#?}", krate);
+    p!("{:#?}", krate);
     for cmnt in &cmnts {
-        println!("{:?}", cmnt.pos);
-        println!("{:?}", cmnt.lines);
+        p!("{:?}", cmnt.pos);
+        p!("{:?}", cmnt.lines);
     }
-    println!("");
-    println!("");
+    p!("");
+    p!("");
 
     ft::fmt_crate(&krate, &cmnts);
 }
