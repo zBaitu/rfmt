@@ -8,7 +8,6 @@ use rst::ast::CrateConfig;
 use rst::parse::{self, ParseSess};
 use rst::parse::lexer::comments;
 
-use std::collections::HashSet;
 use std::env;
 use std::fs::File;
 use std::io::Read;
@@ -50,14 +49,12 @@ fn main() {
 
     let (krate, cmnts) = tr::trans(session, krate, lits, cmnts);
     println!("{:#?}", krate);
-    println!("\n----------");
     for cmnt in &cmnts {
         println!("{:?}", cmnt.pos);
         println!("{:?}", cmnt.lines);
     }
+    println!("");
+    println!("");
 
-    let cmnt_pos_set: HashSet<u32> = cmnts.iter().map(|cmnt| cmnt.pos).collect();
-    println!("{:?}", cmnt_pos_set);
-
-    ft::fmt_crate(&krate, &cmnts, &cmnt_pos_set);
+    ft::fmt_crate(&krate, &cmnts);
 }

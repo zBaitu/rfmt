@@ -1,30 +1,90 @@
-use rst;
-
-use std::collections::HashSet;
-
 use ir::*;
 use ts::*;
 
-pub fn fmt_crate(krate: &Crate, cmnts: &Vec<Comment>, cmnt_pos_set: &HashSet<u32>) -> String {
-    Formatter::new(cmnts, cmnt_pos_set).fmt_crate(krate)
+pub fn fmt_crate(krate: &Crate, cmnts: &Vec<Comment>) -> String {
+    Formatter::new(cmnts).fmt_crate(krate)
 }
 
 struct Formatter<'a> {
     cmnts: &'a Vec<Comment>,
-    cmnt_pos_set: &'a HashSet<u32>,
+    cmnt_idx: usize,
+
     ts: Typesetter,
 }
 
 impl<'a> Formatter<'a> {
-    pub fn new(cmnts: &'a Vec<Comment>, cmnt_pos_set: &'a HashSet<u32>) -> Formatter<'a> {
+    fn new(cmnts: &'a Vec<Comment>) -> Formatter<'a> {
         Formatter {
             cmnts: cmnts,
-            cmnt_pos_set: cmnt_pos_set,
+            cmnt_idx: 0,
+
             ts: Typesetter::new(),
         }
     }
 
-    pub fn fmt_crate(&self, krate: &Crate) -> String {
-        "".to_string()
+    #[inline]
+    fn is_after_comment(&self, loc: &Loc) -> bool {
+        self.cmnt_idx < self.cmnts.len() && self.cmnts[self.cmnt_idx].pos < loc.start
+    }
+
+    #[inline]
+    fn try_fmt_comments(&mut self, loc: &Loc) {
+        if self.is_after_comment(loc) {
+            self.fmt_comments(loc);
+        }
+    }
+
+    fn fmt_comments(&mut self, loc: &Loc) {
+        while self.cmnt_idx < self.cmnts.len() && self.cmnts[self.cmnt_idx].pos < loc.start {
+            self.fmt_comment(&self.cmnts[self.cmnt_idx]);
+            self.cmnt_idx += 1;
+        }
+    }
+
+    fn fmt_comment(&self, cmnt: &Comment) {
+        println!("---------- comment ----------");
+        println!("{:#?}", cmnt);
+    }
+
+    fn fmt_crate(mut self, krate: &Crate) -> String {
+        self.try_fmt_comments(&krate.loc);
+        self.fmt_attrs(&krate.attrs);
+
+        self.ts.string()
+    }
+
+    fn fmt_attrs(&mut self, attrs: &Vec<AttrKind>) {
+        let mut attr_group: Vec<&Attr> = Vec::new();
+        for attr in attrs {
+            match *attr {
+                AttrKind::Doc(ref doc) => {
+                    self.fmt_attr_group(&attr_group);
+                    attr_group.clear();
+
+                    self.fmt_doc(doc);
+                }
+                AttrKind::Attr(ref attr) => {
+                    if self.is_after_comment(&attr.loc) {
+                        self.fmt_attr_group(&attr_group);
+                        attr_group.clear();
+
+                        self.fmt_comments(&attr.loc);
+                    }
+                    attr_group.push(attr);
+                }
+            }
+        }
+        self.fmt_attr_group(&attr_group);
+    }
+
+    fn fmt_doc(&mut self, doc: &Doc) {
+        println!("---------- doc ----------");
+        println!("{:#?}", doc);
+        self.try_fmt_comments(&doc.loc);
+    }
+
+    fn fmt_attr_group(&mut self, attr_group: &Vec<&Attr>) {
+        println!("---------- attr group ----------");
+        println!("{:#?}", attr_group);
     }
 }
