@@ -50,12 +50,12 @@ fn main() {
                                                               &mut input);
     println!("\n----------");
     for cmt in cmts {
-        println!("{:?}", cmt.lines);
         println!("{:?}", cmt.pos);
+        println!("{:?}", cmt.lines);
     }
     println!("----------");
     for lit in lits {
-        println!("{}", lit.lit);
         println!("{:?}", lit.pos);
+        println!("{}", lit.lit);
     }
 }

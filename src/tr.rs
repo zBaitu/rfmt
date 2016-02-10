@@ -6,11 +6,49 @@ use rst;
 
 use ir::*;
 
-pub fn trans(sess: rst::ParseSess, krate: rst::Crate, cmnts: Vec<rst::Comment>,
-             lits: Vec<rst::Literal>) {
-    let ts = Trans::new(sess, krate, cmnts, to_lit_map(lits));
-    let krate = ts.trans();
-    println!("{:#?}", krate);
+const MAX_BLANK_LINE: u8 = 2;
+
+pub fn trans(sess: rst::ParseSess, krate: rst::Crate, lits: Vec<rst::Literal>,
+             cmnts: Vec<rst::Comment>)
+    -> (Crate, Vec<Comment>) {
+    let cmnts = trans_comments(cmnts);
+    let krate = Translator::new(sess, krate, to_lit_map(lits)).trans();
+    (krate, cmnts)
+}
+
+fn trans_comments(cmnts: Vec<rst::Comment>) -> Vec<Comment> {
+    let mut pre_blank_line_pos = 0;
+    let mut blank_line = 0;
+
+    cmnts.into_iter().fold(Vec::new(), |mut cmnts, cmnt| {
+        if cmnt.style == rst::CommentStyle::BlankLine {
+            let cur_pos = cmnt.pos.0;
+
+            if cur_pos != pre_blank_line_pos + 1 {
+                blank_line = 1;
+                cmnts.push(trans_comment(cmnt));
+            } else {
+                blank_line += 1;
+                if blank_line <= MAX_BLANK_LINE {
+                    cmnts.push(trans_comment(cmnt));
+                }
+            }
+
+            pre_blank_line_pos = cur_pos;
+        } else {
+            blank_line = 0;
+            cmnts.push(trans_comment(cmnt));
+        }
+
+        cmnts
+    })
+}
+
+fn trans_comment(cmnt: rst::Comment) -> Comment {
+    Comment {
+        pos: cmnt.pos.0,
+        lines: cmnt.lines,
+    }
 }
 
 fn to_lit_map(lits: Vec<rst::Literal>) -> HashMap<rst::BytePos, String> {
@@ -98,11 +136,9 @@ fn uop_to_string(op: rst::UnOp) -> &'static str {
     rst::UnOp::to_string(op)
 }
 
-struct Trans {
+struct Translator {
     sess: rst::ParseSess,
     krate: rst::Crate,
-    cmnts: Vec<rst::Comment>,
-    cmnt_idx: u32,
     lits: HashMap<rst::BytePos, String>,
 
     last_loc: Cell<Loc>,
@@ -195,16 +231,13 @@ macro_rules! trans_list {
     })
 }
 
-impl Trans {
-    fn new(sess: rst::ParseSess, krate: rst::Crate, cmnts: Vec<rst::Comment>,
-           lits: HashMap<rst::BytePos, String>)
-        -> Trans {
+impl Translator {
+    fn new(sess: rst::ParseSess, krate: rst::Crate, lits: HashMap<rst::BytePos, String>)
+        -> Translator {
         let crate_start = krate.span.lo.0;
-        Trans {
+        Translator {
             sess: sess,
             krate: krate,
-            cmnts: cmnts,
-            cmnt_idx: crate_start,
             lits: lits,
 
             last_loc: Cell::new(Loc {

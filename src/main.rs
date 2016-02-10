@@ -15,6 +15,8 @@ use std::path::Path;
 
 mod ir;
 mod tr;
+mod ft;
+mod ts;
 
 fn main() {
     let mut args = env::args();
@@ -30,20 +32,28 @@ fn main() {
     let mut input = &rs.as_bytes().to_vec()[..];
 
     let krate = parse::parse_crate_from_source_str(path.file_name()
-                                                       .unwrap()
-                                                       .to_str()
-                                                       .unwrap()
-                                                       .to_string(),
+                                                   .unwrap()
+                                                   .to_str()
+                                                   .unwrap()
+                                                   .to_string(),
                                                    rs,
                                                    cfg,
                                                    &session);
     let (cmnts, lits) = comments::gather_comments_and_literals(&session.span_diagnostic,
                                                                path.file_name()
-                                                                   .unwrap()
-                                                                   .to_str()
-                                                                   .unwrap()
-                                                                   .to_string(),
+                                                               .unwrap()
+                                                               .to_str()
+                                                               .unwrap()
+                                                               .to_string(),
                                                                &mut input);
 
-    tr::trans(session, krate, cmnts, lits);
+    let (krate, cmnts) = tr::trans(session, krate, lits, cmnts);
+    println!("{:#?}", krate);
+    println!("\n----------");
+    for cmnt in &cmnts {
+        println!("{:?}", cmnt.pos);
+        println!("{:?}", cmnt.lines);
+    }
+
+    //ft::fmt_crate(&krate, &cmnts);
 }

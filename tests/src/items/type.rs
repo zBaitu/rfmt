@@ -1,4 +1,4 @@
-//type a = bool;
+type a = bool;
 //type a = result::Result;
 //type a = <::i32 as Vec<bool>>::MAX;
 //type a = [bool];
@@ -8,7 +8,7 @@
 //type a = *mut bool;
 //type a = &bool;
 //type a = &'a mut bool;
-type a = &[bool];
+//type a = &[bool];
 //type a = &'a bool;
 //type a = ();
 //type a = (bool);
@@ -18,3 +18,5 @@ type a = &[bool];
 //type a = Result + Iterator<T> + 'static + Sized;
 //type a = for<'a, 'b: 'a> Foo<&'a Bar>;
 //type a = a!("a");
+
+//type a<T>  where T: Iterator = Option<T>;
