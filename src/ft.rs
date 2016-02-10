@@ -1,21 +1,25 @@
 use rst;
 
+use std::collections::HashSet;
+
 use ir::*;
 use ts::*;
 
-pub fn fmt_crate(krate: &Crate, cmnts: &Vec<rst::Comment>) -> String {
-    Formatter::new(cmnts).fmt_crate(krate)
+pub fn fmt_crate(krate: &Crate, cmnts: &Vec<Comment>, cmnt_pos_set: &HashSet<u32>) -> String {
+    Formatter::new(cmnts, cmnt_pos_set).fmt_crate(krate)
 }
 
 struct Formatter<'a> {
-    cmnts: &'a Vec<rst::Comment>,
+    cmnts: &'a Vec<Comment>,
+    cmnt_pos_set: &'a HashSet<u32>,
     ts: Typesetter,
 }
 
 impl<'a> Formatter<'a> {
-    pub fn new(cmnts: &Vec<rst::Comment>) -> Formatter {
+    pub fn new(cmnts: &'a Vec<Comment>, cmnt_pos_set: &'a HashSet<u32>) -> Formatter<'a> {
         Formatter {
             cmnts: cmnts,
+            cmnt_pos_set: cmnt_pos_set,
             ts: Typesetter::new(),
         }
     }
