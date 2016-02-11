@@ -6,7 +6,7 @@ extern crate zbase;
 extern crate rst;
 
 use rst::ast::CrateConfig;
-use rst::parse::{self, ParseSess};
+use rst::parse::{ParseSess, self};
 use rst::parse::lexer::comments;
 
 use std::env;
@@ -22,22 +22,35 @@ mod ts;
 fn main() {
     let mut args = env::args();
     args.next();
-    let src = args.next().unwrap();
-    let path = Path::new(&src);
+    let file = args.next().unwrap();
+    let path = Path::new(&file);
+
+    let dir = path.parent();
+    if let Some(dir) = dir {
+        if let Some(dir) = dir.to_str() {
+            if !dir.is_empty() {
+                env::set_current_dir(dir).unwrap();
+            }
+        }
+    }
+
+    let file_name = path.file_name().unwrap();
+    let mut path = env::current_dir().unwrap();
+    path.push(file_name);
+
+    let mut file = File::open(&path).unwrap();
+    let mut src = String::new();
+    file.read_to_string(&mut src).unwrap();
+    let mut input = &src.as_bytes().to_vec()[..];
+
     let cfg = CrateConfig::new();
     let session = ParseSess::new();
-
-    let mut file = File::open(path).unwrap();
-    let mut rs = String::new();
-    file.read_to_string(&mut rs).unwrap();
-    let mut input = &rs.as_bytes().to_vec()[..];
-
     let krate = parse::parse_crate_from_source_str(path.file_name()
                                                    .unwrap()
                                                    .to_str()
                                                    .unwrap()
                                                    .to_string(),
-                                                   rs,
+                                                   src,
                                                    cfg,
                                                    &session);
     let (cmnts, lits) = comments::gather_comments_and_literals(&session.span_diagnostic,

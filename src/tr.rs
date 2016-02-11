@@ -1,4 +1,5 @@
 use std::cell::Cell;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use zbase::zopt;
@@ -436,10 +437,10 @@ impl Translator {
             rst::ItemExternCrate(ref name) => {
                 ItemKind::ExternCrate(self.trans_extren_crate(ident, name))
             }
-            rst::ItemUse(ref view_path) => ItemKind::Use(self.trans_use(is_pub, view_path)),
+            rst::ItemUse(ref view_path) => ItemKind::Use(self.trans_use(view_path)),
             rst::ItemMod(ref module) => {
                 if self.is_mod_decl(&module.inner) {
-                    ItemKind::ModDecl(self.trans_mod_decl(is_pub, ident))
+                    ItemKind::ModDecl(self.trans_mod_decl(ident))
                 } else {
                     ItemKind::Mod(self.trans_mod(ident, module))
                 }
@@ -499,6 +500,7 @@ impl Translator {
         Item {
             loc: loc,
             attrs: attrs,
+            is_pub: is_pub,
             item: item,
         }
     }
@@ -510,13 +512,12 @@ impl Translator {
         };
 
         ExternCrate {
-            head: "extern crate ",
             name: name,
         }
     }
 
-    fn trans_use(&self, is_pub: bool, view_path: &rst::ViewPath) -> Use {
-        let (full_path, items) = match view_path.node {
+    fn trans_use(&self, view_path: &rst::ViewPath) -> Use {
+        let (full_path, mut items) = match view_path.node {
             rst::ViewPathSimple(ref ident, ref path) => {
                 self.loc_leaf(&path.span);
                 let mut full_path = self.use_path_to_string(path);
@@ -539,8 +540,17 @@ impl Translator {
             }
         };
 
+        items.sort_by(|a, b| {
+            if a.s == "self" {
+                Ordering::Less
+            } else if b.s == "self" {
+                Ordering::Greater
+            } else {
+                a.s.cmp(&b.s)
+            }
+        });
+
         Use {
-            head: use_head(is_pub),
             path: full_path,
             items: items,
         }
@@ -577,9 +587,8 @@ impl Translator {
         }
     }
 
-    fn trans_mod_decl(&self, is_pub: bool, ident: String) -> ModDecl {
+    fn trans_mod_decl(&self, ident: String) -> ModDecl {
         ModDecl {
-            head: mod_head(is_pub),
             name: ident,
         }
     }

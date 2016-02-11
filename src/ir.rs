@@ -86,6 +86,7 @@ pub struct Mod {
 pub struct Item {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
+    pub is_pub: bool,
     pub item: ItemKind,
 }
 
@@ -110,20 +111,17 @@ pub enum ItemKind {
 
 #[derive(Debug)]
 pub struct ExternCrate {
-    pub head: &'static str,
     pub name: String,
 }
 
 #[derive(Debug)]
 pub struct Use {
-    pub head: &'static str,
     pub path: String,
     pub items: Vec<Chunk>,
 }
 
 #[derive(Debug)]
 pub struct ModDecl {
-    pub head: &'static str,
     pub name: String,
 }
 

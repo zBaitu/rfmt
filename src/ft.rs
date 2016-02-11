@@ -1,5 +1,5 @@
-use std::collections::BTreeMap;
-use std::fmt::{self, Display};
+use std::collections::{BTreeMap};
+use std::fmt::{self, Debug, Display};
 
 use ir::*;
 use ts::*;
@@ -8,21 +8,22 @@ pub fn fmt_crate(krate: &Crate, cmnts: &Vec<Comment>) -> String {
     Formatter::new(cmnts).fmt_crate(krate)
 }
 
-//
-// macro_rules! fmt_list {
-// ($list: ident, $bop: expr, $op: expr, $sop: expr, $eop: expr) => ({
-// $bop;
-// $list.iter().fold(true, |first, e| {
-// if !first {
-// $sop;
-// }
-// $op(e);
-// false
-// });
-// $eop;
-// })
-// }
-//
+macro_rules! display_list {
+    ($f: expr, $list: expr, $begin: expr, $sep: expr, $end: expr) => ({
+        try!(write!($f, $begin));
+
+        let mut first = true;
+        for e in $list {
+            if !first {
+                try!(write!($f, $sep));
+            }
+            try!(Display::fmt(e, $f));
+            first = false;
+        }
+
+        write!($f, $end)
+    })
+}
 
 impl Display for Chunk {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -46,21 +47,97 @@ impl Display for MetaItem {
         match *self {
             MetaItem::Single(ref chunk) => Display::fmt(chunk, f),
             MetaItem::List(_, ref name, ref items) => {
-                try!(write!(f, "{}(", name));
-
-                let mut first = true;
-                for item in items {
-                    if !first {
-                        try!(write!(f, ", "));
-                    }
-                    try!(Display::fmt(item, f));
-                    first = false;
-                }
-
-                write!(f, ")")
+                try!(write!(f, "{}", name));
+                display_list!(f, items, "(", ", ", ")")
             }
         }
     }
+}
+
+impl Display for Item {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.is_pub {
+            try!(write!(f, "pub "));
+        }
+        Display::fmt(&self.item, f)
+    }
+}
+
+impl Display for ItemKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            ItemKind::ExternCrate(ref item) => Display::fmt(item, f),
+            ItemKind::Use(ref item) => Display::fmt(item, f),
+            ItemKind::ModDecl(ref item) => Display::fmt(item, f),
+            _ => Debug::fmt(self, f),
+        }
+    }
+}
+
+impl Display for ExternCrate {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "extern crate {};", self.name)
+    }
+}
+
+impl Display for Use {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(f, "use {}", self.path));
+
+        if !self.items.is_empty() {
+            try!(write!(f, "::"));
+            if self.items.len() == 1 {
+                try!(write!(f, "{}", self.items[0]))
+            } else {
+                try!(display_list!(f, &self.items, "{{", ", ", "}}"));
+            }
+        }
+
+        write!(f, ";")
+    }
+}
+
+impl Display for ModDecl {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "mod {};", self.name)
+    }
+}
+
+macro_rules! fmt_group_items {
+    ($sf: ident, $items: expr, $item_kind: path, $fmt_item: ident) => ({
+        let mut group: Vec<&Item> = Vec::new();
+
+        for item in $items {
+            match item.item {
+                $item_kind(_) => {
+                    if $sf.is_after_comment(&item.loc) {
+                        fmt_group!($sf, &group, &Item, $fmt_item);
+                        group.clear();
+
+                        $sf.fmt_comments(&item.loc);
+                    }
+
+                    group.push(item);
+                }
+                _ => {
+                    fmt_group!($sf, &group, &Item, $fmt_item);
+                    group.clear();
+                }
+            }
+        }
+    })
+}
+
+macro_rules! fmt_group {
+    ($sf: expr, $group: expr, $ty: ty, $fmt_item: ident) => ({
+        let map: BTreeMap<String, $ty> = $group.into_iter()
+            .map(|e| (e.to_string(), *e))
+            .collect();
+        
+        for (_, e) in map {
+            $sf.$fmt_item(e);
+        }
+    })
 }
 
 struct Formatter<'a> {
@@ -107,6 +184,7 @@ impl<'a> Formatter<'a> {
     fn fmt_crate(mut self, krate: &Crate) -> String {
         self.try_fmt_comments(&krate.loc);
         self.fmt_attrs(&krate.attrs);
+        self.fmt_mod(&krate.module);
 
         self.ts.string()
     }
@@ -143,13 +221,53 @@ impl<'a> Formatter<'a> {
         p!("{:#?}", doc);
     }
 
+    #[inline]
     fn fmt_attr_group(&mut self, attr_group: &Vec<&Attr>) {
-        let mut attrs: BTreeMap<String, &Attr> = attr_group.into_iter()
-                                                    .map(|e| (e.to_string(), *e))
-                                                    .collect();
-        p!("---------- attr group ----------");
-        for (_, attr) in attrs {
-            p!("{}", attr);
-        }
+        p!("---------- attr ----------");
+        fmt_group!(self, attr_group, &Attr, fmt_attr);
     }
+
+    fn fmt_attr(&mut self, attr: &Attr) {
+        p!("{}", attr);
+    }
+
+    fn fmt_mod(&mut self, module: &Mod) {
+        self.fmt_group_items(&module.items);
+        self.fmt_non_group_items(&module.items);
+    }
+
+    fn fmt_group_items(&mut self, items: &Vec<Item>) {
+        self.fmt_extern_crate_items(items);
+        self.fmt_use_items(items);
+        self.fmt_mod_decl_items(items);
+    }
+
+    fn fmt_extern_crate_items(&mut self, items: &Vec<Item>) {
+        p!("---------- extern crate ----------");
+        fmt_group_items!(self, items, ItemKind::ExternCrate, fmt_extern_crate);
+    }
+
+    fn fmt_extern_crate(&mut self, item: &Item) {
+        p!("{}", item);
+    }
+
+    fn fmt_use_items(&mut self, items: &Vec<Item>) {
+        p!("---------- use ----------");
+        fmt_group_items!(self, items, ItemKind::Use, fmt_use);
+    }
+
+    fn fmt_use(&mut self, item: &Item) {
+        p!("{}", item);
+    }
+
+    fn fmt_mod_decl_items(&mut self, items: &Vec<Item>) {
+        p!("---------- mod decl ----------");
+        fmt_group_items!(self, items, ItemKind::ModDecl, fmt_mod_decl);
+    }
+
+    fn fmt_mod_decl(&mut self, item: &Item) {
+        p!("{}", item);
+    }
+
+    fn fmt_non_group_items(&mut self, items: &Vec<Item>) {}
 }
