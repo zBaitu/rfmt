@@ -16,8 +16,8 @@
 
 #![crate_name = "syntax"]
 #![unstable(feature = "rustc_private", issue = "27812")]
-#![crate_type = "dylib"]
 #![crate_type = "rlib"]
+#![crate_type = "dylib"]
 /* abcdefg
  * hijklmn
  */
@@ -27,13 +27,12 @@
        test(attr(deny(warnings))))]
 #![cfg_attr(not(stage0), deny(warnings))]
 
-#![feature(associated_consts)]
 #![feature(filling_drop)]
-#![feature(libc)]
 #![feature(rustc_private)]
 #![feature(staged_api)]
-#![feature(str_char)]
 #![feature(str_escape)]
+#![feature(associated_consts)]
 #![feature(unicode)]
-
+#![feature(str_char)]
+#![feature(libc)]
 

@@ -1,9 +1,11 @@
 use std::fmt::{self, Debug, Display};
 
+pub type Pos = u32;
+
 #[derive(Clone, Copy, Default)]
 pub struct Loc {
-    pub start: u32,
-    pub end: u32,
+    pub start: Pos,
+    pub end: Pos,
     pub wrapped: bool,
 }
 
@@ -41,7 +43,7 @@ impl Chunk {
 
 #[derive(Debug)]
 pub struct Comment {
-    pub pos: u32,
+    pub pos: Pos,
     pub lines: Vec<String>,
 }
 
@@ -61,7 +63,7 @@ pub enum AttrKind {
 #[derive(Debug)]
 pub struct Attr {
     pub loc: Loc,
-    pub head: &'static str,
+    pub is_inner: bool,
     pub item: MetaItem,
 }
 

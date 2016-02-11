@@ -61,8 +61,8 @@ fn span(s: u32, e: u32) -> rst::Span {
 }
 
 #[inline]
-fn is_outer(style: rst::AttrStyle) -> bool {
-    style == rst::AttrStyle::Outer
+fn is_inner(style: rst::AttrStyle) -> bool {
+    style == rst::AttrStyle::Inner
 }
 
 #[inline]
@@ -367,13 +367,13 @@ impl Translator {
 
     fn trans_attr_attr(&self, attr: &rst::Attribute) -> Attr {
         let loc = self.loc(&attr.span);
-        let is_outer = is_outer(attr.node.style);
+        let is_inner = is_inner(attr.node.style);
         let item = self.trans_meta_item(&attr.node.value);
         self.set_loc(&loc);
 
         Attr {
             loc: loc,
-            head: attr_head(is_outer),
+            is_inner: is_inner,
             item: item,
         }
     }
