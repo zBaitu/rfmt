@@ -387,25 +387,36 @@ impl Translator {
     fn trans_meta_item(&self, meta_item: &rst::MetaItem) -> MetaItem {
         match meta_item.node {
             rst::MetaWord(ref ident) => {
-                MetaItem::Single(Chunk {
-                    loc: self.loc_leaf(&meta_item.span),
-                    s: ident.to_string(),
-                })
+                MetaItem {
+                    name: Chunk {
+                        loc: self.loc_leaf(&meta_item.span),
+                        s: ident.to_string(),
+                    },
+                    items: None,
+                }
             }
             rst::MetaNameValue(ref ident, ref lit) => {
                 let s = format!("{} = {}", ident, self.lit_to_string(lit));
-                MetaItem::Single(Chunk {
-                    loc: self.loc_leaf(&meta_item.span),
-                    s: s,
-                })
+                MetaItem {
+                    name: Chunk {
+                        loc: self.loc_leaf(&meta_item.span),
+                        s: s,
+                    },
+                    items: None,
+                }
             }
             rst::MetaList(ref ident, ref meta_items) => {
                 let loc = self.loc(&meta_item.span);
-                let meta_item = MetaItem::List(loc,
-                                               ident.to_string(),
-                                               self.trans_meta_items(meta_items));
+                let items = self.trans_meta_items(meta_items);
                 self.set_loc(&loc);
-                meta_item
+
+                MetaItem {
+                    name: Chunk {
+                        loc: loc,
+                        s: ident.to_string(),
+                    },
+                    items: Some(Box::new(items)),
+                }
             }
         }
     }

@@ -68,11 +68,16 @@ impl Typesetter {
 
     #[inline]
     pub fn insert(&mut self, s: &str) {
-        if s.len() <= self.left() || s.len() > self.nl_left() {
-            self.raw_insert(s);
-        } else {
+        if self.need_wrap(s) {
             self.wrap_insert(s);
+        } else {
+            self.raw_insert(s);
         }
+    }
+
+    #[inline]
+    pub fn need_wrap(&mut self, s: &str) -> bool {
+        s.len() > self.left() && s.len() <= self.nl_left()
     }
 
     #[inline]
@@ -99,11 +104,6 @@ impl Typesetter {
     pub fn nl_indent(&mut self) {
         self.nl();
         self.insert_indent();
-    }
-
-    #[inline]
-    pub fn need_wrap(&mut self, s: &str) -> bool {
-        s.len() > self.left() && s.len() > self.nl_left()
     }
 
     #[inline]
@@ -174,7 +174,7 @@ impl Typesetter {
 
     #[inline]
     fn mark_align(&mut self) {
-        self.align_stack.push(self.col + 1);
+        self.align_stack.push(self.col);
     }
 
     #[inline]
