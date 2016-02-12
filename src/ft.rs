@@ -155,6 +155,8 @@ macro_rules! fmt_item_groups {
                 }
             }
         }
+
+        fmt_item_group!($sf, &group, $item_type, $fmt_item);
     })
 }
 

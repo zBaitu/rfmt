@@ -67,6 +67,11 @@ fn is_inner(style: rst::AttrStyle) -> bool {
 }
 
 #[inline]
+fn is_outer(style: rst::AttrStyle) -> bool {
+    !is_inner(style)
+}
+
+#[inline]
 fn is_pub(vis: rst::Visibility) -> bool {
     vis == rst::Visibility::Public
 }
@@ -294,11 +299,12 @@ impl Translator {
     fn is_wrapped(&self, sp: &rst::Span) -> bool {
         let start = self.last_loc.get().end;
         let end = sp.lo.0;
-        if start > end {
+        let snippet = self.sess.codemap().span_to_snippet(span(start, end));
+        if snippet.is_err() {
             return false;
         }
 
-        let snippet = self.sess.codemap().span_to_snippet(span(start, end)).unwrap();
+        let snippet = snippet.unwrap();
         let mut wrapped = false;
         let mut in_comment = false;
         for ch in snippet.chars() {
@@ -329,6 +335,9 @@ impl Translator {
 
     #[inline]
     fn is_mod_decl(&self, sp: &rst::Span) -> bool {
+        p!("-------------------------");
+        p!("{}" ,sp.lo.0);
+        p!("{}" ,self.krate.span.hi.0);
         sp.lo.0 > self.krate.span.hi.0
     }
 
@@ -351,6 +360,11 @@ impl Translator {
     #[inline]
     fn trans_attrs(&self, attrs: &Vec<rst::Attribute>) -> Vec<AttrKind> {
         trans_list!(self, attrs, trans_attr)
+    }
+
+    #[inline]
+    fn trans_outer_attrs(&self, attrs: &Vec<rst::Attribute>) -> Vec<AttrKind> {
+        attrs.iter().filter(|ref e| is_outer(e.node.style)).map(|ref e| self.trans_attr(e)).collect()
     }
 
     fn trans_attr(&self, attr: &rst::Attribute) -> AttrKind {
@@ -436,13 +450,26 @@ impl Translator {
     }
 
     #[inline]
+    fn is_mod_decl_item(&self, item: &rst::Item) -> bool {
+        match item.node {
+            rst::ItemMod(ref module) if self.is_mod_decl(&module.inner) => true,
+            _ => false
+        }
+    }
+
+    #[inline]
     fn trans_items(&self, items: &Vec<rst::P<rst::Item>>) -> Vec<Item> {
         trans_list!(self, items, trans_item)
     }
 
     fn trans_item(&self, item: &rst::Item) -> Item {
         let loc = self.loc(&item.span);
-        let attrs = self.trans_attrs(&item.attrs);
+
+        let attrs = if self.is_mod_decl_item(item) {
+            self.trans_outer_attrs(&item.attrs)
+        } else {
+            self.trans_attrs(&item.attrs)
+        };
 
         let is_pub = is_pub(item.vis);
         let ident = ident_to_string(&item.ident);

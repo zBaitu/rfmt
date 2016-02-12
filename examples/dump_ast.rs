@@ -15,20 +15,33 @@ fn main() {
     args.next();
     let src = args.next().unwrap();
     let path = Path::new(&src);
+
+    let dir = path.parent();
+    if let Some(dir) = dir {
+        if let Some(dir) = dir.to_str() {
+            if !dir.is_empty() {
+                env::set_current_dir(dir).unwrap();
+            }
+        }
+    }
+
+    let file_name = path.file_name().unwrap();
+    let mut path = env::current_dir().unwrap();
+    path.push(file_name);
+
+    let mut file = File::open(&path).unwrap();
+    let mut src = String::new();
+    file.read_to_string(&mut src).unwrap();
+    let mut input = &src.as_bytes().to_vec()[..];
+
     let cfg = CrateConfig::new();
     let session = ParseSess::new();
-
-    let mut file = File::open(path).unwrap();
-    let mut rs = String::new();
-    file.read_to_string(&mut rs).unwrap();
-    let mut input = &rs.as_bytes().to_vec()[..];
-
     let krate = parse::parse_crate_from_source_str(path.file_name()
                                                        .unwrap()
                                                        .to_str()
                                                        .unwrap()
                                                        .to_string(),
-                                                   rs,
+                                                   src,
                                                    cfg,
                                                    &session);
     println!("{:#?}", krate);
