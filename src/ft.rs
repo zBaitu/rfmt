@@ -304,24 +304,6 @@ impl<'a> Formatter<'a> {
 
     fn fmt_attr_meta_items(&mut self, items: &Vec<MetaItem>) {
         fmt_list!(self, items, "(", ")", |item: &MetaItem| self.fmt_attr_meta_item(item));
-        /*
-        self.ts.insert_mark_align("(");
-
-        let mut first = true;
-        for item in items {
-            if !first {
-                self.ts.raw_insert(",");
-                if !item.name.loc.wrapped && !self.ts.need_wrap(&item.to_string()) {
-                    self.ts.raw_insert(" ");
-                }
-            }
-
-            self.fmt_attr_meta_item(item);
-            first = false;
-        }
-
-        self.ts.insert_unmark_align(")");
-        */
     }
 
     fn fmt_mod(&mut self, module: &Mod) {
@@ -381,6 +363,9 @@ impl<'a> Formatter<'a> {
 
     fn fmt_mod_decl(&mut self, item: &ModDecl) {
         p!("{}", item);
+
+        self.ts.insert("mod ");
+        self.ts.insert(&item.name);
     }
 
     fn fmt_non_group_items(&mut self, items: &Vec<Item>) {}
