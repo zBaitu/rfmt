@@ -101,40 +101,56 @@ impl Display for ModDecl {
     }
 }
 
-macro_rules! fmt_group_items {
-    ($sf: ident, $items: expr, $item_kind: path, $fmt_item: ident) => ({
-        let mut group: Vec<&Item> = Vec::new();
+macro_rules! fmt_attr_group {
+    ($sf: expr, $group: expr, $ty: ty, $fmt_item: ident) => ({
+        let map: BTreeMap<String, $ty> = $group.into_iter()
+            .map(|e| (e.to_string(), *e))
+            .collect();
+
+        for (_, e) in map {
+            $sf.$fmt_item(e);
+            $sf.ts.nl();
+        }
+    })
+}
+
+macro_rules! fmt_item_group {
+    ($sf: expr, $group: expr, $ty: ty, $fmt_item: ident) => ({
+        let map: BTreeMap<String, ($ty, bool)> = $group.into_iter()
+            .map(|e| (e.0.to_string(), *e))
+            .collect();
+
+        for (_, e) in map {
+            if e.1 {
+                $sf.ts.insert("pub ");
+            }
+            $sf.$fmt_item(e.0);
+            $sf.ts.nl();
+        }
+    })
+}
+
+macro_rules! fmt_item_groups {
+    ($sf: ident, $items: expr, $item_kind: path, $item_type: ty, $fmt_item: ident) => ({
+        let mut group: Vec<($item_type, bool)> = Vec::new();
 
         for item in $items {
             match item.item {
-                $item_kind(_) => {
+                $item_kind(ref e) => {
                     if $sf.is_after_comment(&item.loc) {
-                        fmt_group!($sf, &group, &Item, $fmt_item);
+                        fmt_item_group!($sf, &group, $item_type, $fmt_item);
                         group.clear();
 
                         $sf.fmt_comments(&item.loc);
                     }
 
-                    group.push(item);
+                    group.push((e, item.is_pub));
                 }
                 _ => {
-                    fmt_group!($sf, &group, &Item, $fmt_item);
+                    fmt_item_group!($sf, &group, $item_type, $fmt_item);
                     group.clear();
                 }
             }
-        }
-    })
-}
-
-macro_rules! fmt_group {
-    ($sf: expr, $group: expr, $ty: ty, $fmt_item: ident) => ({
-        let map: BTreeMap<String, $ty> = $group.into_iter()
-            .map(|e| (e.to_string(), *e))
-            .collect();
-        
-        for (_, e) in map {
-            $sf.$fmt_item(e);
-            $sf.ts.nl();
         }
     })
 }
@@ -238,7 +254,7 @@ impl<'a> Formatter<'a> {
     #[inline]
     fn fmt_attr_group(&mut self, attr_group: &Vec<&Attr>) {
         p!("---------- attr ----------");
-        fmt_group!(self, attr_group, &Attr, fmt_attr);
+        fmt_attr_group!(self, attr_group, &Attr, fmt_attr);
     }
 
     fn fmt_attr(&mut self, attr: &Attr) {
@@ -296,28 +312,31 @@ impl<'a> Formatter<'a> {
 
     fn fmt_extern_crate_items(&mut self, items: &Vec<Item>) {
         p!("---------- extern crate ----------");
-        fmt_group_items!(self, items, ItemKind::ExternCrate, fmt_extern_crate);
+        fmt_item_groups!(self, items, ItemKind::ExternCrate, &ExternCrate, fmt_extern_crate);
     }
 
-    fn fmt_extern_crate(&mut self, item: &Item) {
+    fn fmt_extern_crate(&mut self, item: &ExternCrate) {
         p!("{}", item);
+
+        self.ts.insert("extern crate ");
+        self.ts.insert(&item.name);
     }
 
     fn fmt_use_items(&mut self, items: &Vec<Item>) {
         p!("---------- use ----------");
-        fmt_group_items!(self, items, ItemKind::Use, fmt_use);
+        fmt_item_groups!(self, items, ItemKind::Use, &Use, fmt_use);
     }
 
-    fn fmt_use(&mut self, item: &Item) {
+    fn fmt_use(&mut self, item: &Use) {
         p!("{}", item);
     }
 
     fn fmt_mod_decl_items(&mut self, items: &Vec<Item>) {
         p!("---------- mod decl ----------");
-        fmt_group_items!(self, items, ItemKind::ModDecl, fmt_mod_decl);
+        fmt_item_groups!(self, items, ItemKind::ModDecl, &ModDecl, fmt_mod_decl);
     }
 
-    fn fmt_mod_decl(&mut self, item: &Item) {
+    fn fmt_mod_decl(&mut self, item: &ModDecl) {
         p!("{}", item);
     }
 

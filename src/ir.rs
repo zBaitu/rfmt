@@ -67,14 +67,6 @@ pub struct Attr {
     pub item: MetaItem,
 }
 
-/*
-#[derive(Debug)]
-pub enum MetaItem {
-    Single(Chunk),
-    List(Loc, String, Vec<MetaItem>),
-}
-*/
-
 #[derive(Debug)]
 pub struct MetaItem {
     pub name: Chunk,
