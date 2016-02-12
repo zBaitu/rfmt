@@ -128,6 +128,17 @@ fn ident_to_string(ident: &rst::Ident) -> String {
 }
 
 #[inline]
+fn path_to_string(path: &rst::Path) -> String {
+    path.segments.iter().fold(String::new(), |mut s, e| {
+        if !s.is_empty() {
+            s.push_str("::");
+        }
+        s.push_str(&ident_to_string(&e.identifier));
+        s
+    })
+}
+
+#[inline]
 fn abi_to_string(abi: rst::abi::Abi) -> String {
     format!(r#""{:?}""#, abi)
 }
@@ -528,30 +539,30 @@ impl Translator {
     }
 
     fn trans_use(&self, view_path: &rst::ViewPath) -> Use {
-        let (full_path, mut items) = match view_path.node {
+        let (base, mut names) = match view_path.node {
             rst::ViewPathSimple(ref ident, ref path) => {
                 self.loc_leaf(&path.span);
-                let mut full_path = self.use_path_to_string(path);
+                let mut base = path_to_string(path);
                 if path.segments.last().unwrap().identifier.name != ident.name {
-                    full_path = format!("{} as {}", full_path, ident_to_string(ident));
+                    base = format!("{} as {}", base, ident_to_string(ident));
                 }
-                (full_path, Vec::new())
+                (base, Vec::new())
             }
             rst::ViewPathGlob(ref path) => {
                 self.loc_leaf(&path.span);
-                let full_path = format!("{}::*", self.use_path_to_string(path));
-                (full_path, Vec::new())
+                let base = format!("{}::*", path_to_string(path));
+                (base, Vec::new())
             }
             rst::ViewPathList(ref path, ref items) => {
                 let loc = self.loc(&path.span);
-                let full_path = self.use_path_to_string(path);
-                let items = self.trans_use_items(items);
+                let base = path_to_string(path);
+                let names = self.trans_use_names(items);
                 self.set_loc(&loc);
-                (full_path, items)
+                (base, names)
             }
         };
 
-        items.sort_by(|a, b| {
+        names.sort_by(|a, b| {
             if a.s == "self" {
                 Ordering::Less
             } else if b.s == "self" {
@@ -562,27 +573,17 @@ impl Translator {
         });
 
         Use {
-            path: full_path,
-            items: items,
+            base: base,
+            names: names,
         }
     }
 
-    fn use_path_to_string(&self, path: &rst::Path) -> String {
-        path.segments.iter().fold(String::new(), |mut s, e| {
-            if !s.is_empty() {
-                s.push_str("::");
-            }
-            s.push_str(&ident_to_string(&e.identifier));
-            s
-        })
-    }
-
     #[inline]
-    fn trans_use_items(&self, items: &Vec<rst::PathListItem>) -> Vec<Chunk> {
-        trans_list!(self, items, trans_use_item)
+    fn trans_use_names(&self, items: &Vec<rst::PathListItem>) -> Vec<Chunk> {
+        trans_list!(self, items, trans_use_name)
     }
 
-    fn trans_use_item(&self, item: &rst::PathListItem) -> Chunk {
+    fn trans_use_name(&self, item: &rst::PathListItem) -> Chunk {
         let loc = self.loc_leaf(&item.span);
         let (mut s, rename) = match item.node {
             rst::PathListIdent{ ref name, ref rename, .. } => (ident_to_string(name), rename),

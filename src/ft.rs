@@ -80,14 +80,14 @@ impl Display for ExternCrate {
 
 impl Display for Use {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "use {}", self.path));
+        try!(write!(f, "use {}", self.base));
 
-        if !self.items.is_empty() {
+        if !self.names.is_empty() {
             try!(write!(f, "::"));
-            if self.items.len() == 1 {
-                try!(write!(f, "{}", self.items[0]))
+            if self.names.len() == 1 {
+                try!(write!(f, "{}", self.names[0]))
             } else {
-                try!(display_list!(f, &self.items, "{{", ", ", "}}"));
+                try!(display_list!(f, &self.names, "{{", ", ", "}}"));
             }
         }
 
@@ -125,6 +125,7 @@ macro_rules! fmt_item_group {
                 $sf.ts.insert("pub ");
             }
             $sf.$fmt_item(e.0);
+            $sf.ts.raw_insert(";");
             $sf.ts.nl();
         }
     })
@@ -329,6 +330,37 @@ impl<'a> Formatter<'a> {
 
     fn fmt_use(&mut self, item: &Use) {
         p!("{}", item);
+
+        self.ts.insert("use ");
+        self.ts.insert(&item.base);
+        self.fmt_use_names(&item.names);
+    }
+
+    fn fmt_use_names(&mut self, names: &Vec<Chunk>) {
+        if names.is_empty() {
+            return;
+        }
+
+        self.ts.insert("::");
+        if names.len() == 1 {
+            self.ts.insert(&names[0].s);
+            return;
+        }
+
+        self.ts.insert_mark_align("{");
+        let mut first = true;
+        for name in names {
+            if !first {
+                self.ts.raw_insert(",");
+                if !name.loc.wrapped && !self.ts.need_wrap(&name.to_string()) {
+                    self.ts.raw_insert(" ");
+                }
+            }
+
+            self.ts.insert(&name.s);
+            first = false;
+        }
+        self.ts.insert_unmark_align("}");
     }
 
     fn fmt_mod_decl_items(&mut self, items: &Vec<Item>) {

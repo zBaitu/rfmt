@@ -116,8 +116,8 @@ pub struct ExternCrate {
 
 #[derive(Debug)]
 pub struct Use {
-    pub path: String,
-    pub items: Vec<Chunk>,
+    pub base: String,
+    pub names: Vec<Chunk>,
 }
 
 #[derive(Debug)]
