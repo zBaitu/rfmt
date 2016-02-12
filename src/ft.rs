@@ -1,10 +1,10 @@
-use std::collections::{BTreeMap};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{self, Debug, Display};
 
 use ir::*;
 use ts::*;
 
-pub fn fmt_crate(krate: &Crate, cmnts: &Vec<Comment>) -> String {
+pub fn fmt_crate(krate: &Crate, cmnts: &Vec<Comment>) -> (String, BTreeSet<u32>) {
     Formatter::new(cmnts).fmt_crate(krate)
 }
 
@@ -181,12 +181,13 @@ impl<'a> Formatter<'a> {
         p!("{:#?}", cmnt);
     }
 
-    fn fmt_crate(mut self, krate: &Crate) -> String {
+    fn fmt_crate(mut self, krate: &Crate) -> (String, BTreeSet<u32>) {
         self.try_fmt_comments(&krate.loc);
         self.fmt_attrs(&krate.attrs);
         self.fmt_mod(&krate.module);
 
-        self.ts.string()
+        p!("{:?}", self.ts);
+        self.ts.result()
     }
 
     fn fmt_attrs(&mut self, attrs: &Vec<AttrKind>) {

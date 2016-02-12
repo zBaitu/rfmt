@@ -67,8 +67,12 @@ fn main() {
         p!("{:?}", cmnt.pos);
         p!("{:?}", cmnt.lines);
     }
-    p!("");
-    p!("");
+    p!();
+    p!();
 
-    ft::fmt_crate(&krate, &cmnts);
+    let (s, exceed_lines) = ft::fmt_crate(&krate, &cmnts);
+    p!();
+    p!();
+    p!("{}", s);
+    p!("{:?}", exceed_lines);
 }
