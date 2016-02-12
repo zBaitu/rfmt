@@ -171,11 +171,8 @@ macro_rules! select_str {
         }
     );
 }
-select_str!(attr_head, is_outer, "#", "#!");
 select_str!(pub_head, is_pub, "pub ", "");
 select_str!(mut_head, is_mut, "mut ", "");
-select_str!(use_head, is_pub, "pub use", "use");
-select_str!(mod_head, is_pub, "pub mod", "mod");
 select_str!(type_head, is_pub, "pub type", "type");
 select_str!(path_head, global, "::", "");
 select_str!(ptr_head, is_mut, "*mut", "*const");
@@ -399,20 +396,16 @@ impl Translator {
         match meta_item.node {
             rst::MetaWord(ref ident) => {
                 MetaItem {
-                    name: Chunk {
-                        loc: self.loc_leaf(&meta_item.span),
-                        s: ident.to_string(),
-                    },
+                    loc: self.loc_leaf(&meta_item.span),
+                    name: ident.to_string(),
                     items: None,
                 }
             }
             rst::MetaNameValue(ref ident, ref lit) => {
                 let s = format!("{} = {}", ident, self.lit_to_string(lit));
                 MetaItem {
-                    name: Chunk {
-                        loc: self.loc_leaf(&meta_item.span),
-                        s: s,
-                    },
+                    loc: self.loc_leaf(&meta_item.span),
+                    name: s,
                     items: None,
                 }
             }
@@ -422,10 +415,8 @@ impl Translator {
                 self.set_loc(&loc);
 
                 MetaItem {
-                    name: Chunk {
-                        loc: loc,
-                        s: ident.to_string(),
-                    },
+                    loc: loc,
+                    name: ident.to_string(),
                     items: Some(Box::new(items)),
                 }
             }

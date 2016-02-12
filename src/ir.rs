@@ -69,7 +69,8 @@ pub struct Attr {
 
 #[derive(Debug)]
 pub struct MetaItem {
-    pub name: Chunk,
+    pub loc: Loc,
+    pub name: String,
     pub items: Option<Box<Vec<MetaItem>>>,
 }
 

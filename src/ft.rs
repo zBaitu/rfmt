@@ -9,8 +9,8 @@ pub fn fmt_crate(krate: &Crate, cmnts: &Vec<Comment>) -> (String, BTreeSet<u32>)
 }
 
 macro_rules! display_list {
-    ($f: expr, $list: expr, $begin: expr, $sep: expr, $end: expr) => ({
-        try!(write!($f, $begin));
+    ($f: expr, $list: expr, $open: expr, $sep: expr, $close: expr) => ({
+        try!(write!($f, $open));
 
         let mut first = true;
         for e in $list {
@@ -21,7 +21,7 @@ macro_rules! display_list {
             first = false;
         }
 
-        write!($f, $end)
+        write!($f, $close)
     })
 }
 
@@ -44,7 +44,7 @@ impl Display for Attr {
 
 impl Display for MetaItem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        Display::fmt(&self.name.s, f);
+        try!(Display::fmt(&self.name, f));
         if let Some(ref items) = self.items {
             try!(display_list!(f, &**items, "(", ", ", ")"));
         }
@@ -115,7 +115,7 @@ macro_rules! fmt_attr_group {
 }
 
 macro_rules! fmt_item_group {
-    ($sf: expr, $group: expr, $ty: ty, $fmt_item: ident) => ({
+    ($sf: ident, $group: expr, $ty: ty, $fmt_item: ident) => ({
         let map: BTreeMap<String, ($ty, bool)> = $group.into_iter()
             .map(|e| (e.0.to_string(), *e))
             .collect();
@@ -153,6 +153,27 @@ macro_rules! fmt_item_groups {
                 }
             }
         }
+    })
+}
+
+macro_rules! fmt_list {
+    ($sf: ident, $list: expr, $open: expr, $close: expr, $act: expr) => ({
+        $sf.ts.insert_mark_align($open);
+
+        let mut first = true;
+        for e in $list {
+            if !first {
+                $sf.ts.raw_insert(",");
+                if !e.loc.wrapped && !$sf.ts.need_wrap(&e.to_string()) {
+                    $sf.ts.raw_insert(" ");
+                }
+            }
+
+            $act(e);
+            first = false;
+        }
+
+        $sf.ts.insert_unmark_align($close);
     })
 }
 
@@ -271,10 +292,10 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_attr_meta_item(&mut self, item: &MetaItem) {
-        if item.name.loc.wrapped {
+        if item.loc.wrapped {
             self.ts.wrap();
         }
-        self.ts.insert(&item.name.s);
+        self.ts.insert(&item.name);
 
         if let Some(ref items) = item.items {
             self.fmt_attr_meta_items(&**items);
@@ -282,6 +303,8 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_attr_meta_items(&mut self, items: &Vec<MetaItem>) {
+        fmt_list!(self, items, "(", ")", |item: &MetaItem| self.fmt_attr_meta_item(item));
+        /*
         self.ts.insert_mark_align("(");
 
         let mut first = true;
@@ -298,6 +321,7 @@ impl<'a> Formatter<'a> {
         }
 
         self.ts.insert_unmark_align(")");
+        */
     }
 
     fn fmt_mod(&mut self, module: &Mod) {
@@ -347,20 +371,7 @@ impl<'a> Formatter<'a> {
             return;
         }
 
-        self.ts.insert_mark_align("{");
-        let mut first = true;
-        for name in names {
-            if !first {
-                self.ts.raw_insert(",");
-                if !name.loc.wrapped && !self.ts.need_wrap(&name.to_string()) {
-                    self.ts.raw_insert(" ");
-                }
-            }
-
-            self.ts.insert(&name.s);
-            first = false;
-        }
-        self.ts.insert_unmark_align("}");
+        fmt_list!(self, names, "{", "}", |name: &Chunk| self.ts.insert(&name.s));
     }
 
     fn fmt_mod_decl_items(&mut self, items: &Vec<Item>) {
