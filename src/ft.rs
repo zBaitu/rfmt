@@ -116,15 +116,17 @@ macro_rules! fmt_attr_group {
 
 macro_rules! fmt_item_group {
     ($sf: ident, $group: expr, $ty: ty, $fmt_item: ident) => ({
-        let map: BTreeMap<String, ($ty, bool)> = $group.into_iter()
-            .map(|e| (e.0.to_string(), *e))
+        let map: BTreeMap<String, (&Vec<AttrKind>, bool, $ty)> = $group.into_iter()
+            .map(|e| (e.2.to_string(), *e))
             .collect();
 
         for (_, e) in map {
+            $sf.fmt_attrs(e.0);
             if e.1 {
                 $sf.ts.insert("pub ");
             }
-            $sf.$fmt_item(e.0);
+            $sf.$fmt_item(e.2);
+
             $sf.ts.raw_insert(";");
             $sf.ts.nl();
         }
@@ -133,7 +135,7 @@ macro_rules! fmt_item_group {
 
 macro_rules! fmt_item_groups {
     ($sf: ident, $items: expr, $item_kind: path, $item_type: ty, $fmt_item: ident) => ({
-        let mut group: Vec<($item_type, bool)> = Vec::new();
+        let mut group: Vec<(&Vec<AttrKind>, bool, $item_type)> = Vec::new();
 
         for item in $items {
             match item.item {
@@ -145,7 +147,7 @@ macro_rules! fmt_item_groups {
                         $sf.fmt_comments(&item.loc);
                     }
 
-                    group.push((e, item.is_pub));
+                    group.push((&item.attrs, item.is_pub, e));
                 }
                 _ => {
                     fmt_item_group!($sf, &group, $item_type, $fmt_item);
