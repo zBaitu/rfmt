@@ -33,12 +33,12 @@ impl Debug for Typesetter {
     }
 }
 
-macro_rules! insert_non_wrap {
+macro_rules! raw_insert {
     ($sf: expr, $s: expr) => ({
         $sf.s.push_str($s);
 
         $sf.col += $s.len();
-        if $sf.col > MAX_WIDTH as usize {
+        if $sf.col > MAX_WIDTH {
             $sf.exceed_lines.insert($sf.line);
         }
     })
@@ -61,29 +61,36 @@ impl Typesetter {
         (self.s, self.exceed_lines)
     }
 
+    #[inline]
     pub fn insert(&mut self, s: &str) {
         if s.len() <= self.left() || s.len() > self.nl_left() {
-            self.insert_non_wrap(s);
+            self.raw_insert(s);
         } else {
             self.nl_wrap();
             self.insert(s);
         }
     }
 
-    pub fn insert_non_wrap(&mut self, s: &str) {
-        insert_non_wrap!(self, s);
+    #[inline]
+    pub fn raw_insert(&mut self, s: &str) {
+        raw_insert!(self, s);
     }
 
+    #[inline]
     pub fn nl(&mut self) {
-        self.line += 1;
         self.s.push_str(NL);
+
+        self.line += 1;
+        self.col = 0;
     }
 
+    #[inline]
     pub fn nl_indent(&mut self) {
         self.nl();
         self.insert_indent();
     }
 
+    #[inline]
     fn nl_wrap(&mut self) {
         self.nl();
 
@@ -129,17 +136,17 @@ impl Typesetter {
 
     #[inline]
     fn insert_indent(&mut self) {
-        insert_non_wrap!(self, &self.indent);
+        raw_insert!(self, &self.indent);
     }
 
     #[inline]
     fn insert_wrap(&mut self) {
-        self.insert_non_wrap(WRAP_INDENT);
+        self.raw_insert(WRAP_INDENT);
     }
 
     #[inline]
     fn insert_align(&mut self) {
         let blank = zstr::new_fill(' ', *self.align_stack.last().unwrap());
-        self.insert_non_wrap(&blank);
+        self.raw_insert(&blank);
     }
 }

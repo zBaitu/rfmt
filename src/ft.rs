@@ -171,14 +171,25 @@ impl<'a> Formatter<'a> {
 
     fn fmt_comments(&mut self, loc: &Loc) {
         while self.cmnt_idx < self.cmnts.len() && self.cmnts[self.cmnt_idx].pos < loc.start {
-            self.fmt_comment(&self.cmnts[self.cmnt_idx]);
+            let idx = self.cmnt_idx;
+            self.fmt_comment(&self.cmnts[idx]);
             self.cmnt_idx += 1;
         }
     }
 
-    fn fmt_comment(&self, cmnt: &Comment) {
+    fn fmt_comment(&mut self, cmnt: &Comment) {
         p!("---------- comment ----------");
         p!("{:#?}", cmnt);
+
+        if cmnt.lines.is_empty() {
+            self.ts.nl();
+            return;
+        }
+
+        for line in &cmnt.lines {
+            self.ts.raw_insert(line);
+            self.ts.nl();
+        }
     }
 
     fn fmt_crate(mut self, krate: &Crate) -> (String, BTreeSet<u32>) {
@@ -220,6 +231,9 @@ impl<'a> Formatter<'a> {
         self.try_fmt_comments(&doc.loc);
         p!("---------- doc ----------");
         p!("{:#?}", doc);
+
+        self.ts.raw_insert(&doc.s);
+        self.ts.nl();
     }
 
     #[inline]
