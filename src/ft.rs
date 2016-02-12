@@ -45,7 +45,7 @@ impl Display for Attr {
 impl Display for MetaItem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            MetaItem::Single(ref chunk) => Display::fmt(chunk, f),
+            MetaItem::Single(ref name) => Display::fmt(name, f),
             MetaItem::List(_, ref name, ref items) => {
                 try!(write!(f, "{}", name));
                 display_list!(f, items, "(", ", ", ")")
@@ -244,6 +244,47 @@ impl<'a> Formatter<'a> {
 
     fn fmt_attr(&mut self, attr: &Attr) {
         p!("{}", attr);
+
+        self.ts.insert("#");
+        if attr.is_inner {
+            self.ts.insert("!");
+        }
+        self.ts.insert("[");
+        self.fmt_attr_meta_item(&attr.item);
+        self.ts.insert("]");
+    }
+
+    fn fmt_attr_meta_item(&mut self, item: &MetaItem) {
+        /*
+        match *item {
+            MetaItem::Single(ref name) => self.fmt_attr_meta_item_single(name),
+            MetaItem::List(ref loc, ref name, ref items) => {
+                self.ts.insert(name);
+                self.ts.insert_mark_align("(");
+
+                let mut first = true;
+                for item in items {
+                    if !first {
+                        self.ts.raw_insert(",");
+                        if !item.loc.wrapped && !self.ts.need_wrap(&item.to_string()) {
+                            self.ts.raw_insert(" ");
+                        }
+                    }
+
+                    self.fmt_attr_meta_item(item);
+                    first = false;
+                }
+            }
+        }
+        */
+    }
+
+    #[inline]
+    fn fmt_attr_meta_item_single(&mut self, single: Chunk) {
+        if single.loc.wrapped {
+            self.ts.wrap();
+        }
+        self.ts.insert(&single.s);
     }
 
     fn fmt_mod(&mut self, module: &Mod) {

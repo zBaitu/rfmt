@@ -62,18 +62,29 @@ impl Typesetter {
     }
 
     #[inline]
+    pub fn raw_insert(&mut self, s: &str) {
+        raw_insert!(self, s);
+    }
+
+    #[inline]
     pub fn insert(&mut self, s: &str) {
         if s.len() <= self.left() || s.len() > self.nl_left() {
             self.raw_insert(s);
         } else {
-            self.nl_wrap();
-            self.insert(s);
+            self.wrap_insert(s);
         }
     }
 
     #[inline]
-    pub fn raw_insert(&mut self, s: &str) {
-        raw_insert!(self, s);
+    pub fn insert_mark_align(&mut self, s: &str) {
+        self.insert(s);
+        self.mark_align();
+    }
+
+    #[inline]
+    pub fn insert_unmark_align(&mut self, s: &str) {
+        self.insert(s);
+        self.unmark_align();
     }
 
     #[inline]
@@ -91,7 +102,18 @@ impl Typesetter {
     }
 
     #[inline]
-    fn nl_wrap(&mut self) {
+    pub fn need_wrap(&mut self, s: &str) -> bool {
+        s.len() > self.left() && s.len() > self.nl_left()
+    }
+
+    #[inline]
+    pub fn wrap_insert(&mut self, s: &str) {
+        self.wrap();
+        self.insert(s);
+    }
+
+    #[inline]
+    pub fn wrap(&mut self) {
         self.nl();
 
         if self.should_align() {
@@ -148,5 +170,15 @@ impl Typesetter {
     fn insert_align(&mut self) {
         let blank = zstr::new_fill(' ', *self.align_stack.last().unwrap());
         self.raw_insert(&blank);
+    }
+
+    #[inline]
+    fn mark_align(&mut self) {
+        self.align_stack.push(self.col + 1);
+    }
+
+    #[inline]
+    fn unmark_align(&mut self) {
+        self.align_stack.pop();
     }
 }

@@ -379,6 +379,11 @@ impl Translator {
         }
     }
 
+    #[inline]
+    fn trans_meta_items(&self, meta_items: &Vec<rst::P<rst::MetaItem>>) -> Vec<MetaItem> {
+        trans_list!(self, meta_items, trans_meta_item)
+    }
+
     fn trans_meta_item(&self, meta_item: &rst::MetaItem) -> MetaItem {
         match meta_item.node {
             rst::MetaWord(ref ident) => {
@@ -403,11 +408,6 @@ impl Translator {
                 meta_item
             }
         }
-    }
-
-    #[inline]
-    fn trans_meta_items(&self, meta_items: &Vec<rst::P<rst::MetaItem>>) -> Vec<MetaItem> {
-        trans_list!(self, meta_items, trans_meta_item)
     }
 
     fn trans_mod(&self, name: String, module: &rst::Mod) -> Mod {
