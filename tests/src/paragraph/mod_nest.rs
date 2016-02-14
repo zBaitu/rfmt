@@ -1,4 +1,12 @@
+// a
 #[test]
-mod a;
+pub mod a;
 
-mod b;
+pub mod b;
+
+mod c {
+    mod d;
+}
+
+mod e {
+}

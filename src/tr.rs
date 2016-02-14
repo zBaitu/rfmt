@@ -266,7 +266,7 @@ impl Translator {
         Loc {
             start: sp.lo.0,
             end: sp.hi.0,
-            wrapped: self.is_wrapped(sp),
+            nl: self.is_nl(sp),
         }
     }
 
@@ -296,7 +296,7 @@ impl Translator {
         name
     }
 
-    fn is_wrapped(&self, sp: &rst::Span) -> bool {
+    fn is_nl(&self, sp: &rst::Span) -> bool {
         let start = self.last_loc.get().end;
         let end = sp.lo.0;
         let snippet = self.sess.codemap().span_to_snippet(span(start, end));
@@ -305,16 +305,16 @@ impl Translator {
         }
 
         let snippet = snippet.unwrap();
-        let mut wrapped = false;
+        let mut nl = false;
         let mut in_comment = false;
         for ch in snippet.chars() {
             if !in_comment {
                 if ch == '/' {
                     in_comment = true;
                 } else if ch == '\n' {
-                    wrapped = true;
+                    nl = true;
                 } else if ch != ',' && !ch.is_whitespace() {
-                    wrapped = false;
+                    nl = false;
                     break;
                 }
             } else if ch == '/' {
@@ -322,7 +322,7 @@ impl Translator {
             }
         }
 
-        wrapped
+        nl
     }
 
     #[inline]
@@ -335,9 +335,6 @@ impl Translator {
 
     #[inline]
     fn is_mod_decl(&self, sp: &rst::Span) -> bool {
-        p!("-------------------------");
-        p!("{}" ,sp.lo.0);
-        p!("{}" ,self.krate.span.hi.0);
         sp.lo.0 > self.krate.span.hi.0
     }
 
@@ -364,7 +361,10 @@ impl Translator {
 
     #[inline]
     fn trans_outer_attrs(&self, attrs: &Vec<rst::Attribute>) -> Vec<AttrKind> {
-        attrs.iter().filter(|ref e| is_outer(e.node.style)).map(|ref e| self.trans_attr(e)).collect()
+        attrs.iter()
+             .filter(|ref e| is_outer(e.node.style))
+             .map(|ref e| self.trans_attr(e))
+             .collect()
     }
 
     fn trans_attr(&self, attr: &rst::Attribute) -> AttrKind {
@@ -453,7 +453,7 @@ impl Translator {
     fn is_mod_decl_item(&self, item: &rst::Item) -> bool {
         match item.node {
             rst::ItemMod(ref module) if self.is_mod_decl(&module.inner) => true,
-            _ => false
+            _ => false,
         }
     }
 

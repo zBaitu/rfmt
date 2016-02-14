@@ -102,34 +102,37 @@ impl Display for ModDecl {
 }
 
 macro_rules! fmt_attr_group {
-    ($sf: expr, $group: expr, $ty: ty, $fmt_item: ident) => ({
+    ($sf: expr, $group: expr, $ty: ty, $fmt_attr: ident) => ({
         let map: BTreeMap<String, $ty> = $group.into_iter()
-            .map(|e| (e.to_string(), *e))
-            .collect();
+        .map(|e| (e.to_string(), *e))
+        .collect();
 
-        for (_, e) in map {
-            $sf.$fmt_item(e);
-            $sf.ts.nl();
-        }
+    for (_, e) in map {
+        $sf.ts.insert_indent();
+        $sf.$fmt_attr(e);
+        $sf.ts.nl();
+    }
     })
 }
 
 macro_rules! fmt_item_group {
     ($sf: ident, $group: expr, $ty: ty, $fmt_item: ident) => ({
         let map: BTreeMap<String, (&Vec<AttrKind>, bool, $ty)> = $group.into_iter()
-            .map(|e| (e.2.to_string(), *e))
-            .collect();
+        .map(|e| (e.2.to_string(), *e))
+        .collect();
 
-        for (_, e) in map {
-            $sf.fmt_attrs(e.0);
-            if e.1 {
-                $sf.ts.insert("pub ");
-            }
-            $sf.$fmt_item(e.2);
+    for (_, e) in map {
+        $sf.fmt_attrs(e.0);
 
-            $sf.ts.raw_insert(";");
-            $sf.ts.nl();
+        $sf.ts.insert_indent();
+        if e.1 {
+            $sf.ts.insert("pub ");
         }
+        $sf.$fmt_item(e.2);
+
+        $sf.ts.raw_insert(";");
+        $sf.ts.nl();
+    }
     })
 }
 
@@ -168,7 +171,7 @@ macro_rules! fmt_list {
         for e in $list {
             if !first {
                 $sf.ts.raw_insert(",");
-                if !e.loc.wrapped && !$sf.ts.need_wrap(&e.to_string()) {
+                if !e.loc.nl && !$sf.ts.need_wrap(&e.to_string()) {
                     $sf.ts.raw_insert(" ");
                 }
             }
@@ -296,7 +299,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_attr_meta_item(&mut self, item: &MetaItem) {
-        if item.loc.wrapped {
+        if item.loc.nl {
             self.ts.wrap();
         }
         self.ts.insert(&item.name);
@@ -311,14 +314,20 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_mod(&mut self, module: &Mod) {
+        p!("---------- mod ----------");
+
         self.fmt_group_items(&module.items);
-        self.fmt_non_group_items(&module.items);
+        self.fmt_items(&module.items);
     }
 
     fn fmt_group_items(&mut self, items: &Vec<Item>) {
+        p!("---------- group items begin ----------");
+
         self.fmt_extern_crate_items(items);
         self.fmt_use_items(items);
         self.fmt_mod_decl_items(items);
+
+        p!("---------- group items end ----------");
     }
 
     fn fmt_extern_crate_items(&mut self, items: &Vec<Item>) {
@@ -326,11 +335,11 @@ impl<'a> Formatter<'a> {
         fmt_item_groups!(self, items, ItemKind::ExternCrate, &ExternCrate, fmt_extern_crate);
     }
 
+    #[inline]
     fn fmt_extern_crate(&mut self, item: &ExternCrate) {
         p!("{}", item);
 
-        self.ts.insert("extern crate ");
-        self.ts.insert(&item.name);
+        self.ts.insert(&format!("extern crate {}", &item.name));
     }
 
     fn fmt_use_items(&mut self, items: &Vec<Item>) {
@@ -338,11 +347,11 @@ impl<'a> Formatter<'a> {
         fmt_item_groups!(self, items, ItemKind::Use, &Use, fmt_use);
     }
 
+    #[inline]
     fn fmt_use(&mut self, item: &Use) {
         p!("{}", item);
 
-        self.ts.insert("use ");
-        self.ts.insert(&item.base);
+        self.ts.insert(&format!("use {}", &item.base));
         self.fmt_use_names(&item.names);
     }
 
@@ -365,12 +374,60 @@ impl<'a> Formatter<'a> {
         fmt_item_groups!(self, items, ItemKind::ModDecl, &ModDecl, fmt_mod_decl);
     }
 
+    #[inline]
     fn fmt_mod_decl(&mut self, item: &ModDecl) {
         p!("{}", item);
 
-        self.ts.insert("mod ");
-        self.ts.insert(&item.name);
+        self.ts.insert(&format!("mod {}", &item.name));
     }
 
-    fn fmt_non_group_items(&mut self, items: &Vec<Item>) {}
+    #[inline]
+    fn fmt_items(&mut self, items: &Vec<Item>) {
+        for item in items {
+            match item.item {
+                ItemKind::ExternCrate(_) | ItemKind::Use(_) | ItemKind::ModDecl(_) => (),
+                _ => self.fmt_item(item),
+            }
+        }
+    }
+
+    fn fmt_item(&mut self, item: &Item) {
+        self.try_fmt_comments(&item.loc);
+        p!("---------- item ----------");
+
+        self.fmt_attrs(&item.attrs);
+
+        self.ts.insert_indent();
+        if item.is_pub {
+            self.ts.insert("pub ");
+        }
+
+        match item.item {
+            ItemKind::ExternCrate(_) | ItemKind::Use(_) | ItemKind::ModDecl(_) => unreachable!(),
+            ItemKind::Mod(ref item) => self.fmt_sub_mod(item),
+            _ => (),
+        }
+    }
+
+    fn fmt_sub_mod(&mut self, item: &Mod) {
+        p!("---------- sub item ----------");
+
+        self.ts.insert(&format!("mod {} ", &item.name));
+
+        if item.items.is_empty() {
+            self.ts.insert("{}");
+            self.ts.nl();
+            return;
+        }
+
+        self.ts.insert("{");
+        self.ts.indent();
+        self.ts.nl();
+
+        self.fmt_mod(item);
+
+        self.ts.outdent();
+        self.ts.insert_indent();
+        self.ts.insert("}");
+    }
 }

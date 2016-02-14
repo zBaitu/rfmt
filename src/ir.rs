@@ -6,13 +6,13 @@ pub type Pos = u32;
 pub struct Loc {
     pub start: Pos,
     pub end: Pos,
-    pub wrapped: bool,
+    pub nl: bool,
 }
 
 impl Display for Loc {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.wrapped {
-            write!(f, "Loc({}, {}, wrapped)", self.start, self.end)
+        if self.nl {
+            write!(f, "Loc({}, {}, nl)", self.start, self.end)
         } else {
             write!(f, "Loc({}, {})", self.start, self.end)
         }

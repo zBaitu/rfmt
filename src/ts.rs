@@ -81,6 +81,18 @@ impl Typesetter {
     }
 
     #[inline]
+    pub fn wrap(&mut self) {
+        self.nl();
+
+        if self.should_align() {
+            self.insert_align();
+        } else {
+            self.insert_indent();
+            self.insert_wrap();
+        }
+    }
+
+    #[inline]
     pub fn insert_mark_align(&mut self, s: &str) {
         self.insert(s);
         self.mark_align();
@@ -101,27 +113,19 @@ impl Typesetter {
     }
 
     #[inline]
-    pub fn nl_indent(&mut self) {
-        self.nl();
-        self.insert_indent();
+    pub fn indent(&mut self) {
+        self.indent.push_str(INDENT);
     }
 
     #[inline]
-    pub fn wrap_insert(&mut self, s: &str) {
-        self.wrap();
-        self.insert(s);
+    pub fn outdent(&mut self) {
+        let len = self.indent.len();
+        self.indent.truncate(len - INDENT.len());
     }
 
     #[inline]
-    pub fn wrap(&mut self) {
-        self.nl();
-
-        if self.should_align() {
-            self.insert_align();
-        } else {
-            self.insert_indent();
-            self.insert_wrap();
-        }
+    pub fn insert_indent(&mut self) {
+        raw_insert!(self, &self.indent);
     }
 
     #[inline]
@@ -141,7 +145,7 @@ impl Typesetter {
     #[inline]
     fn should_align(&self) -> bool {
         match self.align_stack.last() {
-            Some(col) if *col < MAX_WIDTH => true,
+            Some(col) if *col <= MAX_ALIGN_COL => true,
             _ => false,
         }
     }
@@ -157,8 +161,9 @@ impl Typesetter {
     }
 
     #[inline]
-    fn insert_indent(&mut self) {
-        raw_insert!(self, &self.indent);
+    fn wrap_insert(&mut self, s: &str) {
+        self.wrap();
+        self.insert(s);
     }
 
     #[inline]
