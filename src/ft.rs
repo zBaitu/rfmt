@@ -25,6 +25,23 @@ macro_rules! display_list {
     })
 }
 
+macro_rules! display_lists {
+    ($f: expr, $open: expr, $sep: expr, $close: expr, $($lists: expr),+) => ({
+        try!(write!($f, $open));
+
+        let mut first = true;
+        $(for e in $lists {
+            if !first {
+                try!(write!($f, $sep));
+            }
+            try!(Display::fmt(e, $f));
+            first = false;
+        })+
+
+        write!($f, $close)
+    })
+}
+
 impl Display for Chunk {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(&self.s, f)
@@ -98,6 +115,134 @@ impl Display for Use {
 impl Display for ModDecl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "mod {};", self.name)
+    }
+}
+
+impl Display for TypeAlias {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "type {}{} = {};", self.name, self.generics, self.ty)
+    }
+}
+
+impl Display for Generics {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.is_empty() {
+            return Ok(());
+        } else {
+            try!(display_lists!(f, "<", ", ", ">", &self.lifetime_defs, &self.type_params));
+        }
+
+        if !self.wh.is_empty() {
+            try!(write!(f, " where "));
+            try!(display_list!(f, &self.wh, "", ", ", ""));
+        }
+
+        Ok(())
+    }
+}
+
+impl Display for LifetimeDef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(f, "{}", self.lifetime));
+        if !self.bounds.is_empty() {
+            try!(write!(f, ": "));
+            try!(display_list!(f, &self.bounds, "", " + ", ""));
+        }
+        Ok(())
+    }
+}
+
+impl Display for TypeParam {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(f, "{}", self.name));
+
+        if !self.bounds.is_empty() {
+            try!(write!(f, ": "));
+            try!(display_list!(f, &self.bounds, "", " + ", ""));
+        }
+
+        if let Some(ref ty) = self.default {
+            try!(write!(f, " = {}", ty));
+        }
+
+        Ok(())
+    }
+}
+
+impl Display for TypeParamBound {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            TypeParamBound::Lifetime(ref lifetime) => Display::fmt(lifetime, f),
+            TypeParamBound::PolyTraitRef(ref poly_trait_ref) => Display::fmt(poly_trait_ref, f),
+        }
+    }
+}
+
+impl Display for PolyTraitRef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if !self.lifetime_defs.is_empty() {
+            try!(display_list!(f, &self.lifetime_defs, "for<", ", ", "> "));
+        }
+        Display::fmt(&self.trait_ref, f)
+    }
+}
+
+impl Display for Path {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.global {
+            try!(write!(f, "::"));
+        }
+        display_list!(f, &self.segs, "", "::", "")
+    }
+}
+
+impl Display for PathSegment {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(f, "{}", self.name));
+        Display::fmt(&self.param, f)
+    }
+}
+
+impl Display for PathParam {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            PathParam::Angle(ref param) => Display::fmt(param, f),
+            PathParam::Paren(ref param) => Display::fmt(param, f),
+        }
+    }
+}
+
+impl Display for AngleParam {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.is_empty() {
+            Ok(())
+        } else {
+            display_lists!(f, "<", ", ", ">", &self.lifetimes, &self.types, &self.bindings)
+        }
+    }
+}
+
+impl Display for TypeBinding {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} = {}", self.name, self.ty)
+    }
+}
+
+impl Display for ParenParam {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        Debug::fmt(self, f)
+    }
+}
+
+impl Display for WhereClause {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        Debug::fmt(self, f)
+    }
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        Debug::fmt(self, f)
     }
 }
 
@@ -287,7 +432,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_attr(&mut self, attr: &Attr) {
-        p!("{}", attr);
+        p!(attr);
 
         self.ts.insert("#");
         if attr.is_inner {
@@ -315,6 +460,7 @@ impl<'a> Formatter<'a> {
 
     fn fmt_mod(&mut self, module: &Mod) {
         p!("---------- mod ----------");
+        p!(module.name);
 
         self.fmt_group_items(&module.items);
         self.fmt_items(&module.items);
@@ -337,7 +483,7 @@ impl<'a> Formatter<'a> {
 
     #[inline]
     fn fmt_extern_crate(&mut self, item: &ExternCrate) {
-        p!("{}", item);
+        p!(item);
 
         self.ts.insert(&format!("extern crate {}", &item.name));
     }
@@ -349,7 +495,7 @@ impl<'a> Formatter<'a> {
 
     #[inline]
     fn fmt_use(&mut self, item: &Use) {
-        p!("{}", item);
+        p!(item);
 
         self.ts.insert(&format!("use {}", &item.base));
         self.fmt_use_names(&item.names);
@@ -376,7 +522,7 @@ impl<'a> Formatter<'a> {
 
     #[inline]
     fn fmt_mod_decl(&mut self, item: &ModDecl) {
-        p!("{}", item);
+        p!(item);
 
         self.ts.insert(&format!("mod {}", &item.name));
     }
@@ -405,12 +551,14 @@ impl<'a> Formatter<'a> {
         match item.item {
             ItemKind::ExternCrate(_) | ItemKind::Use(_) | ItemKind::ModDecl(_) => unreachable!(),
             ItemKind::Mod(ref item) => self.fmt_sub_mod(item),
+            ItemKind::TypeAlias(ref item) => self.fmt_type_alias(item),
             _ => (),
         }
     }
 
     fn fmt_sub_mod(&mut self, item: &Mod) {
-        p!("---------- sub item ----------");
+        p!("---------- sub mod ----------");
+        p!(item.name);
 
         self.ts.insert(&format!("mod {} ", &item.name));
 
@@ -429,5 +577,10 @@ impl<'a> Formatter<'a> {
         self.ts.outdent();
         self.ts.insert_indent();
         self.ts.insert("}");
+    }
+
+    fn fmt_type_alias(&mut self, item: &TypeAlias) {
+        p!("---------- type alias ----------");
+        p!(item);
     }
 }

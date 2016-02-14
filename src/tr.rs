@@ -179,7 +179,6 @@ macro_rules! select_str {
 select_str!(pub_head, is_pub, "pub ", "");
 select_str!(mut_head, is_mut, "mut ", "");
 select_str!(type_head, is_pub, "pub type", "type");
-select_str!(path_head, global, "::", "");
 select_str!(ptr_head, is_mut, "*mut", "*const");
 select_str!(const_head, is_pub, "pub const", "const");
 select_str!(struct_head, is_pub, "pub struct", "struct");
@@ -486,7 +485,7 @@ impl Translator {
                 }
             }
             rst::ItemTy(ref ty, ref generics) => {
-                ItemKind::TypeAlias(self.trans_type_alias(is_pub, ident, generics, ty))
+                ItemKind::TypeAlias(self.trans_type_alias(ident, generics, ty))
             }
             rst::ItemForeignMod(ref module) => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
             rst::ItemConst(ref ty, ref expr) => {
@@ -623,10 +622,9 @@ impl Translator {
         }
     }
 
-    fn trans_type_alias(&self, is_pub: bool, ident: String, generics: &rst::Generics, ty: &rst::Ty)
+    fn trans_type_alias(&self, ident: String, generics: &rst::Generics, ty: &rst::Ty)
         -> TypeAlias {
         TypeAlias {
-            head: type_head(is_pub),
             name: ident,
             generics: self.trans_generics(generics),
             ty: self.trans_type(ty),
@@ -637,7 +635,7 @@ impl Translator {
         Generics {
             lifetime_defs: self.trans_lifetime_defs(&generics.lifetimes),
             type_params: self.trans_type_params(&generics.ty_params),
-            wh: self.trans_where(&generics.where_clause),
+            wh: self.trans_where_clauses(&generics.where_clause.predicates),
         }
     }
 
@@ -727,12 +725,6 @@ impl Translator {
         self.trans_path(&trait_ref.path)
     }
 
-    fn trans_where(&self, where_clause: &rst::WhereClause) -> Where {
-        Where {
-            clauses: self.trans_where_clauses(&where_clause.predicates),
-        }
-    }
-
     #[inline]
     fn trans_where_clauses(&self, predicates: &Vec<rst::WherePredicate>) -> Vec<WhereClause> {
         trans_list!(self, predicates, trans_where_clause)
@@ -785,7 +777,7 @@ impl Translator {
 
         Path {
             loc: loc,
-            head: path_head(path.global),
+            global: path.global,
             segs: segs,
         }
     }

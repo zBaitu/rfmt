@@ -128,7 +128,6 @@ pub struct ModDecl {
 
 #[derive(Debug)]
 pub struct TypeAlias {
-    pub head: &'static str,
     pub name: String,
     pub generics: Generics,
     pub ty: Type,
@@ -138,16 +137,22 @@ pub struct TypeAlias {
 pub struct Generics {
     pub lifetime_defs: Vec<LifetimeDef>,
     pub type_params: Vec<TypeParam>,
-    pub wh: Where,
+    pub wh: Vec<WhereClause>,
 }
 
-pub type Lifetime = Chunk;
+impl Generics {
+    pub fn is_empty(&self) -> bool {
+        self.lifetime_defs.is_empty() && self.type_params.is_empty()
+    }
+}
 
 #[derive(Debug)]
 pub struct LifetimeDef {
     pub lifetime: Lifetime,
     pub bounds: Vec<Lifetime>,
 }
+
+pub type Lifetime = Chunk;
 
 #[derive(Debug)]
 pub struct TypeParam {
@@ -183,11 +188,6 @@ impl PolyTraitRef {
 pub type TraitRef = Path;
 
 #[derive(Debug)]
-pub struct Where {
-    pub clauses: Vec<WhereClause>,
-}
-
-#[derive(Debug)]
 pub struct WhereClause {
     pub loc: Loc,
     pub clause: WhereKind,
@@ -209,7 +209,7 @@ pub struct WhereBound {
 #[derive(Debug)]
 pub struct Path {
     pub loc: Loc,
-    pub head: &'static str,
+    pub global: bool,
     pub segs: Vec<PathSegment>,
 }
 
@@ -217,7 +217,7 @@ impl Path {
     pub fn new_sized(loc: Loc) -> Path {
         Path {
             loc: loc,
-            head: Default::default(),
+            global: Default::default(),
             segs: vec![PathSegment::new_sized()],
         }
     }
@@ -249,6 +249,12 @@ pub struct AngleParam {
     pub lifetimes: Vec<Lifetime>,
     pub types: Vec<Type>,
     pub bindings: Vec<TypeBinding>,
+}
+
+impl AngleParam {
+    pub fn is_empty(&self) -> bool {
+        self.lifetimes.is_empty() && self.types.is_empty() && self.bindings.is_empty()
+    }
 }
 
 #[derive(Debug)]
