@@ -63,10 +63,15 @@ impl Display for MetaItem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(Display::fmt(&self.name, f));
         if let Some(ref items) = self.items {
-            try!(display_list!(f, &**items, "(", ", ", ")"));
+            try!(display_meta_items(f, &**items));
         }
         Ok(())
     }
+}
+
+#[inline]
+fn display_meta_items(f: &mut fmt::Formatter, items: &Vec<MetaItem>) -> fmt::Result {
+    display_list!(f, items, "(", ", ", ")")
 }
 
 impl Display for Item {
@@ -104,12 +109,17 @@ impl Display for Use {
             if self.names.len() == 1 {
                 try!(write!(f, "{}", self.names[0]))
             } else {
-                try!(display_list!(f, &self.names, "{{", ", ", "}}"));
+                try!(display_use_names(f, &self.names));
             }
         }
 
         write!(f, ";")
     }
+}
+
+#[inline]
+fn display_use_names(f: &mut fmt::Formatter, names: &Vec<Chunk>) -> fmt::Result {
+    display_list!(f, names, "{{", ", ", "}}")
 }
 
 impl Display for ModDecl {
@@ -134,7 +144,7 @@ impl Display for Generics {
 
         if !self.wh.is_empty() {
             try!(write!(f, " where "));
-            try!(display_list!(f, &self.wh, "", ", ", ""));
+            try!(display_where_clauses(f, &self.wh));
         }
 
         Ok(())
@@ -146,10 +156,15 @@ impl Display for LifetimeDef {
         try!(write!(f, "{}", self.lifetime));
         if !self.bounds.is_empty() {
             try!(write!(f, ": "));
-            try!(display_list!(f, &self.bounds, "", " + ", ""));
+            try!(display_lifetime_def_bounds(f, &self.bounds));
         }
         Ok(())
     }
+}
+
+#[inline]
+fn display_lifetime_def_bounds(f: &mut fmt::Formatter, bounds: &Vec<Lifetime>) -> fmt::Result {
+    display_list!(f, bounds, "", " + ", "")
 }
 
 impl Display for TypeParam {
@@ -158,7 +173,7 @@ impl Display for TypeParam {
 
         if !self.bounds.is_empty() {
             try!(write!(f, ": "));
-            try!(display_list!(f, &self.bounds, "", " + ", ""));
+            try!(display_type_param_bounds(f, &self.bounds));
         }
 
         if let Some(ref ty) = self.default {
@@ -167,6 +182,11 @@ impl Display for TypeParam {
 
         Ok(())
     }
+}
+
+#[inline]
+fn display_type_param_bounds(f: &mut fmt::Formatter, bounds: &Vec<TypeParamBound>) -> fmt::Result {
+    display_list!(f, bounds, "", " + ", "")
 }
 
 impl Display for TypeParamBound {
@@ -181,10 +201,20 @@ impl Display for TypeParamBound {
 impl Display for PolyTraitRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if !self.lifetime_defs.is_empty() {
-            try!(display_list!(f, &self.lifetime_defs, "for<", ", ", "> "));
+            try!(display_for_liftime_defs(f, &self.lifetime_defs));
         }
         Display::fmt(&self.trait_ref, f)
     }
+}
+
+#[inline]
+fn display_for_liftime_defs(f: &mut fmt::Formatter, lifetime_defs: &Vec<LifetimeDef>) -> fmt::Result {
+    display_list!(f, lifetime_defs, "for<", ", ", "> ")
+}
+
+#[inline]
+fn display_where_clauses(f: &mut fmt::Formatter, wh: &Vec<WhereClause>) -> fmt::Result {
+    display_list!(f, wh, "", ", ", "")
 }
 
 impl Display for WhereClause {
@@ -199,10 +229,10 @@ impl Display for WhereClause {
 impl Display for WhereBound {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if !self.lifetime_defs.is_empty() {
-            try!(display_list!(f, &self.lifetime_defs, "for<", ", ", "> "));
+            try!(display_for_liftime_defs(f, &self.lifetime_defs));
         }
         try!(write!(f, "{}: ", &self.ty));
-        display_list!(f, &self.bounds, "", " + ", "")
+        display_type_param_bounds(f, &self.bounds)
     }
 }
 
@@ -211,8 +241,13 @@ impl Display for Path {
         if self.global {
             try!(write!(f, "::"));
         }
-        display_list!(f, &self.segs, "", "::", "")
+        display_path_segments(f, &self.segs)
     }
+}
+
+#[inline]
+fn display_path_segments(f: &mut fmt::Formatter, segs: &Vec<PathSegment>) -> fmt::Result {
+    display_list!(f, segs, "", "::", "")
 }
 
 impl Display for PathSegment {
@@ -249,12 +284,17 @@ impl Display for TypeBinding {
 
 impl Display for ParenParam {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(display_list!(f, &self.inputs, "(", ", ", ")"));
+        try!(display_paren_param_inputs(f, &self.inputs));
         if let Some(ref output) = self.output {
             try!(write!(f, " -> {}", output));
         }
         Ok(())
     }
+}
+
+#[inline]
+fn display_paren_param_inputs(f: &mut fmt::Formatter, inputs: &Vec<Type>) -> fmt::Result {
+    display_list!(f, inputs, "(", ", ", ")")
 }
 
 impl Display for Type {
