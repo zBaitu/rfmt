@@ -187,6 +187,25 @@ impl Display for PolyTraitRef {
     }
 }
 
+impl Display for WhereClause {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.clause {
+            WhereKind::Lifetime(ref lifetime_def) => Display::fmt(lifetime_def, f),
+            WhereKind::Bound(ref bound) => Display::fmt(bound, f),
+        }
+    }
+}
+
+impl Display for WhereBound {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if !self.lifetime_defs.is_empty() {
+            try!(display_list!(f, &self.lifetime_defs, "for<", ", ", "> "));
+        }
+        try!(write!(f, "{}: ", &self.ty));
+        display_list!(f, &self.bounds, "", " + ", "")
+    }
+}
+
 impl Display for Path {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.global {
@@ -230,13 +249,11 @@ impl Display for TypeBinding {
 
 impl Display for ParenParam {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        Debug::fmt(self, f)
-    }
-}
-
-impl Display for WhereClause {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        Debug::fmt(self, f)
+        try!(display_list!(f, &self.inputs, "(", ", ", ")"));
+        if let Some(ref output) = self.output {
+            try!(write!(f, " -> {}", output));
+        }
+        Ok(())
     }
 }
 
@@ -252,11 +269,11 @@ macro_rules! fmt_attr_group {
         .map(|e| (e.to_string(), *e))
         .collect();
 
-    for (_, e) in map {
-        $sf.ts.insert_indent();
-        $sf.$fmt_attr(e);
-        $sf.ts.nl();
-    }
+        for (_, e) in map {
+            $sf.ts.insert_indent();
+            $sf.$fmt_attr(e);
+            $sf.ts.nl();
+        }
     })
 }
 
