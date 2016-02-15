@@ -425,9 +425,15 @@ macro_rules! fmt_comma_lists {
 
 macro_rules! fmt_lists {
     ($sf: expr, $sep: expr, $wrap_sep: expr, $($list: expr, $act: ident),+) => ({
+        let mut first = true;
         $(for e in $list {
-            maybe_wrap!($sf, $sep, $wrap_sep, e, $act);
-            $sf.$act(e);
+            if !first {
+                maybe_wrap!($sf, $sep, $wrap_sep, e, $act);
+            } else {
+                $sf.$act(e);
+            }
+
+            first = false;
         })+
     })
 }
