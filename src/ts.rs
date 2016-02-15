@@ -33,6 +33,13 @@ impl Debug for Typesetter {
     }
 }
 
+#[macro_export]
+macro_rules! need_wrap {
+    ($ts: expr, $($s: expr),+) => ({
+        $ts.need_wrap(&[$($s),+])
+    })
+}
+
 macro_rules! raw_insert {
     ($sf: expr, $s: expr) => ({
         $sf.s.push_str($s);
@@ -68,7 +75,7 @@ impl Typesetter {
 
     #[inline]
     pub fn insert(&mut self, s: &str) {
-        if self.need_wrap(s) {
+        if need_wrap!(self, s) {
             self.wrap_insert(s);
         } else {
             self.raw_insert(s);
@@ -76,8 +83,9 @@ impl Typesetter {
     }
 
     #[inline]
-    pub fn need_wrap(&mut self, s: &str) -> bool {
-        s.len() > self.left() && s.len() <= self.nl_left()
+    pub fn need_wrap(&mut self, list: &[&str]) -> bool {
+        let len: usize = list.iter().map(|s| s.len()).sum();
+        len > self.left() && len <= self.nl_left()
     }
 
     #[inline]

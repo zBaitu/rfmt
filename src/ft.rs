@@ -8,23 +8,6 @@ pub fn fmt_crate(krate: &Crate, cmnts: &Vec<Comment>) -> (String, BTreeSet<u32>)
     Formatter::new(cmnts).fmt_crate(krate)
 }
 
-macro_rules! display_list {
-    ($f: expr, $list: expr, $open: expr, $sep: expr, $close: expr) => ({
-        try!(write!($f, $open));
-
-        let mut first = true;
-        for e in $list {
-            if !first {
-                try!(write!($f, $sep));
-            }
-            try!(Display::fmt(e, $f));
-            first = false;
-        }
-
-        write!($f, $close)
-    })
-}
-
 macro_rules! display_lists {
     ($f: expr, $open: expr, $sep: expr, $close: expr, $($lists: expr),+) => ({
         try!(write!($f, $open));
@@ -71,7 +54,7 @@ impl Display for MetaItem {
 
 #[inline]
 fn display_meta_items(f: &mut fmt::Formatter, items: &Vec<MetaItem>) -> fmt::Result {
-    display_list!(f, items, "(", ", ", ")")
+    display_lists!(f, "(", ", ", ")", items)
 }
 
 impl Display for Item {
@@ -119,7 +102,7 @@ impl Display for Use {
 
 #[inline]
 fn display_use_names(f: &mut fmt::Formatter, names: &Vec<Chunk>) -> fmt::Result {
-    display_list!(f, names, "{{", ", ", "}}")
+    display_lists!(f, "{{", ", ", "}}", names)
 }
 
 impl Display for ModDecl {
@@ -143,8 +126,8 @@ impl Display for Generics {
         }
 
         if !self.wh.is_empty() {
-            try!(write!(f, " where "));
-            try!(display_where_clauses(f, &self.wh));
+            try!(write!(f, " "));
+            try!(Display::fmt(&self.wh, f));
         }
 
         Ok(())
@@ -164,7 +147,7 @@ impl Display for LifetimeDef {
 
 #[inline]
 fn display_lifetime_def_bounds(f: &mut fmt::Formatter, bounds: &Vec<Lifetime>) -> fmt::Result {
-    display_list!(f, bounds, "", " + ", "")
+    display_lists!(f, "", " + ", "", bounds)
 }
 
 impl Display for TypeParam {
@@ -186,7 +169,7 @@ impl Display for TypeParam {
 
 #[inline]
 fn display_type_param_bounds(f: &mut fmt::Formatter, bounds: &Vec<TypeParamBound>) -> fmt::Result {
-    display_list!(f, bounds, "", " + ", "")
+    display_lists!(f, "", " + ", "", bounds)
 }
 
 impl Display for TypeParamBound {
@@ -209,12 +192,23 @@ impl Display for PolyTraitRef {
 
 #[inline]
 fn display_for_liftime_defs(f: &mut fmt::Formatter, lifetime_defs: &Vec<LifetimeDef>) -> fmt::Result {
-    display_list!(f, lifetime_defs, "for<", ", ", "> ")
+    display_lists!(f, "for<", ", ", "> ", lifetime_defs)
+}
+
+impl Display for Where {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.is_empty() {
+            return Ok(());
+        }
+
+        try!(write!(f, "where "));
+        display_where_clauses(f, &self.clauses)
+    }
 }
 
 #[inline]
 fn display_where_clauses(f: &mut fmt::Formatter, wh: &Vec<WhereClause>) -> fmt::Result {
-    display_list!(f, wh, "", ", ", "")
+    display_lists!(f, "", ", ", "", wh)
 }
 
 impl Display for WhereClause {
@@ -247,7 +241,7 @@ impl Display for Path {
 
 #[inline]
 fn display_path_segments(f: &mut fmt::Formatter, segs: &[PathSegment]) -> fmt::Result {
-    display_list!(f, segs, "", "::", "")
+    display_lists!(f, "", "::", "", segs)
 }
 
 impl Display for PathSegment {
@@ -294,7 +288,7 @@ impl Display for ParenParam {
 
 #[inline]
 fn display_paren_param_inputs(f: &mut fmt::Formatter, inputs: &Vec<Type>) -> fmt::Result {
-    display_list!(f, inputs, "(", ", ", ")")
+    display_lists!(f, "(", ", ", ")", inputs)
 }
 
 impl Display for Type {
@@ -345,28 +339,28 @@ macro_rules! fmt_attr_group {
 }
 
 macro_rules! fmt_item_group {
-    ($sf: ident, $group: expr, $ty: ty, $fmt_item: ident) => ({
+    ($sf: expr, $group: expr, $ty: ty, $fmt_item: ident) => ({
         let map: BTreeMap<String, (&Vec<AttrKind>, bool, $ty)> = $group.into_iter()
         .map(|e| (e.2.to_string(), *e))
         .collect();
 
-    for (_, e) in map {
-        $sf.fmt_attrs(e.0);
+        for (_, e) in map {
+            $sf.fmt_attrs(e.0);
 
-        $sf.ts.insert_indent();
-        if e.1 {
-            $sf.ts.insert("pub ");
+            $sf.ts.insert_indent();
+            if e.1 {
+                $sf.ts.insert("pub ");
+            }
+            $sf.$fmt_item(e.2);
+
+            $sf.ts.raw_insert(";");
+            $sf.ts.nl();
         }
-        $sf.$fmt_item(e.2);
-
-        $sf.ts.raw_insert(";");
-        $sf.ts.nl();
-    }
     })
 }
 
 macro_rules! fmt_item_groups {
-    ($sf: ident, $items: expr, $item_kind: path, $item_type: ty, $fmt_item: ident) => ({
+    ($sf: expr, $items: expr, $item_kind: path, $item_type: ty, $fmt_item: ident) => ({
         let mut group: Vec<(&Vec<AttrKind>, bool, $item_type)> = Vec::new();
 
         for item in $items {
@@ -392,24 +386,49 @@ macro_rules! fmt_item_groups {
     })
 }
 
-macro_rules! fmt_list {
-    ($sf: ident, $list: expr, $open: expr, $close: expr, $act: expr) => ({
+macro_rules! maybe_wrap {
+    ($sf: expr, $sep: expr, $wrap_sep: expr, $e: expr, $act: ident) => ({
+        if !need_wrap!($sf.ts, $sep, &$e.to_string()) {
+            $sf.ts.insert($sep);
+        } else {
+            $sf.ts.wrap();
+            $sf.ts.insert($wrap_sep);
+        }
+        $sf.$act(&$e)
+    })
+}
+
+macro_rules! fmt_comma_lists {
+    ($sf: expr, $open: expr, $close: expr, $($list: expr, $act: ident),+) => ({
         $sf.ts.insert_mark_align($open);
 
         let mut first = true;
-        for e in $list {
+        $(for e in $list {
             if !first {
                 $sf.ts.raw_insert(",");
-                if !e.loc.nl && !$sf.ts.need_wrap(&e.to_string()) {
+                if !e.loc.nl && !need_wrap!($sf.ts, &e.to_string()) {
                     $sf.ts.raw_insert(" ");
                 }
             }
 
-            $act(e);
+            if e.loc.nl {
+                $sf.ts.wrap();
+            }
+            $sf.$act(e);
+
             first = false;
-        }
+        })+
 
         $sf.ts.insert_unmark_align($close);
+    })
+}
+
+macro_rules! fmt_lists {
+    ($sf: expr, $sep: expr, $wrap_sep: expr, $($list: expr, $act: ident),+) => ({
+        $(for e in $list {
+            maybe_wrap!($sf, $sep, $wrap_sep, e, $act);
+            $sf.$act(e);
+        })+
     })
 }
 
@@ -428,6 +447,11 @@ impl<'a> Formatter<'a> {
 
             ts: Typesetter::new(),
         }
+    }
+
+    #[inline]
+    fn fmt_chunk(&mut self, chunk: &Chunk) {
+        self.ts.insert(&chunk.s);
     }
 
     #[inline]
@@ -539,7 +563,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_attr_meta_items(&mut self, items: &Vec<MetaItem>) {
-        fmt_list!(self, items, "(", ")", |item: &MetaItem| self.fmt_attr_meta_item(item));
+        fmt_comma_lists!(self, "(", ")", items, fmt_attr_meta_item);
     }
 
     fn fmt_mod(&mut self, module: &Mod) {
@@ -596,7 +620,7 @@ impl<'a> Formatter<'a> {
             return;
         }
 
-        fmt_list!(self, names, "{", "}", |name: &Chunk| self.ts.insert(&name.s));
+        fmt_comma_lists!(self, "{", "}", names, fmt_chunk);
     }
 
     fn fmt_mod_decl_items(&mut self, items: &Vec<Item>) {
@@ -666,5 +690,49 @@ impl<'a> Formatter<'a> {
     fn fmt_type_alias(&mut self, item: &TypeAlias) {
         p!("---------- type alias ----------");
         p!(item);
+
+        self.ts.insert(&format!("type {}", &item.name));
+
+        if !item.generics.is_empty() {
+            self.fmt_generics(&item.generics);
+
+            if !item.generics.wh.is_empty() {
+                maybe_wrap!(self, " ", "", item.generics.wh, fmt_where);
+            }
+        }
+
+        maybe_wrap!(self, " = ", "= ", item.ty, fmt_type);
     }
+
+    fn fmt_generics(&mut self, generics: &Generics) {
+        if generics.is_empty() {
+            return;
+        }
+
+        fmt_comma_lists!(self,
+                         "<",
+                         ">",
+                         &generics.lifetime_defs,
+                         fmt_lifetime_def,
+                         &generics.type_params,
+                         fmt_type_param);
+    }
+
+    fn fmt_lifetime_def(&mut self, lifetime_def: &LifetimeDef) {
+        self.fmt_lifetime(&lifetime_def.lifetime);
+        if !lifetime_def.bounds.is_empty() {
+            self.ts.insert(": ");
+            fmt_lists!(self, " + ", "+ ", &lifetime_def.bounds, fmt_lifetime)
+        }
+    }
+
+    fn fmt_lifetime(&mut self, lifetime: &Lifetime) {
+        self.ts.insert(&lifetime.s);
+    }
+
+    fn fmt_type_param(&mut self, type_params: &TypeParam) {}
+
+    fn fmt_where(&mut self, wh: &Where) {}
+
+    fn fmt_type(&mut self, ty: &Type) {}
 }

@@ -1,5 +1,6 @@
 #![feature(rustc_private)]
 #![feature(custom_derive)]
+#![feature(iter_arith)]
 
 #[macro_use]
 extern crate zbase;
@@ -14,10 +15,12 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
+#[macro_use]
+mod ts;
+
+mod ft;
 mod ir;
 mod tr;
-mod ft;
-mod ts;
 
 fn main() {
     let mut args = env::args();

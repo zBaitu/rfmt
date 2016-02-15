@@ -635,7 +635,7 @@ impl Translator {
         Generics {
             lifetime_defs: self.trans_lifetime_defs(&generics.lifetimes),
             type_params: self.trans_type_params(&generics.ty_params),
-            wh: self.trans_where_clauses(&generics.where_clause.predicates),
+            wh: self.trans_where(&generics.where_clause.predicates),
         }
     }
 
@@ -645,8 +645,10 @@ impl Translator {
     }
 
     fn trans_lifetime_def(&self, lifetime_def: &rst::LifetimeDef) -> LifetimeDef {
+        let lifetime = self.trans_lifetime(&lifetime_def.lifetime);
         LifetimeDef {
-            lifetime: self.trans_lifetime(&lifetime_def.lifetime),
+            loc: lifetime.loc,
+            lifetime: lifetime,
             bounds: self.trans_lifetimes(&lifetime_def.bounds),
         }
     }
@@ -726,6 +728,13 @@ impl Translator {
     }
 
     #[inline]
+    fn trans_where(&self, predicates: &Vec<rst::WherePredicate>) -> Where {
+        Where {
+            clauses: self.trans_where_clauses(predicates),
+        }
+    }
+
+    #[inline]
     fn trans_where_clauses(&self, predicates: &Vec<rst::WherePredicate>) -> Vec<WhereClause> {
         trans_list!(self, predicates, trans_where_clause)
     }
@@ -747,6 +756,7 @@ impl Translator {
         WhereClause {
             loc: loc,
             clause: WhereKind::Lifetime(LifetimeDef {
+                loc: lifetime.loc,
                 lifetime: lifetime,
                 bounds: bounds,
             }),

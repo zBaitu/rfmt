@@ -137,10 +137,11 @@ pub struct TypeAlias {
 pub struct Generics {
     pub lifetime_defs: Vec<LifetimeDef>,
     pub type_params: Vec<TypeParam>,
-    pub wh: Vec<WhereClause>,
+    pub wh: Where,
 }
 
 impl Generics {
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.lifetime_defs.is_empty() && self.type_params.is_empty()
     }
@@ -148,6 +149,7 @@ impl Generics {
 
 #[derive(Debug)]
 pub struct LifetimeDef {
+    pub loc: Loc,
     pub lifetime: Lifetime,
     pub bounds: Vec<Lifetime>,
 }
@@ -186,6 +188,18 @@ impl PolyTraitRef {
 }
 
 pub type TraitRef = Path;
+
+#[derive(Debug)]
+pub struct Where {
+    pub clauses: Vec<WhereClause>,
+}
+
+impl Where {
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.clauses.is_empty()
+    }
+}
 
 #[derive(Debug)]
 pub struct WhereClause {
@@ -252,6 +266,7 @@ pub struct AngleParam {
 }
 
 impl AngleParam {
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.lifetimes.is_empty() && self.types.is_empty() && self.bindings.is_empty()
     }
