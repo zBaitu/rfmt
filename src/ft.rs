@@ -192,8 +192,8 @@ fn display_type_param_bounds(f: &mut fmt::Formatter, bounds: &Vec<TypeParamBound
 impl Display for TypeParamBound {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            TypeParamBound::Lifetime(ref lifetime) => Display::fmt(lifetime, f),
-            TypeParamBound::PolyTraitRef(ref poly_trait_ref) => Display::fmt(poly_trait_ref, f),
+            TypeParamBound::Lifetime(ref bound) => Display::fmt(bound, f),
+            TypeParamBound::PolyTraitRef(ref bound) => Display::fmt(bound, f),
         }
     }
 }
@@ -220,8 +220,8 @@ fn display_where_clauses(f: &mut fmt::Formatter, wh: &Vec<WhereClause>) -> fmt::
 impl Display for WhereClause {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.clause {
-            WhereKind::Lifetime(ref lifetime_def) => Display::fmt(lifetime_def, f),
-            WhereKind::Bound(ref bound) => Display::fmt(bound, f),
+            WhereKind::Lifetime(ref wh) => Display::fmt(wh, f),
+            WhereKind::Bound(ref wh) => Display::fmt(wh, f),
         }
     }
 }
@@ -246,7 +246,7 @@ impl Display for Path {
 }
 
 #[inline]
-fn display_path_segments(f: &mut fmt::Formatter, segs: &Vec<PathSegment>) -> fmt::Result {
+fn display_path_segments(f: &mut fmt::Formatter, segs: &[PathSegment]) -> fmt::Result {
     display_list!(f, segs, "", "::", "")
 }
 
@@ -299,8 +299,35 @@ fn display_paren_param_inputs(f: &mut fmt::Formatter, inputs: &Vec<Type>) -> fmt
 
 impl Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        Debug::fmt(self, f)
+        match self.ty {
+            TypeKind::Path(ref ty) => Display::fmt(ty, f),
+            _ => Debug::fmt(self, f),
+        }
     }
+}
+
+impl Display for PathType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.qself {
+            Some(ref qself) => display_qself(f, qself, &self.path),
+            None => Display::fmt(&self.path, f),
+        }
+    }
+}
+
+fn display_qself(f: &mut fmt::Formatter, qself: &QSelf, path: &Path) -> fmt::Result {
+    try!(write!(f, "<{}", qself.ty));
+    if qself.pos > 0 {
+        try!(write!(f, " as "));
+        if path.global {
+            try!(write!(f, "::"));
+        }
+        try!(display_path_segments(f, &path.segs[0..qself.pos]));
+    }
+    try!(write!(f, ">"));
+
+    try!(write!(f, "::"));
+    display_path_segments(f, &path.segs[qself.pos..])
 }
 
 macro_rules! fmt_attr_group {

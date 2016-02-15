@@ -272,6 +272,12 @@ pub struct ParenParam {
 }
 
 #[derive(Debug)]
+pub struct QSelf {
+    pub ty: Type,
+    pub pos: usize,
+}
+
+#[derive(Debug)]
 pub struct Type {
     pub loc: Loc,
     pub ty: TypeKind,
@@ -294,7 +300,7 @@ pub enum TypeKind {
 
 #[derive(Debug)]
 pub struct PathType {
-    pub qself: Option<Type>,
+    pub qself: Option<QSelf>,
     pub path: Path,
 }
 
@@ -678,7 +684,7 @@ pub struct RangePatten {
 
 #[derive(Debug)]
 pub struct PathPatten {
-    pub qself: Type,
+    pub qself: QSelf,
     pub path: Path,
 }
 

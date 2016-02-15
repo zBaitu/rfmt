@@ -838,6 +838,13 @@ impl Translator {
         }
     }
 
+    fn trans_qself(&self, qself: &rst::QSelf) -> QSelf {
+        QSelf {
+            ty: self.trans_type(&qself.ty),
+            pos: qself.position,
+        }
+    }
+
     #[inline]
     fn trans_types(&self, types: &[rst::P<rst::Ty>]) -> Vec<Type> {
         trans_list!(self, types, trans_type)
@@ -885,7 +892,7 @@ impl Translator {
 
     fn trans_path_type(&self, qself: &Option<rst::QSelf>, path: &rst::Path) -> PathType {
         let qself = match *qself {
-            Some(ref qself) => Some(self.trans_type(&qself.ty)),
+            Some(ref qself) => Some(self.trans_qself(&qself)),
             None => None,
         };
         let path = self.trans_path(path);
@@ -1569,7 +1576,7 @@ impl Translator {
 
     fn trans_path_patten(&self, qself: &rst::QSelf, path: &rst::Path) -> PathPatten {
         PathPatten {
-            qself: self.trans_type(&qself.ty),
+            qself: self.trans_qself(&qself),
             path: self.trans_path(path),
         }
     }
