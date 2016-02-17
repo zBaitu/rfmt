@@ -386,6 +386,14 @@ macro_rules! fmt_item_groups {
     })
 }
 
+macro_rules! maybe_nl {
+    ($sf: expr, $e: ident) => ({
+        if $e.loc.nl {
+            $sf.ts.wrap();
+        }
+    })
+}
+
 macro_rules! maybe_wrap {
     ($sf: expr, $sep: expr, $wrap_sep: expr, $e: expr, $act: ident) => ({
         if !need_wrap!($sf.ts, $sep, &$e.to_string()) {
@@ -411,11 +419,7 @@ macro_rules! fmt_comma_lists {
                 }
             }
 
-            if e.loc.nl {
-                $sf.ts.wrap();
-            }
             $sf.$act(e);
-
             first = false;
         })+
 
@@ -457,6 +461,7 @@ impl<'a> Formatter<'a> {
 
     #[inline]
     fn fmt_chunk(&mut self, chunk: &Chunk) {
+        maybe_nl!(self, chunk);
         self.ts.insert(&chunk.s);
     }
 
@@ -558,9 +563,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_attr_meta_item(&mut self, item: &MetaItem) {
-        if item.loc.nl {
-            self.ts.wrap();
-        }
+        maybe_nl!(self, item);
         self.ts.insert(&item.name);
 
         if let Some(ref items) = item.items {
@@ -733,6 +736,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_lifetime(&mut self, lifetime: &Lifetime) {
+        maybe_nl!(self, lifetime);
         self.ts.insert(&lifetime.s);
     }
 
