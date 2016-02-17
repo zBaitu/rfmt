@@ -209,7 +209,7 @@ pub struct WhereClause {
 
 #[derive(Debug)]
 pub enum WhereKind {
-    Lifetime(LifetimeDef),
+    LifetimeDef(LifetimeDef),
     Bound(WhereBound),
 }
 

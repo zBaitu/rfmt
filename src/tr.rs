@@ -755,7 +755,7 @@ impl Translator {
 
         WhereClause {
             loc: loc,
-            clause: WhereKind::Lifetime(LifetimeDef {
+            clause: WhereKind::LifetimeDef(LifetimeDef {
                 loc: lifetime.loc,
                 lifetime: lifetime,
                 bounds: bounds,

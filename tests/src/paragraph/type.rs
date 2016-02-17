@@ -1,7 +1,7 @@
-type a = bool;
+//type a = bool;
 //type a = result::Result;
 //type a = <::i32>::MAX;
-//type a = <::i32 as a::b::Vec<bool>>::c::d::MAX;
+type a = <::i32 as a::b::Vec<bool>>::c::d::MAX;
 //type a = [bool];
 //type a = [[bool]];
 //type a = [bool; 8];

@@ -113,6 +113,12 @@ impl Typesetter {
     }
 
     #[inline]
+    pub fn nl_indent(&mut self) {
+        self.nl();
+        self.insert_indent();
+    }
+
+    #[inline]
     pub fn nl(&mut self) {
         self.s.push_str(NL);
 

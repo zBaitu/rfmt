@@ -214,7 +214,7 @@ fn display_where_clauses(f: &mut fmt::Formatter, wh: &Vec<WhereClause>) -> fmt::
 impl Display for WhereClause {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.clause {
-            WhereKind::Lifetime(ref wh) => Display::fmt(wh, f),
+            WhereKind::LifetimeDef(ref wh) => Display::fmt(wh, f),
             WhereKind::Bound(ref wh) => Display::fmt(wh, f),
         }
     }
@@ -395,15 +395,31 @@ macro_rules! maybe_nl {
 }
 
 macro_rules! maybe_wrap {
-    ($sf: expr, $sep: expr, $wrap_sep: expr, $e: expr, $act: ident) => ({
+    ($sf: expr, $sep: expr, $wrap_sep: expr, $e: expr) => ({
         if !need_wrap!($sf.ts, $sep, &$e.to_string()) {
             $sf.ts.insert($sep);
         } else {
             $sf.ts.wrap();
             $sf.ts.insert($wrap_sep);
         }
-        $sf.$act(&$e)
-    })
+    });
+    ($sf: expr, $e: expr) => ({
+        maybe_wrap!($sf, "", "", $e);
+    });
+    ($sf: expr, $sep: expr, $wrap_sep: expr, $e: expr, $act: ident) => ({
+        maybe_wrap!($sf, $sep, $wrap_sep, $e);
+        $sf.$act(&$e);
+    });
+}
+
+macro_rules! maybe_nl_non_wrap {
+    ($sf: expr, $sep: expr, $e: expr) => ({
+        if !need_wrap!($sf.ts, $sep, &$e.to_string()) {
+            $sf.ts.insert($sep);
+        } else {
+            $sf.ts.nl_indent();
+        }
+    });
 }
 
 macro_rules! fmt_comma_lists {
@@ -424,7 +440,10 @@ macro_rules! fmt_comma_lists {
         })+
 
         $sf.ts.insert_unmark_align($close);
-    })
+    });
+    ($sf: expr, $($list: expr, $act: ident),+) => ({
+        fmt_comma_lists!($sf, "", "", $($list, $act)+);
+    });
 }
 
 macro_rules! fmt_lists {
@@ -702,29 +721,23 @@ impl<'a> Formatter<'a> {
 
         self.ts.insert(&format!("type {}", &item.name));
 
-        if !item.generics.is_empty() {
-            self.fmt_generics(&item.generics);
-
-            if !item.generics.wh.is_empty() {
-                maybe_wrap!(self, " ", "", item.generics.wh, fmt_where);
-            }
-        }
+        self.fmt_generics(&item.generics);
+        self.fmt_where(&item.generics.wh);
 
         maybe_wrap!(self, " = ", "= ", item.ty, fmt_type);
+        self.ts.raw_insert(";");
     }
 
     fn fmt_generics(&mut self, generics: &Generics) {
-        if generics.is_empty() {
-            return;
+        if !generics.is_empty() {
+            fmt_comma_lists!(self,
+                             "<",
+                             ">",
+                             &generics.lifetime_defs,
+                             fmt_lifetime_def,
+                             &generics.type_params,
+                             fmt_type_param);
         }
-
-        fmt_comma_lists!(self,
-                         "<",
-                         ">",
-                         &generics.lifetime_defs,
-                         fmt_lifetime_def,
-                         &generics.type_params,
-                         fmt_type_param);
     }
 
     fn fmt_lifetime_def(&mut self, lifetime_def: &LifetimeDef) {
@@ -736,13 +749,161 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_lifetime(&mut self, lifetime: &Lifetime) {
-        maybe_nl!(self, lifetime);
-        self.ts.insert(&lifetime.s);
+        self.fmt_chunk(lifetime);
     }
 
-    fn fmt_type_param(&mut self, type_params: &TypeParam) {}
+    fn fmt_type_param(&mut self, type_param: &TypeParam) {
+        maybe_nl!(self, type_param);
+        self.ts.insert(&type_param.name);
 
-    fn fmt_where(&mut self, wh: &Where) {}
+        if let Some(ref ty) = type_param.default {
+            maybe_wrap!(self, " = ", "= ", ty, fmt_type);
+            return;
+        }
 
-    fn fmt_type(&mut self, ty: &Type) {}
+        if !type_param.bounds.is_empty() {
+            self.ts.insert(": ");
+            self.fmt_type_param_bounds(&type_param.bounds);
+        }
+    }
+
+    fn fmt_type_param_bounds(&mut self, bounds: &Vec<TypeParamBound>) {
+        fmt_lists!(self, " + ", "+ ", bounds, fmt_type_param_bound)
+    }
+
+    fn fmt_type_param_bound(&mut self, bound: &TypeParamBound) {
+        match *bound {
+            TypeParamBound::Lifetime(ref lifetime) => self.fmt_lifetime(lifetime),
+            TypeParamBound::PolyTraitRef(ref poly_trait_ref) => {
+                self.fmt_poly_trait_ref(poly_trait_ref)
+            }
+        }
+    }
+
+    fn fmt_poly_trait_ref(&mut self, poly_trait_ref: &PolyTraitRef) {
+        self.fmt_for_lifetime_defs(&poly_trait_ref.lifetime_defs);
+        self.fmt_trait_ref(&poly_trait_ref.trait_ref);
+    }
+
+    fn fmt_for_lifetime_defs(&mut self, lifetime_defs: &Vec<LifetimeDef>) {
+        if !lifetime_defs.is_empty() {
+            fmt_comma_lists!(self, "for<", "> ", lifetime_defs, fmt_lifetime_def);
+        }
+    }
+
+    fn fmt_trait_ref(&mut self, trait_ref: &TraitRef) {
+        self.fmt_path(trait_ref);
+    }
+
+    fn fmt_where(&mut self, wh: &Where) {
+        if !wh.is_empty() {
+            maybe_nl_non_wrap!(self, " ", wh);
+            self.ts.insert("where ");
+            self.fmt_where_clauses(&wh.clauses);
+        }
+    }
+
+    fn fmt_where_clauses(&mut self, clauses: &Vec<WhereClause>) {
+        fmt_comma_lists!(self, clauses, fmt_where_clause);
+    }
+
+    fn fmt_where_clause(&mut self, clause: &WhereClause) {
+        match clause.clause {
+            WhereKind::LifetimeDef(ref lifetime_def) => self.fmt_lifetime_def(lifetime_def),
+            WhereKind::Bound(ref bound) => self.fmt_where_bound(bound),
+        }
+    }
+
+    fn fmt_where_bound(&mut self, bound: &WhereBound) {
+        self.fmt_for_lifetime_defs(&bound.lifetime_defs);
+        self.fmt_type(&bound.ty);
+        self.ts.insert(": ");
+        self.fmt_type_param_bounds(&bound.bounds);
+    }
+
+    fn fmt_path(&mut self, path: &Path) {
+        maybe_nl!(self, path);
+
+        if path.global {
+            self.ts.insert("::");
+        }
+
+        self.fmt_path_segments(&path.segs);
+    }
+
+    fn fmt_path_segments(&mut self, segs: &[PathSegment]) {
+        fmt_lists!(self, "::", "::", segs, fmt_path_segment)
+    }
+
+    fn fmt_path_segment(&mut self, seg: &PathSegment) {
+        self.ts.insert(&seg.name);
+        self.fmt_path_param(&seg.param);
+    }
+
+    fn fmt_path_param(&mut self, param: &PathParam) {
+        match *param {
+            PathParam::Angle(ref param) => self.fmt_angle_param(param),
+            PathParam::Paren(ref param) => self.fmt_paren_param(param),
+        }
+    }
+
+    fn fmt_angle_param(&mut self, param: &AngleParam) {
+        if !param.is_empty() {
+            fmt_comma_lists!(self,
+                             "<",
+                             ">",
+                             &param.lifetimes,
+                             fmt_lifetime,
+                             &param.types,
+                             fmt_type,
+                             &param.bindings,
+                             fmt_type_binding);
+        }
+    }
+
+    fn fmt_type_binding(&mut self, binding: &TypeBinding) {
+        maybe_nl!(self, binding);
+        self.ts.insert(&format!("{} = ", binding.name));
+        self.fmt_type(&binding.ty);
+    }
+
+    fn fmt_paren_param(&mut self, param: &ParenParam) {
+        fmt_comma_lists!(self, "(", ")", &param.inputs, fmt_type);
+        if let Some(ref output) = param.output {
+            maybe_wrap!(self, " -> ", "-> ", output, fmt_type);
+        }
+    }
+
+    fn fmt_type(&mut self, ty: &Type) {
+        maybe_nl!(self, ty);
+        match ty.ty {
+            TypeKind::Path(ref ty) => self.fmt_path_type(ty),
+            _ => (),
+        }
+    }
+
+    fn fmt_path_type(&mut self, ty: &PathType) {
+        match ty.qself {
+            Some(ref qself) => self.fmt_qself_path(ty, qself, &ty.path),
+            None => self.fmt_path(&ty.path),
+        }
+    }
+
+    fn fmt_qself_path(&mut self, ty: &PathType, qself: &QSelf, path: &Path) {
+        maybe_wrap!(self, ty);
+
+        self.ts.insert_mark_align("<");
+        self.fmt_type(&qself.ty);
+        if qself.pos > 0 {
+            self.ts.insert(" as ");
+            if path.global {
+                self.ts.insert("::");
+            }
+            self.fmt_path_segments(&path.segs[0..qself.pos]);
+        }
+        self.ts.insert_unmark_align(">");
+
+        self.ts.insert("::");
+        self.fmt_path_segments(&path.segs[qself.pos..]);
+    }
 }
