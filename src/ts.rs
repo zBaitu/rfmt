@@ -84,7 +84,11 @@ impl Typesetter {
 
     #[inline]
     pub fn need_wrap(&mut self, list: &[&str]) -> bool {
-        let len: usize = list.iter().map(|s| s.len()).sum();
+        self.need_wrap_len(list.iter().map(|s| s.len()).sum())
+    }
+
+    #[inline]
+    pub fn need_wrap_len(&mut self, len: usize) -> bool {
         len > self.left() && len <= self.nl_left()
     }
 
@@ -96,7 +100,7 @@ impl Typesetter {
             self.insert_align();
         } else {
             self.insert_indent();
-            self.insert_wrap();
+            self.insert_wrap_indent();
         }
     }
 
@@ -181,7 +185,7 @@ impl Typesetter {
     }
 
     #[inline]
-    fn insert_wrap(&mut self) {
+    fn insert_wrap_indent(&mut self) {
         self.raw_insert(WRAP_INDENT);
     }
 

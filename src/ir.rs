@@ -321,13 +321,14 @@ pub struct PathType {
 
 #[derive(Debug)]
 pub struct PtrType {
-    pub head: &'static str,
+    pub is_mut: bool,
     pub ty: Type,
 }
 
 #[derive(Debug)]
 pub struct RefType {
-    pub head: String,
+    pub lifetime: Option<Lifetime>,
+    pub is_mut: bool,
     pub ty: Type,
 }
 

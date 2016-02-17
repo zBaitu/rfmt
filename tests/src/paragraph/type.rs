@@ -1,14 +1,16 @@
-//type a = bool;
-//type a = result::Result;
-//type a = <::i32>::MAX;
+type a = bool;
+type a = result::Result;
+type a = <::i32>::MAX;
 type a = <::i32 as a::b::Vec<bool>>::c::d::MAX;
-//type a = [bool];
-//type a = [[bool]];
+
+type a = *const bool;
+type a = *mut bool;
+type a = &bool;
+type a = &'a mut bool;
+
+type a = [bool];
+type a = [[bool]];
 //type a = [bool; 8];
-//type a = *const bool;
-//type a = *mut bool;
-//type a = &bool;
-//type a = &'a mut bool;
 //type a = &[bool];
 //type a = &'a bool;
 //type a = ();

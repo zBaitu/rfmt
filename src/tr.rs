@@ -179,7 +179,6 @@ macro_rules! select_str {
 select_str!(pub_head, is_pub, "pub ", "");
 select_str!(mut_head, is_mut, "mut ", "");
 select_str!(type_head, is_pub, "pub type", "type");
-select_str!(ptr_head, is_mut, "*mut", "*const");
 select_str!(const_head, is_pub, "pub const", "const");
 select_str!(struct_head, is_pub, "pub struct", "struct");
 select_str!(enum_head, is_pub, "pub enum", "enum");
@@ -187,20 +186,6 @@ select_str!(unsafe_str, is_unsafe, "unsafe ", "");
 select_str!(fn_const_str, is_const, "const ", "");
 select_str!(polarity_str, is_neg, "!", "");
 select_str!(block_head, is_unsafe, "unsafe", "");
-
-#[inline]
-fn ref_head(lifetime: Option<Lifetime>, is_mut: bool) -> String {
-    let mut head = String::new();
-    head.push_str("&");
-
-    if let Some(lifetime) = lifetime {
-        head.push_str(&lifetime.s);
-        head.push_str(" ");
-    }
-
-    head.push_str(mut_head(is_mut));
-    head
-}
 
 #[inline]
 fn static_head(is_pub: bool, is_mut: bool) -> String {
@@ -622,8 +607,7 @@ impl Translator {
         }
     }
 
-    fn trans_type_alias(&self, ident: String, generics: &rst::Generics, ty: &rst::Ty)
-        -> TypeAlias {
+    fn trans_type_alias(&self, ident: String, generics: &rst::Generics, ty: &rst::Ty) -> TypeAlias {
         TypeAlias {
             name: ident,
             generics: self.trans_generics(generics),
@@ -915,7 +899,7 @@ impl Translator {
 
     fn trans_ptr_type(&self, mut_type: &rst::MutTy) -> PtrType {
         PtrType {
-            head: ptr_head(is_mut(mut_type.mutbl)),
+            is_mut: is_mut(mut_type.mutbl),
             ty: self.trans_type(&mut_type.ty),
         }
     }
@@ -929,7 +913,8 @@ impl Translator {
         let ty = self.trans_type(&mut_type.ty);
 
         RefType {
-            head: ref_head(lifetime, is_mut),
+            lifetime: lifetime,
+            is_mut: is_mut,
             ty: ty,
         }
     }

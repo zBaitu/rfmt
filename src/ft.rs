@@ -295,6 +295,9 @@ impl Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.ty {
             TypeKind::Path(ref ty) => Display::fmt(ty, f),
+            TypeKind::Ptr(ref ty) => Display::fmt(ty, f),
+            TypeKind::Ref(ref ty) => Display::fmt(ty, f),
+            TypeKind::Array(ref ty) => Display::fmt(ty, f),
             _ => Debug::fmt(self, f),
         }
     }
@@ -322,6 +325,48 @@ fn display_qself(f: &mut fmt::Formatter, qself: &QSelf, path: &Path) -> fmt::Res
 
     try!(write!(f, "::"));
     display_path_segments(f, &path.segs[qself.pos..])
+}
+
+impl Display for PtrType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.is_mut {
+            try!(write!(f, "*mut "));
+        } else {
+            try!(write!(f, "*const "));
+        }
+        Display::fmt(&self.ty, f)
+    }
+}
+
+fn ref_head(lifetime: &Option<Lifetime>, is_mut: bool) -> String {
+    let mut head = String::new();
+    head.push_str("&");
+
+    if let Some(ref lifetime) = *lifetime {
+        head.push_str(&lifetime.s);
+        head.push_str(" ");
+    }
+    if is_mut {
+        head.push_str("mut ");
+    }
+
+    head
+}
+
+impl Display for RefType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(f, "{}", ref_head(&self.lifetime, self.is_mut)));
+        Display::fmt(&self.ty, f)
+    }
+}
+
+impl Display for ArrayType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(f, "["));
+        try!(Display::fmt(&self.ty, f));
+        try!(write!(f, "]"));
+        Ok(())
+    }
 }
 
 macro_rules! fmt_attr_group {
@@ -409,6 +454,14 @@ macro_rules! maybe_wrap {
     ($sf: expr, $sep: expr, $wrap_sep: expr, $e: expr, $act: ident) => ({
         maybe_wrap!($sf, $sep, $wrap_sep, $e);
         $sf.$act(&$e);
+    });
+}
+
+macro_rules! maybe_wrap_len {
+    ($sf: expr, $e: expr, $len: expr) => ({
+        if $sf.ts.need_wrap_len($e.to_string().len() + $len) {
+            $sf.ts.wrap();
+        }
     });
 }
 
@@ -690,6 +743,8 @@ impl<'a> Formatter<'a> {
             ItemKind::TypeAlias(ref item) => self.fmt_type_alias(item),
             _ => (),
         }
+
+        self.ts.nl();
     }
 
     fn fmt_sub_mod(&mut self, item: &Mod) {
@@ -878,6 +933,9 @@ impl<'a> Formatter<'a> {
         maybe_nl!(self, ty);
         match ty.ty {
             TypeKind::Path(ref ty) => self.fmt_path_type(ty),
+            TypeKind::Ptr(ref ty) => self.fmt_ptr_type(ty),
+            TypeKind::Ref(ref ty) => self.fmt_ref_type(ty),
+            TypeKind::Array(ref ty) => self.fmt_array_type(ty),
             _ => (),
         }
     }
@@ -905,5 +963,26 @@ impl<'a> Formatter<'a> {
 
         self.ts.insert("::");
         self.fmt_path_segments(&path.segs[qself.pos..]);
+    }
+
+    fn fmt_ptr_type(&mut self, ty: &PtrType) {
+        let head = if ty.is_mut {
+            "*mut "
+        } else {
+            "*const "
+        };
+        maybe_wrap!(self, head, head, ty.ty, fmt_type);
+    }
+
+    fn fmt_ref_type(&mut self, ty: &RefType) {
+        let head = &ref_head(&ty.lifetime, ty.is_mut);
+        maybe_wrap!(self, head, head, ty.ty, fmt_type);
+    }
+
+    fn fmt_array_type(&mut self, ty: &ArrayType) {
+        maybe_wrap_len!(self, ty.ty, 2);
+        self.ts.insert("[");
+        self.fmt_type(&ty.ty);
+        self.ts.insert("]");
     }
 }
