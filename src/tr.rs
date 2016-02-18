@@ -940,11 +940,9 @@ impl Translator {
 
     fn trans_bare_fn_type(&self, bare_fn: &rst::BareFnTy) -> BareFnType {
         BareFnType {
-            head: fn_head(false,
-                          is_unsafe(bare_fn.unsafety),
-                          false,
-                          Some(&abi_to_string(bare_fn.abi))),
             lifetime_defs: self.trans_lifetime_defs(&bare_fn.lifetimes),
+            is_unsafe: is_unsafe(bare_fn.unsafety),
+            abi: abi_to_string(bare_fn.abi),
             fn_sig: self.trans_fn_sig(&bare_fn.decl),
         }
     }

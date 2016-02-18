@@ -25,6 +25,41 @@ macro_rules! display_lists {
     })
 }
 
+fn ref_head(lifetime: &Option<Lifetime>, is_mut: bool) -> String {
+    let mut head = String::new();
+    head.push_str("&");
+
+    if let Some(ref lifetime) = *lifetime {
+        head.push_str(&lifetime.s);
+        head.push_str(" ");
+    }
+    if is_mut {
+        head.push_str("mut ");
+    }
+
+    head
+}
+
+fn fn_head(is_unsafe: bool, is_const: bool, abi: Option<&str>) -> String {
+    let mut head = String::new();
+    if is_unsafe {
+        head.push_str("unsafe ");
+    }
+    if is_const {
+        head.push_str("const ");
+    }
+
+    if let Some(abi) = abi {
+        if abi != r#""Rust""# {
+            head.push_str(&format!("extern {} ", abi));
+        }
+    }
+
+    head.push_str("fn");
+    head
+}
+
+
 impl Display for Chunk {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(&self.s, f)
@@ -183,16 +218,18 @@ impl Display for TypeParamBound {
 
 impl Display for PolyTraitRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if !self.lifetime_defs.is_empty() {
-            try!(display_for_liftime_defs(f, &self.lifetime_defs));
-        }
+        try!(display_for_liftime_defs(f, &self.lifetime_defs));
         Display::fmt(&self.trait_ref, f)
     }
 }
 
 #[inline]
 fn display_for_liftime_defs(f: &mut fmt::Formatter, lifetime_defs: &Vec<LifetimeDef>) -> fmt::Result {
-    display_lists!(f, "for<", ", ", "> ", lifetime_defs)
+    if !lifetime_defs.is_empty() {
+        display_lists!(f, "for<", ", ", "> ", lifetime_defs)
+    } else {
+        Ok(())
+    }
 }
 
 impl Display for Where {
@@ -222,9 +259,7 @@ impl Display for WhereClause {
 
 impl Display for WhereBound {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if !self.lifetime_defs.is_empty() {
-            try!(display_for_liftime_defs(f, &self.lifetime_defs));
-        }
+        try!(display_for_liftime_defs(f, &self.lifetime_defs));
         try!(write!(f, "{}: ", &self.ty));
         display_type_param_bounds(f, &self.bounds)
     }
@@ -298,6 +333,9 @@ impl Display for Type {
             TypeKind::Ptr(ref ty) => Display::fmt(ty, f),
             TypeKind::Ref(ref ty) => Display::fmt(ty, f),
             TypeKind::Array(ref ty) => Display::fmt(ty, f),
+            TypeKind::FixedSizeArray(ref ty) => Display::fmt(ty, f),
+            TypeKind::Tuple(ref ty) => Display::fmt(ty, f),
+            TypeKind::BareFn(ref ty) => Display::fmt(ty, f),
             _ => Debug::fmt(self, f),
         }
     }
@@ -338,21 +376,6 @@ impl Display for PtrType {
     }
 }
 
-fn ref_head(lifetime: &Option<Lifetime>, is_mut: bool) -> String {
-    let mut head = String::new();
-    head.push_str("&");
-
-    if let Some(ref lifetime) = *lifetime {
-        head.push_str(&lifetime.s);
-        head.push_str(" ");
-    }
-    if is_mut {
-        head.push_str("mut ");
-    }
-
-    head
-}
-
 impl Display for RefType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(write!(f, "{}", ref_head(&self.lifetime, self.is_mut)));
@@ -366,6 +389,43 @@ impl Display for ArrayType {
         try!(Display::fmt(&self.ty, f));
         try!(write!(f, "]"));
         Ok(())
+    }
+}
+
+impl Display for FixedSizeArrayType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(f, "["));
+        try!(Display::fmt(&self.ty, f));
+        try!(write!(f, "; "));
+        try!(Display::fmt(&self.expr, f));
+        try!(write!(f, "]"));
+        Ok(())
+    }
+}
+
+impl Display for TupleType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_lists!(f, "(", ", ", ")", &self.types)
+    }
+}
+
+impl Display for BareFnType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(display_for_liftime_defs(f, &self.lifetime_defs));
+        try!(write!(f, "{}", fn_head(self.is_unsafe, false, Some(&self.abi))));
+        Display::fmt(&self.fn_sig, f)
+    }
+}
+
+impl Display for FnSig {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        Debug::fmt(self, f)
+    }
+}
+
+impl Display for Expr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        Debug::fmt(self, f)
     }
 }
 
@@ -431,6 +491,15 @@ macro_rules! fmt_item_groups {
     })
 }
 
+macro_rules! insert_sep {
+    ($sf: expr, $sep: expr, $e: expr) => ({
+        $sf.ts.raw_insert($sep);
+        if !$e.loc.nl && !need_wrap!($sf.ts, &$e.to_string()) {
+            $sf.ts.raw_insert(" ");
+        }
+    });
+}
+
 macro_rules! maybe_nl {
     ($sf: expr, $e: ident) => ({
         if $e.loc.nl {
@@ -482,10 +551,7 @@ macro_rules! fmt_comma_lists {
         let mut first = true;
         $(for e in $list {
             if !first {
-                $sf.ts.raw_insert(",");
-                if !e.loc.nl && !need_wrap!($sf.ts, &e.to_string()) {
-                    $sf.ts.raw_insert(" ");
-                }
+                insert_sep!($sf, ",", e);
             }
 
             $sf.$act(e);
@@ -936,6 +1002,9 @@ impl<'a> Formatter<'a> {
             TypeKind::Ptr(ref ty) => self.fmt_ptr_type(ty),
             TypeKind::Ref(ref ty) => self.fmt_ref_type(ty),
             TypeKind::Array(ref ty) => self.fmt_array_type(ty),
+            TypeKind::FixedSizeArray(ref ty) => self.fmt_fixed_size_array_type(ty),
+            TypeKind::Tuple(ref ty) => self.fmt_tuple_type(ty),
+            TypeKind::BareFn(ref ty) => self.fmt_bare_fn_type(ty),
             _ => (),
         }
     }
@@ -981,8 +1050,30 @@ impl<'a> Formatter<'a> {
 
     fn fmt_array_type(&mut self, ty: &ArrayType) {
         maybe_wrap_len!(self, ty.ty, 2);
-        self.ts.insert("[");
+        self.ts.insert_mark_align("[");
         self.fmt_type(&ty.ty);
-        self.ts.insert("]");
+        self.ts.insert_unmark_align("]");
     }
+
+    fn fmt_fixed_size_array_type(&mut self, ty: &FixedSizeArrayType) {
+        maybe_wrap_len!(self, ty.ty, 4);
+        self.ts.insert_mark_align("[");
+        self.fmt_type(&ty.ty);
+        insert_sep!(self, ";", ty.expr);        
+        self.fmt_expr(&ty.expr);
+        self.ts.insert_unmark_align("]");
+    }
+
+    fn fmt_tuple_type(&mut self, ty: &TupleType) {
+        fmt_comma_lists!(self, "(", ")", &ty.types, fmt_type);
+    }
+
+    fn fmt_bare_fn_type(&mut self, ty: &BareFnType) {
+        self.fmt_for_lifetime_defs(&ty.lifetime_defs);
+        self.ts.insert(&fn_head(ty.is_unsafe, false, Some(&ty.abi)));
+        self.fmt_fn_sig(&ty.fn_sig);
+    }
+
+    fn fmt_fn_sig(&mut self, fn_sig: &FnSig){}
+    fn fmt_expr(&mut self, expr: &Expr){}
 }

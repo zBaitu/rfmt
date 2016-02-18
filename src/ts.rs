@@ -5,8 +5,8 @@ use zbase::zstr;
 
 const NL: &'static str = "\n";
 
-const MAX_WIDTH: usize = 100;
-const MAX_ALIGN_COL: usize = 50;
+const MAX_WIDTH: usize = 40;
+const MAX_ALIGN_COL: usize = 20;
 
 const INDENT: &'static str = "    ";
 const WRAP_INDENT: &'static str = "        ";

@@ -350,8 +350,9 @@ pub struct TupleType {
 
 #[derive(Debug)]
 pub struct BareFnType {
-    pub head: String,
     pub lifetime_defs: Vec<LifetimeDef>,
+    pub is_unsafe: bool,
+    pub abi: String,
     pub fn_sig: FnSig,
 }
 
