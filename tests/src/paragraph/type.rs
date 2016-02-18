@@ -21,9 +21,11 @@ type a = (bool, usize);
 type a = (bool, usize, isize, String, Vec, str);
 
 type a = for<'a> unsafe extern "C" fn(bool) -> usize;
-//type a = Result + Iterator<T> + 'static + Sized;
-//type a = for<'a, 'b: 'a> Foo<&'a Bar>;
-//type a = a!("a");
 
-//type a<T>  where T: Iterator = Option<T>;
-//type a = _;
+type a = Result + Iterator<T> + 'static + Sized;
+
+type a = for<'a, 'b: 'a> Foo<&'a Bar>;
+
+type a = a!("a");
+
+type a = _;

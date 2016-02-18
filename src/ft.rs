@@ -336,7 +336,10 @@ impl Display for Type {
             TypeKind::FixedSizeArray(ref ty) => Display::fmt(ty, f),
             TypeKind::Tuple(ref ty) => Display::fmt(ty, f),
             TypeKind::BareFn(ref ty) => Display::fmt(ty, f),
-            _ => Debug::fmt(self, f),
+            TypeKind::Sum(ref ty) => Display::fmt(ty, f),
+            TypeKind::PolyTraitRef(ref ty) => Display::fmt(ty, f),
+            TypeKind::Macro(ref ty) => Display::fmt(ty, f),
+            TypeKind::Infer => display_infer_type(f),
         }
     }
 }
@@ -415,6 +418,27 @@ impl Display for BareFnType {
         try!(write!(f, "{}", fn_head(self.is_unsafe, false, Some(&self.abi))));
         Display::fmt(&self.fn_sig, f)
     }
+}
+
+impl Display for SumType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(Display::fmt(&self.ty, f));
+        if !self.bounds.is_empty() {
+            try!(write!(f, " + "));
+            try!(display_type_param_bounds(f, &self.bounds));
+        }
+        Ok(())
+    }
+}
+
+impl Display for PolyTraitRefType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_type_param_bounds(f, &self.bounds)
+    }
+}
+
+fn display_infer_type(f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "_")
 }
 
 impl Display for FnSig {
@@ -1005,7 +1029,10 @@ impl<'a> Formatter<'a> {
             TypeKind::FixedSizeArray(ref ty) => self.fmt_fixed_size_array_type(ty),
             TypeKind::Tuple(ref ty) => self.fmt_tuple_type(ty),
             TypeKind::BareFn(ref ty) => self.fmt_bare_fn_type(ty),
-            _ => (),
+            TypeKind::Sum(ref ty) => self.fmt_sum_type(ty),
+            TypeKind::PolyTraitRef(ref ty) => self.fmt_poly_trait_ref_type(ty),
+            TypeKind::Macro(ref ty) => self.fmt_macro(ty),
+            TypeKind::Infer => self.fmt_infer_type(),
         }
     }
 
@@ -1074,6 +1101,26 @@ impl<'a> Formatter<'a> {
         self.fmt_fn_sig(&ty.fn_sig);
     }
 
+    fn fmt_sum_type(&mut self, ty: &SumType) {
+        self.fmt_type(&ty.ty);
+        if !ty.bounds.is_empty() {
+            self.ts.insert(" + ");
+            self.fmt_type_param_bounds(&ty.bounds);
+        }
+    }
+
+    fn fmt_poly_trait_ref_type(&mut self, ty: &PolyTraitRefType) {
+        self.fmt_type_param_bounds(&ty.bounds);
+    }
+
+    fn fmt_infer_type(&mut self) {
+        self.ts.insert("_");
+    }
+
     fn fmt_fn_sig(&mut self, fn_sig: &FnSig){}
     fn fmt_expr(&mut self, expr: &Expr){}
+
+    fn fmt_macro(&mut self, mac: &Macro) {
+        self.fmt_chunk(mac);
+    }
 }

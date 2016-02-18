@@ -949,6 +949,4 @@ pub struct ReturnExpr {
 pub type MacroType = Macro;
 pub type MacroImplItem = Macro;
 pub type MacroExpr = Macro;
-
-#[derive(Debug)]
-pub struct Macro;
+pub type Macro = Chunk;

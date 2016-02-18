@@ -280,10 +280,15 @@ impl Translator {
         name
     }
 
+    #[inline]
+    fn span_to_snippet(&self, sp: rst::Span) -> Result<String, rst::SpanSnippetError> {
+        self.sess.codemap().span_to_snippet(sp)
+    }
+
     fn is_nl(&self, sp: &rst::Span) -> bool {
         let start = self.last_loc.get().end;
         let end = sp.lo.0;
-        let snippet = self.sess.codemap().span_to_snippet(span(start, end));
+        let snippet = self.span_to_snippet(span(start, end));
         if snippet.is_err() {
             return false;
         }
@@ -2105,6 +2110,9 @@ impl Translator {
     }
 
     fn trans_macro(&self, mac: &rst::Mac) -> Macro {
-        Macro
+        Macro {
+            loc: self.loc_leaf(&mac.span),
+            s: self.span_to_snippet(mac.span).unwrap(),
+        }
     }
 }
