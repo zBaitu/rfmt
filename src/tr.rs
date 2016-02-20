@@ -177,7 +177,6 @@ macro_rules! select_str {
     );
 }
 select_str!(pub_head, is_pub, "pub ", "");
-select_str!(mut_head, is_mut, "mut ", "");
 select_str!(type_head, is_pub, "pub type", "type");
 select_str!(const_head, is_pub, "pub const", "const");
 select_str!(struct_head, is_pub, "pub struct", "struct");
@@ -186,11 +185,6 @@ select_str!(unsafe_str, is_unsafe, "unsafe ", "");
 select_str!(fn_const_str, is_const, "const ", "");
 select_str!(polarity_str, is_neg, "!", "");
 select_str!(block_head, is_unsafe, "unsafe", "");
-
-#[inline]
-fn static_head(is_pub: bool, is_mut: bool) -> String {
-    format!("{}{}static ", pub_head(is_pub), mut_head(is_mut))
-}
 
 #[inline]
 fn foreign_head(abi: &str) -> String {
@@ -479,13 +473,13 @@ impl Translator {
             }
             rst::ItemForeignMod(ref module) => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
             rst::ItemConst(ref ty, ref expr) => {
-                ItemKind::Const(self.trans_const(is_pub, ident, ty, expr))
+                ItemKind::Const(self.trans_const(ident, ty, expr))
             }
             rst::ItemStatic(ref ty, mutbl, ref expr) => {
-                ItemKind::Static(self.trans_static(is_pub, is_mut(mutbl), ident, ty, expr))
+                ItemKind::Static(self.trans_static(is_mut(mutbl), ident, ty, expr))
             }
             rst::ItemStruct(ref variant, ref generics) => {
-                ItemKind::Struct(self.trans_struct(is_pub, ident, generics, variant))
+                ItemKind::Struct(self.trans_struct(ident, generics, variant))
             }
             rst::ItemEnum(ref enum_def, ref generics) => {
                 ItemKind::Enum(self.trans_enum(is_pub, ident, generics, enum_def))
@@ -1018,31 +1012,29 @@ impl Translator {
         }
     }
 
-    fn trans_const(&self, is_pub: bool, ident: String, ty: &rst::Ty, expr: &rst::Expr) -> Const {
+    fn trans_const(&self, ident: String, ty: &rst::Ty, expr: &rst::Expr) -> Const {
         Const {
-            head: const_head(is_pub),
             name: ident,
             ty: self.trans_type(ty),
             expr: self.trans_expr(expr),
         }
     }
 
-    fn trans_static(&self, is_pub: bool, is_mut: bool, ident: String, ty: &rst::Ty,
+    fn trans_static(&self, is_mut: bool, ident: String, ty: &rst::Ty,
                     expr: &rst::Expr)
         -> Static {
         Static {
-            head: static_head(is_pub, is_mut),
+            is_mut: is_mut,
             name: ident,
             ty: self.trans_type(ty),
             expr: self.trans_expr(expr),
         }
     }
 
-    fn trans_struct(&self, is_pub: bool, ident: String, generics: &rst::Generics,
+    fn trans_struct(&self, ident: String, generics: &rst::Generics,
                     variant: &rst::VariantData)
         -> Struct {
         Struct {
-            head: struct_head(is_pub),
             name: ident,
             generics: self.trans_generics(generics),
             body: self.trans_struct_body(variant),
@@ -1082,7 +1074,7 @@ impl Translator {
         StructField {
             loc: loc,
             attrs: attrs,
-            head: pub_head(is_pub),
+            is_pub: is_pub,
             name: name,
             ty: ty,
         }
@@ -1107,7 +1099,7 @@ impl Translator {
         TupleField {
             loc: loc,
             attrs: attrs,
-            head: pub_head(is_pub),
+            is_pub: is_pub,
             ty: ty,
         }
     }

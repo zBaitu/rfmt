@@ -23,10 +23,10 @@ macro_rules! select_str {
         }
     );
 }
-select_str!(ptr_str, is_mut, "*mut ", "*const ");
-select_str!(static_str, is_mut, "static mut ", "static ");
+select_str!(ptr_head, is_mut, "*mut ", "*const ");
+select_str!(static_head, is_mut, "static mut ", "static ");
 
-fn ref_str(lifetime: &Option<Lifetime>, is_mut: bool) -> String {
+fn ref_head(lifetime: &Option<Lifetime>, is_mut: bool) -> String {
     let mut head = String::new();
     head.push_str("&");
 
@@ -46,14 +46,14 @@ fn foreign_str(abi: &str) -> String {
 
     if abi != r#""Rust""# {
         head.push_str("extern ");
-        head.push_str(&abi_str(abi));
+        head.push_str(&abi_head(abi));
         head.push_str(" ");
     }
 
     head
 }
 
-fn abi_str(abi: &str) -> String {
+fn abi_head(abi: &str) -> String {
     if abi == r#""C""# {
         String::new()
     } else {
@@ -61,7 +61,7 @@ fn abi_str(abi: &str) -> String {
     }
 }
 
-fn fn_str(is_unsafe: bool, is_const: bool, abi: Option<&str>) -> String {
+fn fn_head(is_unsafe: bool, is_const: bool, abi: Option<&str>) -> String {
     let mut head = String::new();
     if is_unsafe {
         head.push_str("unsafe ");
@@ -384,13 +384,13 @@ fn display_qself(f: &mut fmt::Formatter, qself: &QSelf, path: &Path) -> fmt::Res
 
 impl Display for PtrType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", ptr_str(self.is_mut), self.ty)
+        write!(f, "{}{}", ptr_head(self.is_mut), self.ty)
     }
 }
 
 impl Display for RefType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", ref_str(&self.lifetime, self.is_mut), self.ty)
+        write!(f, "{}{}", ref_head(&self.lifetime, self.is_mut), self.ty)
     }
 }
 
@@ -415,7 +415,7 @@ impl Display for TupleType {
 impl Display for BareFnType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(display_for_liftime_defs(f, &self.lifetime_defs));
-        write!(f, "{}{}", fn_str(self.is_unsafe, false, Some(&self.abi)), self.fn_sig)
+        write!(f, "{}{}", fn_head(self.is_unsafe, false, Some(&self.abi)), self.fn_sig)
     }
 }
 
@@ -442,13 +442,22 @@ fn display_infer_type(f: &mut fmt::Formatter) -> fmt::Result {
 
 impl Display for ForeignStatic {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}: {}", static_str(self.is_mut), self.name, self.ty)
+        write!(f, "{}{}: {}", static_head(self.is_mut), self.name, self.ty)
     }
 }
 
 impl Display for ForeignFn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "fn {}{}{}", self.name, self.generics, self.fn_sig)
+    }
+}
+
+impl Display for TupleField {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.is_pub {
+            try!(write!(f, "pub "));
+        }
+        Display::fmt(&self.ty, f)
     }
 }
 
@@ -865,6 +874,9 @@ impl<'a> Formatter<'a> {
             ItemKind::Mod(ref item) => self.fmt_sub_mod(item),
             ItemKind::TypeAlias(ref item) => self.fmt_type_alias(item),
             ItemKind::ForeignMod(ref item) => self.fmt_foreign_mod(item),
+            ItemKind::Const(ref item) => self.fmt_const(item),
+            ItemKind::Static(ref item) => self.fmt_static(item),
+            ItemKind::Struct(ref item) => self.fmt_struct(item),
             _ => (),
         }
 
@@ -1087,12 +1099,12 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_ptr_type(&mut self, ty: &PtrType) {
-        let head = ptr_str(ty.is_mut);
+        let head = ptr_head(ty.is_mut);
         maybe_wrap!(self, head, head, ty.ty, fmt_type);
     }
 
     fn fmt_ref_type(&mut self, ty: &RefType) {
-        let head = &ref_str(&ty.lifetime, ty.is_mut);
+        let head = &ref_head(&ty.lifetime, ty.is_mut);
         maybe_wrap!(self, head, head, ty.ty, fmt_type);
     }
 
@@ -1118,7 +1130,7 @@ impl<'a> Formatter<'a> {
 
     fn fmt_bare_fn_type(&mut self, ty: &BareFnType) {
         self.fmt_for_lifetime_defs(&ty.lifetime_defs);
-        self.ts.insert(&fn_str(ty.is_unsafe, false, Some(&ty.abi)));
+        self.ts.insert(&fn_head(ty.is_unsafe, false, Some(&ty.abi)));
         self.fmt_fn_sig(&ty.fn_sig);
     }
 
@@ -1141,7 +1153,7 @@ impl<'a> Formatter<'a> {
     fn fmt_foreign_mod(&mut self, item: &ForeignMod) {
         p!("---------- foreign mod ----------");
 
-        self.ts.insert(&format!("extern {}", abi_str(&item.abi)));
+        self.ts.insert(&format!("extern {}", abi_head(&item.abi)));
 
         if item.items.is_empty() {
             self.ts.insert("{}");
@@ -1179,7 +1191,7 @@ impl<'a> Formatter<'a> {
         p!("---------- foreign static ----------");
         p!(item);
 
-        self.ts.insert(&format!("{}{}", static_str(item.is_mut), item.name));
+        self.ts.insert(&format!("{}{}", static_head(item.is_mut), item.name));
         insert_sep!(self, ":", item.ty);
         self.fmt_type(&item.ty);
     }
@@ -1191,6 +1203,82 @@ impl<'a> Formatter<'a> {
         self.ts.insert(&format!("fn {}", item.name));
         self.fmt_generics(&item.generics);
         self.fmt_fn_sig(&item.fn_sig);
+    }
+
+    fn fmt_const(&mut self, item: &Const) {
+        self.ts.insert(&format!("const {}", item.name));
+        insert_sep!(self, ":", item.ty);
+        self.fmt_type(&item.ty);
+        maybe_wrap!(self, " = ", "= ", item.expr, fmt_expr);
+    }
+
+    fn fmt_static(&mut self, item: &Static) {
+        self.ts.insert(&format!("{}{}", static_head(item.is_mut), item.name));
+        insert_sep!(self, ":", item.ty);
+        self.fmt_type(&item.ty);
+        maybe_wrap!(self, " = ", "= ", item.expr, fmt_expr);
+    }
+
+    fn fmt_struct(&mut self, item: &Struct) {
+        self.ts.insert(&format!("struct {}", item.name));
+        self.fmt_generics(&item.generics);
+        self.fmt_struct_body(&item.body);
+
+        match item.body {
+            StructBody::Tuple(_) | StructBody::Unit => self.ts.raw_insert(";"),
+            _ => (),
+        }
+    }
+
+    fn fmt_struct_body(&mut self, body: &StructBody) {
+        match *body {
+            StructBody::Struct(ref fields) => self.fmt_struct_field_block(fields),
+            StructBody::Tuple(ref fields) => self.fmt_tuple_fields(fields),
+            StructBody::Unit => (),
+        }
+    }
+
+    fn fmt_struct_field_block(&mut self, fields: &Vec<StructField>) {
+        self.ts.raw_insert(" ");
+        if fields.is_empty() {
+            self.ts.insert("{}");
+            return;
+        }
+        fmt_block!(self, fmt_struct_fields, &fields);
+    }
+
+    fn fmt_struct_fields(&mut self, fields: &Vec<StructField>) {
+        fmt_items!(self, fields, fmt_struct_field);
+    }
+
+    fn fmt_struct_field(&mut self, field: &StructField) {
+        self.ts.insert_indent();
+        self.try_fmt_comments(&field.loc);
+        self.fmt_attrs(&field.attrs);
+
+        if field.is_pub {
+            self.ts.insert("pub ");
+        }
+        self.ts.insert(&field.name);
+        insert_sep!(self, ":", field.ty);
+        self.fmt_type(&field.ty);
+
+        self.ts.raw_insert(",");
+        self.ts.nl();
+    }
+
+    fn fmt_tuple_fields(&mut self, fields: &Vec<TupleField>) {
+        fmt_comma_lists!(self, "(", ")", fields, fmt_tuple_field);
+    }
+
+    fn fmt_tuple_field(&mut self, field: &TupleField) {
+        self.try_fmt_comments(&field.loc);
+        self.fmt_attrs(&field.attrs);
+
+        if field.is_pub {
+            self.ts.insert("pub ");
+        }
+        self.fmt_type(&field.ty);
     }
 
     fn fmt_fn_sig(&mut self, fn_sig: &FnSig) {}

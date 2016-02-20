@@ -403,7 +403,6 @@ pub struct ForeignFn {
 
 #[derive(Debug)]
 pub struct Const {
-    pub head: &'static str,
     pub name: String,
     pub ty: Type,
     pub expr: Expr,
@@ -411,7 +410,7 @@ pub struct Const {
 
 #[derive(Debug)]
 pub struct Static {
-    pub head: String,
+    pub is_mut: bool,
     pub name: String,
     pub ty: Type,
     pub expr: Expr,
@@ -419,7 +418,6 @@ pub struct Static {
 
 #[derive(Debug)]
 pub struct Struct {
-    pub head: &'static str,
     pub name: String,
     pub generics: Generics,
     pub body: StructBody,
@@ -436,7 +434,7 @@ pub enum StructBody {
 pub struct StructField {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
-    pub head: &'static str,
+    pub is_pub: bool,
     pub name: String,
     pub ty: Type,
 }
@@ -445,7 +443,7 @@ pub struct StructField {
 pub struct TupleField {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
-    pub head: &'static str,
+    pub is_pub: bool,
     pub ty: Type,
 }
 
