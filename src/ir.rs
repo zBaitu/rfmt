@@ -449,7 +449,6 @@ pub struct TupleField {
 
 #[derive(Debug)]
 pub struct Enum {
-    pub head: &'static str,
     pub name: String,
     pub generics: Generics,
     pub body: EnumBody,

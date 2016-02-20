@@ -179,8 +179,6 @@ macro_rules! select_str {
 select_str!(pub_head, is_pub, "pub ", "");
 select_str!(type_head, is_pub, "pub type", "type");
 select_str!(const_head, is_pub, "pub const", "const");
-select_str!(struct_head, is_pub, "pub struct", "struct");
-select_str!(enum_head, is_pub, "pub enum", "enum");
 select_str!(unsafe_str, is_unsafe, "unsafe ", "");
 select_str!(fn_const_str, is_const, "const ", "");
 select_str!(polarity_str, is_neg, "!", "");
@@ -482,7 +480,7 @@ impl Translator {
                 ItemKind::Struct(self.trans_struct(ident, generics, variant))
             }
             rst::ItemEnum(ref enum_def, ref generics) => {
-                ItemKind::Enum(self.trans_enum(is_pub, ident, generics, enum_def))
+                ItemKind::Enum(self.trans_enum(ident, generics, enum_def))
             }
             rst::ItemFn(ref fn_decl, unsafety, constness, abi, ref generics, ref block) => {
                 ItemKind::Fn(self.trans_fn(is_pub,
@@ -1104,11 +1102,10 @@ impl Translator {
         }
     }
 
-    fn trans_enum(&self, is_pub: bool, ident: String, generics: &rst::Generics,
+    fn trans_enum(&self, ident: String, generics: &rst::Generics,
                   enum_def: &rst::EnumDef)
         -> Enum {
         Enum {
-            head: enum_head(is_pub),
             name: ident,
             generics: self.trans_generics(generics),
             body: self.trans_enum_body(enum_def),

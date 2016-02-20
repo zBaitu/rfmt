@@ -877,6 +877,7 @@ impl<'a> Formatter<'a> {
             ItemKind::Const(ref item) => self.fmt_const(item),
             ItemKind::Static(ref item) => self.fmt_static(item),
             ItemKind::Struct(ref item) => self.fmt_struct(item),
+            ItemKind::Enum(ref item) => self.fmt_enum(item),
             _ => (),
         }
 
@@ -1244,6 +1245,7 @@ impl<'a> Formatter<'a> {
             self.ts.insert("{}");
             return;
         }
+
         fmt_block!(self, fmt_struct_fields, &fields);
     }
 
@@ -1279,6 +1281,40 @@ impl<'a> Formatter<'a> {
             self.ts.insert("pub ");
         }
         self.fmt_type(&field.ty);
+    }
+
+    fn fmt_enum(&mut self, item: &Enum) {
+        self.ts.insert(&format!("enum {} ", item.name));
+        self.fmt_generics(&item.generics);
+        self.fmt_enum_body(&item.body);
+    }
+
+    fn fmt_enum_body(&mut self, body: &EnumBody) {
+        if body.fields.is_empty() {
+            self.ts.insert("{}");
+            return;
+        }
+
+        fmt_block!(self, fmt_enum_fields, &body.fields);
+    }
+
+    fn fmt_enum_fields(&mut self, fields: &Vec<EnumField>) {
+        fmt_items!(self, fields, fmt_enum_field);
+    }
+
+    fn fmt_enum_field(&mut self, field: &EnumField) {
+        self.ts.insert_indent();
+        self.try_fmt_comments(&field.loc);
+        self.fmt_attrs(&field.attrs);
+
+        self.ts.insert(&field.name);
+        self.fmt_struct_body(&field.body);
+        if let Some(ref expr) = field.expr {
+            maybe_wrap!(self, " = ", "= ", expr, fmt_expr);
+        }
+
+        self.ts.raw_insert(",");
+        self.ts.nl();
     }
 
     fn fmt_fn_sig(&mut self, fn_sig: &FnSig) {}
