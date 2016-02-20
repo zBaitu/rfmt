@@ -470,7 +470,9 @@ pub struct EnumField {
 
 #[derive(Debug)]
 pub struct Fn {
-    pub head: String,
+    pub is_unsafe: bool,
+    pub is_const: bool,
+    pub abi: String,
     pub name: String,
     pub generics: Generics,
     pub fn_sig: FnSig,

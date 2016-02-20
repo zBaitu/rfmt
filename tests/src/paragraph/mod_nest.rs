@@ -8,6 +8,8 @@ mod c {
     // abc
     #[test]
     mod d;
+
+    type a = bool;
 }
 
 mod e {

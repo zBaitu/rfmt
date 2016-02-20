@@ -7,7 +7,8 @@ struct BA;
 struct BB;
 
 enum B {
-    A(BA),
+    A(BA, 
+    BB),
     B(BB),
 }
 

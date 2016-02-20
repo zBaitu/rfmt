@@ -470,9 +470,7 @@ impl Translator {
                 ItemKind::TypeAlias(self.trans_type_alias(ident, generics, ty))
             }
             rst::ItemForeignMod(ref module) => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
-            rst::ItemConst(ref ty, ref expr) => {
-                ItemKind::Const(self.trans_const(ident, ty, expr))
-            }
+            rst::ItemConst(ref ty, ref expr) => ItemKind::Const(self.trans_const(ident, ty, expr)),
             rst::ItemStatic(ref ty, mutbl, ref expr) => {
                 ItemKind::Static(self.trans_static(is_mut(mutbl), ident, ty, expr))
             }
@@ -483,8 +481,7 @@ impl Translator {
                 ItemKind::Enum(self.trans_enum(ident, generics, enum_def))
             }
             rst::ItemFn(ref fn_decl, unsafety, constness, abi, ref generics, ref block) => {
-                ItemKind::Fn(self.trans_fn(is_pub,
-                                           is_unsafe(unsafety),
+                ItemKind::Fn(self.trans_fn(is_unsafe(unsafety),
                                            is_const(constness),
                                            abi_to_string(abi),
                                            ident,
@@ -1018,9 +1015,7 @@ impl Translator {
         }
     }
 
-    fn trans_static(&self, is_mut: bool, ident: String, ty: &rst::Ty,
-                    expr: &rst::Expr)
-        -> Static {
+    fn trans_static(&self, is_mut: bool, ident: String, ty: &rst::Ty, expr: &rst::Expr) -> Static {
         Static {
             is_mut: is_mut,
             name: ident,
@@ -1029,8 +1024,7 @@ impl Translator {
         }
     }
 
-    fn trans_struct(&self, ident: String, generics: &rst::Generics,
-                    variant: &rst::VariantData)
+    fn trans_struct(&self, ident: String, generics: &rst::Generics, variant: &rst::VariantData)
         -> Struct {
         Struct {
             name: ident,
@@ -1102,9 +1096,7 @@ impl Translator {
         }
     }
 
-    fn trans_enum(&self, ident: String, generics: &rst::Generics,
-                  enum_def: &rst::EnumDef)
-        -> Enum {
+    fn trans_enum(&self, ident: String, generics: &rst::Generics, enum_def: &rst::EnumDef) -> Enum {
         Enum {
             name: ident,
             generics: self.trans_generics(generics),
@@ -1143,11 +1135,13 @@ impl Translator {
         }
     }
 
-    fn trans_fn(&self, is_pub: bool, is_unsafe: bool, is_const: bool, abi: String, ident: String,
+    fn trans_fn(&self, is_unsafe: bool, is_const: bool, abi: String, ident: String,
                 generics: &rst::Generics, fn_decl: &rst::FnDecl, block: &rst::Block)
         -> Fn {
         Fn {
-            head: fn_head(is_pub, is_unsafe, is_const, Some(&abi)),
+            is_unsafe: is_unsafe,
+            is_const: is_const,
+            abi: abi,
             name: ident,
             generics: self.trans_generics(generics),
             fn_sig: self.trans_fn_sig(fn_decl),

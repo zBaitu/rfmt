@@ -699,6 +699,7 @@ impl<'a> Formatter<'a> {
         }
 
         for line in &cmnt.lines {
+            self.ts.insert_indent();
             self.ts.raw_insert(line);
             self.ts.nl();
         }
@@ -744,6 +745,7 @@ impl<'a> Formatter<'a> {
         p!("---------- doc ----------");
         p!("{:#?}", doc);
 
+        self.ts.insert_indent();
         self.ts.raw_insert(&doc.s);
         self.ts.nl();
     }
@@ -818,6 +820,7 @@ impl<'a> Formatter<'a> {
     fn fmt_use(&mut self, item: &Use) {
         p!(item);
 
+        self.ts.insert_indent();
         self.ts.insert(&format!("use {}", &item.base));
         self.fmt_use_names(&item.names);
     }
@@ -861,10 +864,10 @@ impl<'a> Formatter<'a> {
     fn fmt_item(&mut self, item: &Item) {
         p!("---------- item ----------");
 
-        self.ts.insert_indent();
         self.try_fmt_comments(&item.loc);
         self.fmt_attrs(&item.attrs);
 
+        self.ts.insert_indent();
         if item.is_pub {
             self.ts.insert("pub ");
         }
@@ -902,6 +905,7 @@ impl<'a> Formatter<'a> {
         p!("---------- type alias ----------");
         p!(item);
 
+        self.ts.insert_indent();
         self.ts.insert(&format!("type {}", &item.name));
 
         self.fmt_generics(&item.generics);
@@ -1154,6 +1158,7 @@ impl<'a> Formatter<'a> {
     fn fmt_foreign_mod(&mut self, item: &ForeignMod) {
         p!("---------- foreign mod ----------");
 
+        self.ts.insert_indent();
         self.ts.insert(&format!("extern {}", abi_head(&item.abi)));
 
         if item.items.is_empty() {
@@ -1171,10 +1176,10 @@ impl<'a> Formatter<'a> {
     fn fmt_foreign_item(&mut self, item: &ForeignItem) {
         p!("---------- foreign item ----------");
 
-        self.ts.insert_indent();
         self.try_fmt_comments(&item.loc);
         self.fmt_attrs(&item.attrs);
 
+        self.ts.insert_indent();
         if item.is_pub {
             self.ts.insert("pub ");
         }
@@ -1207,6 +1212,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_const(&mut self, item: &Const) {
+        self.ts.insert_indent();
         self.ts.insert(&format!("const {}", item.name));
         insert_sep!(self, ":", item.ty);
         self.fmt_type(&item.ty);
@@ -1214,6 +1220,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_static(&mut self, item: &Static) {
+        self.ts.insert_indent();
         self.ts.insert(&format!("{}{}", static_head(item.is_mut), item.name));
         insert_sep!(self, ":", item.ty);
         self.fmt_type(&item.ty);
@@ -1221,6 +1228,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_struct(&mut self, item: &Struct) {
+        self.ts.insert_indent();
         self.ts.insert(&format!("struct {}", item.name));
         self.fmt_generics(&item.generics);
         self.fmt_struct_body(&item.body);
@@ -1254,10 +1262,10 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_struct_field(&mut self, field: &StructField) {
-        self.ts.insert_indent();
         self.try_fmt_comments(&field.loc);
         self.fmt_attrs(&field.attrs);
 
+        self.ts.insert_indent();
         if field.is_pub {
             self.ts.insert("pub ");
         }
@@ -1284,6 +1292,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_enum(&mut self, item: &Enum) {
+        self.ts.insert_indent();
         self.ts.insert(&format!("enum {} ", item.name));
         self.fmt_generics(&item.generics);
         self.fmt_enum_body(&item.body);
@@ -1303,10 +1312,10 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_enum_field(&mut self, field: &EnumField) {
-        self.ts.insert_indent();
         self.try_fmt_comments(&field.loc);
         self.fmt_attrs(&field.attrs);
 
+        self.ts.insert_indent();
         self.ts.insert(&field.name);
         self.fmt_struct_body(&field.body);
         if let Some(ref expr) = field.expr {
