@@ -967,17 +967,17 @@ impl Translator {
 
     fn trans_foreign_mod(&self, module: &rst::ForeignMod) -> ForeignMod {
         ForeignMod {
-            head: foreign_head(&abi_to_string(module.abi)),
+            abi: abi_to_string(module.abi),
             items: self.trans_foreign_items(&module.items),
         }
     }
 
     #[inline]
-    fn trans_foreign_items(&self, items: &Vec<rst::P<rst::ForeignItem>>) -> Vec<Foreign> {
+    fn trans_foreign_items(&self, items: &Vec<rst::P<rst::ForeignItem>>) -> Vec<ForeignItem> {
         trans_list!(self, items, trans_foreign_item)
     }
 
-    fn trans_foreign_item(&self, item: &rst::ForeignItem) -> Foreign {
+    fn trans_foreign_item(&self, item: &rst::ForeignItem) -> ForeignItem {
         let loc = self.loc(&item.span);
         let attrs = self.trans_attrs(&item.attrs);
 
@@ -985,35 +985,33 @@ impl Translator {
         let ident = ident_to_string(&item.ident);
         let item = match item.node {
             rst::ForeignItemStatic(ref ty, is_mut) => {
-                ForeignKind::Static(self.trans_foreign_static(is_pub, is_mut, ident, ty))
+                ForeignKind::Static(self.trans_foreign_static(is_mut, ident, ty))
             }
             rst::ForeignItemFn(ref fn_decl, ref generics) => {
-                ForeignKind::Fn(self.trans_foreign_fn(is_pub, ident, generics, fn_decl))
+                ForeignKind::Fn(self.trans_foreign_fn(ident, generics, fn_decl))
             }
         };
 
         self.set_loc(&loc);
-        Foreign {
+        ForeignItem {
             loc: loc,
             attrs: attrs,
+            is_pub: is_pub,
             item: item,
         }
     }
 
-    fn trans_foreign_static(&self, is_pub: bool, is_mut: bool, ident: String, ty: &rst::Ty)
-        -> ForeignStatic {
+    fn trans_foreign_static(&self, is_mut: bool, ident: String, ty: &rst::Ty) -> ForeignStatic {
         ForeignStatic {
-            head: static_head(is_pub, is_mut),
+            is_mut: is_mut,
             name: ident,
             ty: self.trans_type(ty),
         }
     }
 
-    fn trans_foreign_fn(&self, is_pub: bool, ident: String, generics: &rst::Generics,
-                        fn_decl: &rst::FnDecl)
+    fn trans_foreign_fn(&self, ident: String, generics: &rst::Generics, fn_decl: &rst::FnDecl)
         -> ForeignFn {
         ForeignFn {
-            head: fn_head(is_pub, false, false, None),
             name: ident,
             generics: self.trans_generics(generics),
             fn_sig: self.trans_fn_sig(fn_decl),

@@ -20,7 +20,10 @@ type a = (bool);
 type a = (bool, usize);
 type a = (bool, usize, isize, String, Vec, str);
 
+//type a = for<'a> unsafe extern "C" fn(bool) -> usize;
+type a = for<'a> extern "Rust" fn(bool) -> usize;
 type a = for<'a> unsafe extern "C" fn(bool) -> usize;
+type a = for<'a> fn(bool) -> usize;
 
 type a = Result + Iterator<T> + 'static + Sized;
 

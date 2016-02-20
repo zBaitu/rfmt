@@ -369,14 +369,15 @@ pub struct PolyTraitRefType {
 
 #[derive(Debug)]
 pub struct ForeignMod {
-    pub head: String,
-    pub items: Vec<Foreign>,
+    pub abi: String,
+    pub items: Vec<ForeignItem>,
 }
 
 #[derive(Debug)]
-pub struct Foreign {
+pub struct ForeignItem {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
+    pub is_pub: bool,
     pub item: ForeignKind,
 }
 
@@ -388,14 +389,13 @@ pub enum ForeignKind {
 
 #[derive(Debug)]
 pub struct ForeignStatic {
-    pub head: String,
+    pub is_mut: bool,
     pub name: String,
     pub ty: Type,
 }
 
 #[derive(Debug)]
 pub struct ForeignFn {
-    pub head: String,
     pub name: String,
     pub generics: Generics,
     pub fn_sig: FnSig,

@@ -8,6 +8,76 @@ pub fn fmt_crate(krate: &Crate, cmnts: &Vec<Comment>) -> (String, BTreeSet<u32>)
     Formatter::new(cmnts).fmt_crate(krate)
 }
 
+macro_rules! select_str {
+    ($fn_name:ident, $flag:ident, $true_value:expr, $false_value:expr) => (
+        #[inline]
+        fn $fn_name($flag: bool) -> &'static str {
+            static TRUE_HEAD: &'static str = $true_value;
+            static FALSE_HEAD: &'static str = $false_value;
+
+            if $flag {
+                TRUE_HEAD
+            } else {
+                FALSE_HEAD
+            }
+        }
+    );
+}
+select_str!(ptr_str, is_mut, "*mut ", "*const ");
+select_str!(static_str, is_mut, "static mut ", "static ");
+
+fn ref_str(lifetime: &Option<Lifetime>, is_mut: bool) -> String {
+    let mut head = String::new();
+    head.push_str("&");
+
+    if let Some(ref lifetime) = *lifetime {
+        head.push_str(&lifetime.s);
+        head.push_str(" ");
+    }
+    if is_mut {
+        head.push_str("mut ");
+    }
+
+    head
+}
+
+fn foreign_str(abi: &str) -> String {
+    let mut head = String::new();
+
+    if abi != r#""Rust""# {
+        head.push_str("extern ");
+        head.push_str(&abi_str(abi));
+        head.push_str(" ");
+    }
+
+    head
+}
+
+fn abi_str(abi: &str) -> String {
+    if abi == r#""C""# {
+        String::new()
+    } else {
+        abi.to_string()
+    }
+}
+
+fn fn_str(is_unsafe: bool, is_const: bool, abi: Option<&str>) -> String {
+    let mut head = String::new();
+    if is_unsafe {
+        head.push_str("unsafe ");
+    }
+    if is_const {
+        head.push_str("const ");
+    }
+
+    if let Some(abi) = abi {
+        head.push_str(&foreign_str(abi));
+    }
+
+    head.push_str("fn");
+    head
+}
+
 macro_rules! display_lists {
     ($f: expr, $open: expr, $sep: expr, $close: expr, $($lists: expr),+) => ({
         try!(write!($f, $open));
@@ -24,41 +94,6 @@ macro_rules! display_lists {
         write!($f, $close)
     })
 }
-
-fn ref_head(lifetime: &Option<Lifetime>, is_mut: bool) -> String {
-    let mut head = String::new();
-    head.push_str("&");
-
-    if let Some(ref lifetime) = *lifetime {
-        head.push_str(&lifetime.s);
-        head.push_str(" ");
-    }
-    if is_mut {
-        head.push_str("mut ");
-    }
-
-    head
-}
-
-fn fn_head(is_unsafe: bool, is_const: bool, abi: Option<&str>) -> String {
-    let mut head = String::new();
-    if is_unsafe {
-        head.push_str("unsafe ");
-    }
-    if is_const {
-        head.push_str("const ");
-    }
-
-    if let Some(abi) = abi {
-        if abi != r#""Rust""# {
-            head.push_str(&format!("extern {} ", abi));
-        }
-    }
-
-    head.push_str("fn");
-    head
-}
-
 
 impl Display for Chunk {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -90,26 +125,6 @@ impl Display for MetaItem {
 #[inline]
 fn display_meta_items(f: &mut fmt::Formatter, items: &Vec<MetaItem>) -> fmt::Result {
     display_lists!(f, "(", ", ", ")", items)
-}
-
-impl Display for Item {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.is_pub {
-            try!(write!(f, "pub "));
-        }
-        Display::fmt(&self.item, f)
-    }
-}
-
-impl Display for ItemKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            ItemKind::ExternCrate(ref item) => Display::fmt(item, f),
-            ItemKind::Use(ref item) => Display::fmt(item, f),
-            ItemKind::ModDecl(ref item) => Display::fmt(item, f),
-            _ => Debug::fmt(self, f),
-        }
-    }
 }
 
 impl Display for ExternCrate {
@@ -281,8 +296,7 @@ fn display_path_segments(f: &mut fmt::Formatter, segs: &[PathSegment]) -> fmt::R
 
 impl Display for PathSegment {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "{}", self.name));
-        Display::fmt(&self.param, f)
+        write!(f, "{}{}", self.name, self.param)
     }
 }
 
@@ -370,39 +384,25 @@ fn display_qself(f: &mut fmt::Formatter, qself: &QSelf, path: &Path) -> fmt::Res
 
 impl Display for PtrType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.is_mut {
-            try!(write!(f, "*mut "));
-        } else {
-            try!(write!(f, "*const "));
-        }
-        Display::fmt(&self.ty, f)
+        write!(f, "{}{}", ptr_str(self.is_mut), self.ty)
     }
 }
 
 impl Display for RefType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "{}", ref_head(&self.lifetime, self.is_mut)));
-        Display::fmt(&self.ty, f)
+        write!(f, "{}{}", ref_str(&self.lifetime, self.is_mut), self.ty)
     }
 }
 
 impl Display for ArrayType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "["));
-        try!(Display::fmt(&self.ty, f));
-        try!(write!(f, "]"));
-        Ok(())
+        write!(f, "[{}]", self.ty)
     }
 }
 
 impl Display for FixedSizeArrayType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "["));
-        try!(Display::fmt(&self.ty, f));
-        try!(write!(f, "; "));
-        try!(Display::fmt(&self.expr, f));
-        try!(write!(f, "]"));
-        Ok(())
+        write!(f, "[{}; {}]", self.ty, self.expr)
     }
 }
 
@@ -415,8 +415,7 @@ impl Display for TupleType {
 impl Display for BareFnType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(display_for_liftime_defs(f, &self.lifetime_defs));
-        try!(write!(f, "{}", fn_head(self.is_unsafe, false, Some(&self.abi))));
-        Display::fmt(&self.fn_sig, f)
+        write!(f, "{}{}", fn_str(self.is_unsafe, false, Some(&self.abi)), self.fn_sig)
     }
 }
 
@@ -439,6 +438,18 @@ impl Display for PolyTraitRefType {
 
 fn display_infer_type(f: &mut fmt::Formatter) -> fmt::Result {
     write!(f, "_")
+}
+
+impl Display for ForeignStatic {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}: {}", static_str(self.is_mut), self.name, self.ty)
+    }
+}
+
+impl Display for ForeignFn {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "fn {}{}{}", self.name, self.generics, self.fn_sig)
+    }
 }
 
 impl Display for FnSig {
@@ -602,6 +613,28 @@ macro_rules! fmt_lists {
             first = false;
         })+
     })
+}
+
+macro_rules! fmt_block {
+    ($sf: expr, $act: ident, $item: expr) => ({
+        $sf.ts.insert("{");
+        $sf.ts.indent();
+        $sf.ts.nl();
+
+        $sf.$act($item);
+
+        $sf.ts.outdent();
+        $sf.ts.insert_indent();
+        $sf.ts.insert("}");
+    });
+}
+
+macro_rules! fmt_items {
+    ($sf: ident, $items: expr, $fmt_item: ident) => ({
+        for item in $items {
+            $sf.$fmt_item(item);
+        }
+    });
 }
 
 struct Formatter<'a> {
@@ -817,12 +850,12 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_item(&mut self, item: &Item) {
-        self.try_fmt_comments(&item.loc);
         p!("---------- item ----------");
 
+        self.ts.insert_indent();
+        self.try_fmt_comments(&item.loc);
         self.fmt_attrs(&item.attrs);
 
-        self.ts.insert_indent();
         if item.is_pub {
             self.ts.insert("pub ");
         }
@@ -831,6 +864,7 @@ impl<'a> Formatter<'a> {
             ItemKind::ExternCrate(_) | ItemKind::Use(_) | ItemKind::ModDecl(_) => unreachable!(),
             ItemKind::Mod(ref item) => self.fmt_sub_mod(item),
             ItemKind::TypeAlias(ref item) => self.fmt_type_alias(item),
+            ItemKind::ForeignMod(ref item) => self.fmt_foreign_mod(item),
             _ => (),
         }
 
@@ -845,19 +879,10 @@ impl<'a> Formatter<'a> {
 
         if item.items.is_empty() {
             self.ts.insert("{}");
-            self.ts.nl();
             return;
         }
 
-        self.ts.insert("{");
-        self.ts.indent();
-        self.ts.nl();
-
-        self.fmt_mod(item);
-
-        self.ts.outdent();
-        self.ts.insert_indent();
-        self.ts.insert("}");
+        fmt_block!(self, fmt_mod, item);
     }
 
     fn fmt_type_alias(&mut self, item: &TypeAlias) {
@@ -1062,16 +1087,12 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_ptr_type(&mut self, ty: &PtrType) {
-        let head = if ty.is_mut {
-            "*mut "
-        } else {
-            "*const "
-        };
+        let head = ptr_str(ty.is_mut);
         maybe_wrap!(self, head, head, ty.ty, fmt_type);
     }
 
     fn fmt_ref_type(&mut self, ty: &RefType) {
-        let head = &ref_head(&ty.lifetime, ty.is_mut);
+        let head = &ref_str(&ty.lifetime, ty.is_mut);
         maybe_wrap!(self, head, head, ty.ty, fmt_type);
     }
 
@@ -1086,7 +1107,7 @@ impl<'a> Formatter<'a> {
         maybe_wrap_len!(self, ty.ty, 4);
         self.ts.insert_mark_align("[");
         self.fmt_type(&ty.ty);
-        insert_sep!(self, ";", ty.expr);        
+        insert_sep!(self, ";", ty.expr);
         self.fmt_expr(&ty.expr);
         self.ts.insert_unmark_align("]");
     }
@@ -1097,7 +1118,7 @@ impl<'a> Formatter<'a> {
 
     fn fmt_bare_fn_type(&mut self, ty: &BareFnType) {
         self.fmt_for_lifetime_defs(&ty.lifetime_defs);
-        self.ts.insert(&fn_head(ty.is_unsafe, false, Some(&ty.abi)));
+        self.ts.insert(&fn_str(ty.is_unsafe, false, Some(&ty.abi)));
         self.fmt_fn_sig(&ty.fn_sig);
     }
 
@@ -1117,8 +1138,63 @@ impl<'a> Formatter<'a> {
         self.ts.insert("_");
     }
 
-    fn fmt_fn_sig(&mut self, fn_sig: &FnSig){}
-    fn fmt_expr(&mut self, expr: &Expr){}
+    fn fmt_foreign_mod(&mut self, item: &ForeignMod) {
+        p!("---------- foreign mod ----------");
+
+        self.ts.insert(&format!("extern {}", abi_str(&item.abi)));
+
+        if item.items.is_empty() {
+            self.ts.insert("{}");
+            return;
+        }
+
+        fmt_block!(self, fmt_foreign_items, &item.items);
+    }
+
+    fn fmt_foreign_items(&mut self, items: &Vec<ForeignItem>) {
+        fmt_items!(self, items, fmt_foreign_item);
+    }
+
+    fn fmt_foreign_item(&mut self, item: &ForeignItem) {
+        p!("---------- foreign item ----------");
+
+        self.ts.insert_indent();
+        self.try_fmt_comments(&item.loc);
+        self.fmt_attrs(&item.attrs);
+
+        if item.is_pub {
+            self.ts.insert("pub ");
+        }
+
+        match item.item {
+            ForeignKind::Static(ref item) => self.fmt_foreign_static(item),
+            ForeignKind::Fn(ref item) => self.fmt_foreign_fn(item),
+        }
+
+        self.ts.raw_insert(";");
+        self.ts.nl();
+    }
+
+    fn fmt_foreign_static(&mut self, item: &ForeignStatic) {
+        p!("---------- foreign static ----------");
+        p!(item);
+
+        self.ts.insert(&format!("{}{}", static_str(item.is_mut), item.name));
+        insert_sep!(self, ":", item.ty);
+        self.fmt_type(&item.ty);
+    }
+
+    fn fmt_foreign_fn(&mut self, item: &ForeignFn) {
+        p!("---------- foreign fn ----------");
+        p!(item);
+
+        self.ts.insert(&format!("fn {}", item.name));
+        self.fmt_generics(&item.generics);
+        self.fmt_fn_sig(&item.fn_sig);
+    }
+
+    fn fmt_fn_sig(&mut self, fn_sig: &FnSig) {}
+    fn fmt_expr(&mut self, expr: &Expr) {}
 
     fn fmt_macro(&mut self, mac: &Macro) {
         self.fmt_chunk(mac);
