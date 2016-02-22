@@ -1558,10 +1558,6 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn fmt_args(&mut self, args: &Vec<Arg>) {
-        fmt_items!(self, args, fmt_arg);
-    }
-
     fn fmt_arg(&mut self, arg: &Arg) {
         maybe_wrap!(self, arg);
         self.fmt_patten(&arg.pat);
@@ -1585,7 +1581,34 @@ impl<'a> Formatter<'a> {
 
     fn fmt_method_sig(&mut self, sig: &MethodSig) {
         self.fmt_generics(&sig.generics);
+
+        if let Some(ref sf) = sig.sf {
+            self.fmt_method_fn_sig(sf, sig);
+        } else {
+            self.fmt_fn_sig(&sig.fn_sig);
+        }
+
         self.fmt_where(&sig.generics.wh);
+    }
+
+    fn fmt_method_fn_sig(&mut self, sf: &Sf, sig: &MethodSig) {
+        self.ts.insert_mark_align("(");
+        match *sf {
+            Sf::String(ref s) => self.ts.insert(s),
+            Sf::Type(ref ty) => {
+                maybe_wrap_len!(self, ty, 6);
+                self.ts.insert("self: ");
+                self.fmt_type(ty);
+            }
+        }
+
+        for e in &sig.fn_sig.arg.args[1..] {
+            insert_sep!(self, ",", e);
+            self.fmt_arg(e);
+        }
+        self.ts.insert_unmark_align(")");
+
+        self.fmt_fn_return(&sig.fn_sig.ret);
     }
 
     fn fmt_block(&mut self, block: &Block) {}
