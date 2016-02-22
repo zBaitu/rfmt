@@ -56,10 +56,10 @@ fn foreign_head(abi: &str) -> String {
 fn abi_head(abi: &str) -> String {
     let mut head = String::new();
     if abi != r#""C""# {
-        head.push_str(" "); 
+        head.push_str(" ");
         head.push_str(abi);
     }
-    head 
+    head
 }
 
 fn fn_head(is_unsafe: bool, is_const: bool, abi: &str) -> String {
@@ -881,6 +881,7 @@ impl<'a> Formatter<'a> {
             ItemKind::Fn(ref item) => self.fmt_fn(item),
             ItemKind::Trait(ref item) => self.fmt_trait(item),
             ItemKind::ImplDefault(ref item) => self.fmt_impl_default(item),
+            ItemKind::Impl(ref item) => self.fmt_impl(item),
             _ => (),
         }
 
@@ -1410,6 +1411,82 @@ impl<'a> Formatter<'a> {
         self.ts.insert("impl ");
         self.fmt_trait_ref(&item.trait_ref);
         self.ts.insert(" for .. {}");
+    }
+
+    fn fmt_impl(&mut self, item: &Impl) {
+        if item.is_unsafe {
+            self.ts.insert("unsafe ");
+        }
+
+        self.ts.insert("impl");
+        self.fmt_generics(&item.generics);
+        self.ts.insert(" ");
+
+        if let Some(ref trait_ref) = item.trait_ref {
+            if item.is_neg {
+                maybe_wrap!(self, "!", "!", trait_ref, fmt_trait_ref);
+            } else {
+                self.fmt_trait_ref(trait_ref);
+            }
+            maybe_wrap!(self, " for ", "for ", item.ty, fmt_type);
+        } else {
+            self.fmt_type(&item.ty);
+        }
+
+        self.fmt_where(&item.generics.wh);
+
+        self.ts.raw_insert(" ");
+        if item.items.is_empty() {
+            self.ts.insert("{}");
+            return;
+        }
+
+        fmt_block!(self, fmt_impl_items, &item.items);
+    }
+
+    fn fmt_impl_items(&mut self, items: &Vec<ImplItem>) {
+        fmt_items!(self, items, fmt_impl_item);
+    }
+
+    fn fmt_impl_item(&mut self, item: &ImplItem) {
+        self.try_fmt_comments(&item.loc);
+        self.fmt_attrs(&item.attrs);
+        self.ts.insert_indent();
+
+        match item.item {
+            ImplItemKind::Const(ref item) => {
+                self.fmt_const_impl_item(item);
+                self.ts.raw_insert(";");
+            }
+            ImplItemKind::Type(ref item) => {
+                self.fmt_type_impl_item(item);
+                self.ts.raw_insert(";");
+            }
+            ImplItemKind::Method(ref item) => self.fmt_method_impl_item(item),
+            ImplItemKind::Macro(ref item) => self.fmt_macro(item),
+        }
+
+        self.ts.nl();
+    }
+
+    fn fmt_const_impl_item(&mut self, item: &ConstImplItem) {
+        self.ts.insert(&format!("const {}", item.name));
+        insert_sep!(self, ":", item.ty);
+        self.fmt_type(&item.ty);
+        maybe_wrap!(self, " = ", "= ", item.expr, fmt_expr);
+    }
+
+    fn fmt_type_impl_item(&mut self, item: &TypeImplItem) {
+        self.ts.insert(&format!("type {}", item.name));
+        maybe_wrap!(self, " = ", "= ", item.ty, fmt_type);
+    }
+
+    fn fmt_method_impl_item(&mut self, item: &MethodImplItem) {
+        self.ts.insert(&format!("{} {}",
+                                fn_head(item.is_unsafe, item.is_const, &item.abi),
+                                item.name));
+        self.fmt_method_sig(&item.method_sig);
+        self.fmt_block(&item.block);
     }
 
     fn fmt_fn_sig(&mut self, fn_sig: &FnSig) {}

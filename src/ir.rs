@@ -547,8 +547,8 @@ pub struct ImplDefault {
 
 #[derive(Debug)]
 pub struct Impl {
-    pub head: String,
-    pub polarity: &'static str,
+    pub is_unsafe: bool,
+    pub is_neg: bool,
     pub generics: Generics,
     pub trait_ref: Option<TraitRef>,
     pub ty: Type,
@@ -559,6 +559,7 @@ pub struct Impl {
 pub struct ImplItem {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
+    pub is_pub: bool,
     pub item: ImplItemKind,
 }
 
@@ -572,7 +573,6 @@ pub enum ImplItemKind {
 
 #[derive(Debug)]
 pub struct ConstImplItem {
-    pub head: &'static str,
     pub name: String,
     pub ty: Type,
     pub expr: Expr,
@@ -580,7 +580,6 @@ pub struct ConstImplItem {
 
 #[derive(Debug)]
 pub struct TypeImplItem {
-    pub head: &'static str,
     pub name: String,
     pub ty: Type,
 }

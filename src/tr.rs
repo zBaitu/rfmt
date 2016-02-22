@@ -176,17 +176,7 @@ macro_rules! select_str {
         }
     );
 }
-select_str!(pub_head, is_pub, "pub ", "");
-select_str!(type_head, is_pub, "pub type", "type");
-select_str!(const_head, is_pub, "pub const", "const");
-select_str!(unsafe_str, is_unsafe, "unsafe ", "");
-select_str!(polarity_str, is_neg, "!", "");
 select_str!(block_head, is_unsafe, "unsafe", "");
-
-#[inline]
-fn impl_head(is_pub: bool, is_unsafe: bool) -> String {
-    format!("{}{}impl ", pub_head(is_pub), unsafe_str(is_unsafe))
-}
 
 macro_rules! trans_list {
     ($self_: ident, $list: ident, $trans_single: ident) => ({
@@ -473,8 +463,7 @@ impl Translator {
                 ItemKind::ImplDefault(self.trans_impl_default(is_unsafe(unsafety), trait_ref))
             }
             rst::ItemImpl(unsafety, polarity, ref generics, ref trait_ref, ref ty, ref items) => {
-                ItemKind::Impl(self.trans_impl(is_pub,
-                                               is_unsafe(unsafety),
+                ItemKind::Impl(self.trans_impl(is_unsafe(unsafety),
                                                is_neg(polarity),
                                                generics,
                                                trait_ref,
@@ -1247,7 +1236,7 @@ impl Translator {
         }
     }
 
-    fn trans_impl(&self, is_pub: bool, is_unsafe: bool, is_neg: bool, generics: &rst::Generics,
+    fn trans_impl(&self, is_unsafe: bool, is_neg: bool, generics: &rst::Generics,
                   trait_ref: &Option<rst::TraitRef>, ty: &rst::Ty,
                   items: &Vec<rst::P<rst::ImplItem>>)
         -> Impl {
@@ -1257,8 +1246,8 @@ impl Translator {
         };
 
         Impl {
-            head: impl_head(is_pub, is_unsafe),
-            polarity: polarity_str(is_neg),
+            is_unsafe: is_unsafe,
+            is_neg: is_neg,
             generics: self.trans_generics(generics),
             trait_ref: trait_ref,
             ty: self.trans_type(ty),
@@ -1279,10 +1268,10 @@ impl Translator {
         let ident = ident_to_string(&item.ident);
         let item = match item.node {
             rst::ImplItemKind::Const(ref ty, ref expr) => {
-                ImplItemKind::Const(self.trans_const_impl_item(is_pub, ident, ty, expr))
+                ImplItemKind::Const(self.trans_const_impl_item(ident, ty, expr))
             }
             rst::ImplItemKind::Type(ref ty) => {
-                ImplItemKind::Type(self.trans_type_impl_item(is_pub, ident, ty))
+                ImplItemKind::Type(self.trans_type_impl_item(ident, ty))
             }
             rst::ImplItemKind::Method(ref method_sig, ref block) => {
                 ImplItemKind::Method(self.trans_method_impl_item(ident, method_sig, block))
@@ -1296,23 +1285,22 @@ impl Translator {
         ImplItem {
             loc: loc,
             attrs: attrs,
+            is_pub: is_pub,
             item: item,
         }
     }
 
-    fn trans_const_impl_item(&self, is_pub: bool, ident: String, ty: &rst::Ty, expr: &rst::Expr)
+    fn trans_const_impl_item(&self, ident: String, ty: &rst::Ty, expr: &rst::Expr)
         -> ConstImplItem {
         ConstImplItem {
-            head: const_head(is_pub),
             name: ident,
             ty: self.trans_type(ty),
             expr: self.trans_expr(expr),
         }
     }
 
-    fn trans_type_impl_item(&self, is_pub: bool, ident: String, ty: &rst::Ty) -> TypeImplItem {
+    fn trans_type_impl_item(&self, ident: String, ty: &rst::Ty) -> TypeImplItem {
         TypeImplItem {
-            head: type_head(is_pub),
             name: ident,
             ty: self.trans_type(ty),
         }
