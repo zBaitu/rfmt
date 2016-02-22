@@ -41,11 +41,11 @@ fn ref_head(lifetime: &Option<Lifetime>, is_mut: bool) -> String {
     head
 }
 
-fn foreign_str(abi: &str) -> String {
+fn foreign_head(abi: &str) -> String {
     let mut head = String::new();
 
     if abi != r#""Rust""# {
-        head.push_str("extern ");
+        head.push_str("extern");
         head.push_str(&abi_head(abi));
         head.push_str(" ");
     }
@@ -54,14 +54,15 @@ fn foreign_str(abi: &str) -> String {
 }
 
 fn abi_head(abi: &str) -> String {
-    if abi == r#""C""# {
-        String::new()
-    } else {
-        abi.to_string()
+    let mut head = String::new();
+    if abi != r#""C""# {
+        head.push_str(" "); 
+        head.push_str(abi);
     }
+    head 
 }
 
-fn fn_head(is_unsafe: bool, is_const: bool, abi: Option<&str>) -> String {
+fn fn_head(is_unsafe: bool, is_const: bool, abi: &str) -> String {
     let mut head = String::new();
     if is_unsafe {
         head.push_str("unsafe ");
@@ -69,11 +70,7 @@ fn fn_head(is_unsafe: bool, is_const: bool, abi: Option<&str>) -> String {
     if is_const {
         head.push_str("const ");
     }
-
-    if let Some(abi) = abi {
-        head.push_str(&foreign_str(abi));
-    }
-
+    head.push_str(&foreign_head(abi));
     head.push_str("fn");
     head
 }
@@ -415,7 +412,7 @@ impl Display for TupleType {
 impl Display for BareFnType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(display_for_liftime_defs(f, &self.lifetime_defs));
-        write!(f, "{}{}", fn_head(self.is_unsafe, false, Some(&self.abi)), self.fn_sig)
+        write!(f, "{}{}", fn_head(self.is_unsafe, false, &self.abi), self.fn_sig)
     }
 }
 
@@ -881,6 +878,8 @@ impl<'a> Formatter<'a> {
             ItemKind::Static(ref item) => self.fmt_static(item),
             ItemKind::Struct(ref item) => self.fmt_struct(item),
             ItemKind::Enum(ref item) => self.fmt_enum(item),
+            ItemKind::Fn(ref item) => self.fmt_fn(item),
+            ItemKind::Trait(ref item) => self.fmt_trait(item),
             _ => (),
         }
 
@@ -1135,14 +1134,14 @@ impl<'a> Formatter<'a> {
 
     fn fmt_bare_fn_type(&mut self, ty: &BareFnType) {
         self.fmt_for_lifetime_defs(&ty.lifetime_defs);
-        self.ts.insert(&fn_head(ty.is_unsafe, false, Some(&ty.abi)));
+        self.ts.insert(&fn_head(ty.is_unsafe, false, &ty.abi));
         self.fmt_fn_sig(&ty.fn_sig);
     }
 
     fn fmt_sum_type(&mut self, ty: &SumType) {
         self.fmt_type(&ty.ty);
         if !ty.bounds.is_empty() {
-            self.ts.insert(" + ");
+            self.ts.insert(": ");
             self.fmt_type_param_bounds(&ty.bounds);
         }
     }
@@ -1159,7 +1158,7 @@ impl<'a> Formatter<'a> {
         p!("---------- foreign mod ----------");
 
         self.ts.insert_indent();
-        self.ts.insert(&format!("extern {}", abi_head(&item.abi)));
+        self.ts.insert(&format!("extern{} ", abi_head(&item.abi)));
 
         if item.items.is_empty() {
             self.ts.insert("{}");
@@ -1326,7 +1325,90 @@ impl<'a> Formatter<'a> {
         self.ts.nl();
     }
 
+    fn fmt_fn(&mut self, item: &Fn) {
+        self.ts.insert(&format!("{} {}",
+                                fn_head(item.is_unsafe, item.is_const, &item.abi),
+                                item.name));
+        self.fmt_generics(&item.generics);
+        self.fmt_fn_sig(&item.fn_sig);
+        self.fmt_where(&item.generics.wh);
+        self.fmt_block(&item.block);
+    }
+
+    fn fmt_trait(&mut self, item: &Trait) {
+        if item.is_unsafe {
+            self.ts.insert("unsafe ");
+        }
+        self.ts.insert(&format!("trait {}", item.name));
+        self.fmt_generics(&item.generics);
+        if !item.bounds.is_empty() {
+            self.ts.insert(": ");
+            self.fmt_type_param_bounds(&item.bounds);
+        }
+        self.fmt_where(&item.generics.wh);
+
+        self.ts.raw_insert(" ");
+        if item.items.is_empty() {
+            self.ts.insert("{}");
+            return;
+        }
+
+        fmt_block!(self, fmt_trait_items, &item.items);
+    }
+
+    fn fmt_trait_items(&mut self, items: &Vec<TraitItem>) {
+        fmt_items!(self, items, fmt_trait_item);
+    }
+
+    fn fmt_trait_item(&mut self, item: &TraitItem) {
+        self.try_fmt_comments(&item.loc);
+        self.fmt_attrs(&item.attrs);
+        self.ts.insert_indent();
+
+        match item.item {
+            TraitItemKind::Const(ref item) => self.fmt_const_trait_item(item),
+            TraitItemKind::Type(ref item) => self.fmt_type_trait_item(item),
+            TraitItemKind::Method(ref item) => self.fmt_method_trait_item(item),
+        }
+
+        self.ts.raw_insert(";");
+        self.ts.nl();
+    }
+
+    fn fmt_const_trait_item(&mut self, item: &ConstTraitItem) {
+        self.ts.insert(&format!("const {}", item.name));
+        insert_sep!(self, ":", item.ty);
+        self.fmt_type(&item.ty);
+    }
+
+    fn fmt_type_trait_item(&mut self, item: &TypeTraitItem) {
+        self.ts.insert(&format!("type {}", item.name));
+        if !item.bounds.is_empty() {
+            self.ts.insert(": ");
+            self.fmt_type_param_bounds(&item.bounds);
+        }
+        if let Some(ref ty) = item.ty {
+            maybe_wrap!(self, " = ", "= ", ty, fmt_type);
+        }
+    }
+
+    fn fmt_method_trait_item(&mut self, item: &MethodTraitItem) {
+        self.ts.insert(&format!("{} {}",
+                                fn_head(item.is_unsafe, item.is_const, &item.abi),
+                                item.name));
+        self.fmt_method_sig(&item.method_sig);
+        if let Some(ref block) = item.block {
+            self.fmt_block(block);
+        }
+    }
+
+    fn fmt_method_sig(&mut self, sig: &MethodSig) {
+        self.fmt_generics(&sig.generics);
+        self.fmt_where(&sig.generics.wh);
+    }
+
     fn fmt_fn_sig(&mut self, fn_sig: &FnSig) {}
+    fn fmt_block(&mut self, block: &Block) {}
     fn fmt_expr(&mut self, expr: &Expr) {}
 
     fn fmt_macro(&mut self, mac: &Macro) {

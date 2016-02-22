@@ -481,7 +481,7 @@ pub struct Fn {
 
 #[derive(Debug)]
 pub struct Trait {
-    pub head: String,
+    pub is_unsafe: bool,
     pub name: String,
     pub generics: Generics,
     pub bounds: Vec<TypeParamBound>,
@@ -504,7 +504,6 @@ pub enum TraitItemKind {
 
 #[derive(Debug)]
 pub struct ConstTraitItem {
-    pub head: &'static str,
     pub name: String,
     pub ty: Type,
     pub expr: Option<Expr>,
@@ -512,7 +511,6 @@ pub struct ConstTraitItem {
 
 #[derive(Debug)]
 pub struct TypeTraitItem {
-    pub head: &'static str,
     pub name: String,
     pub bounds: Vec<TypeParamBound>,
     pub ty: Option<Type>,
@@ -520,7 +518,9 @@ pub struct TypeTraitItem {
 
 #[derive(Debug)]
 pub struct MethodTraitItem {
-    pub head: String,
+    pub is_unsafe: bool,
+    pub is_const: bool,
+    pub abi: String,
     pub name: String,
     pub method_sig: MethodSig,
     pub block: Option<Block>,
@@ -530,7 +530,13 @@ pub struct MethodTraitItem {
 pub struct MethodSig {
     pub generics: Generics,
     pub fn_sig: FnSig,
-    pub slf: Option<String>,
+    pub sf: Option<Sf>,
+}
+
+#[derive(Debug)]
+pub enum Sf {
+    String(String),
+    Type(Type),
 }
 
 #[derive(Debug)]
@@ -582,7 +588,9 @@ pub struct TypeImplItem {
 
 #[derive(Debug)]
 pub struct MethodImplItem {
-    pub head: String,
+    pub is_unsafe: bool,
+    pub is_const: bool,
+    pub abi: String,
     pub name: String,
     pub method_sig: MethodSig,
     pub block: Block,

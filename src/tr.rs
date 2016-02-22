@@ -180,35 +180,8 @@ select_str!(pub_head, is_pub, "pub ", "");
 select_str!(type_head, is_pub, "pub type", "type");
 select_str!(const_head, is_pub, "pub const", "const");
 select_str!(unsafe_str, is_unsafe, "unsafe ", "");
-select_str!(fn_const_str, is_const, "const ", "");
 select_str!(polarity_str, is_neg, "!", "");
 select_str!(block_head, is_unsafe, "unsafe", "");
-
-#[inline]
-fn foreign_head(abi: &str) -> String {
-    format!("extern {}", abi)
-}
-
-#[inline]
-fn fn_head(is_pub: bool, is_unsafe: bool, is_const: bool, abi: Option<&str>) -> String {
-    let mut head = format!("{}{}{}",
-                           pub_head(is_pub),
-                           unsafe_str(is_unsafe),
-                           fn_const_str(is_const));
-    if let Some(abi) = abi {
-        if abi != r#""Rust""# {
-            head.push_str(&foreign_head(abi));
-            head.push_str(" ");
-        }
-    }
-    head.push_str("fn ");
-    head
-}
-
-#[inline]
-fn trait_head(is_pub: bool, is_unsafe: bool) -> String {
-    format!("{}{}trait ", pub_head(is_pub), unsafe_str(is_unsafe))
-}
 
 #[inline]
 fn impl_head(is_pub: bool, is_unsafe: bool) -> String {
@@ -490,8 +463,7 @@ impl Translator {
                                            block))
             }
             rst::ItemTrait(unsafety, ref generics, ref bounds, ref items) => {
-                ItemKind::Trait(self.trans_trait(is_pub,
-                                                 is_unsafe(unsafety),
+                ItemKind::Trait(self.trans_trait(is_unsafe(unsafety),
                                                  ident,
                                                  generics,
                                                  bounds,
@@ -1149,11 +1121,11 @@ impl Translator {
         }
     }
 
-    fn trans_trait(&self, is_pub: bool, is_unsafe: bool, ident: String, generics: &rst::Generics,
+    fn trans_trait(&self, is_unsafe: bool, ident: String, generics: &rst::Generics,
                    bounds: &rst::TyParamBounds, items: &Vec<rst::P<rst::TraitItem>>)
         -> Trait {
         Trait {
-            head: trait_head(is_pub, is_unsafe),
+            is_unsafe: is_unsafe,
             name: ident,
             generics: self.trans_generics(generics),
             bounds: self.trans_type_param_bounds(bounds),
@@ -1198,7 +1170,6 @@ impl Translator {
         };
 
         ConstTraitItem {
-            head: const_head(false),
             name: ident,
             ty: self.trans_type(ty),
             expr: expr,
@@ -1214,7 +1185,6 @@ impl Translator {
         };
 
         TypeTraitItem {
-            head: type_head(false),
             name: ident,
             bounds: self.trans_type_param_bounds(bounds),
             ty: ty,
@@ -1230,10 +1200,9 @@ impl Translator {
         };
 
         MethodTraitItem {
-            head: fn_head(false,
-                          is_unsafe(method_sig.unsafety),
-                          is_const(method_sig.constness),
-                          Some(&abi_to_string(method_sig.abi))),
+            is_unsafe: is_unsafe(method_sig.unsafety),
+            is_const: is_const(method_sig.constness),
+            abi: abi_to_string(method_sig.abi),
             name: ident,
             method_sig: self.trans_method_sig(method_sig),
             block: block,
@@ -1244,14 +1213,14 @@ impl Translator {
         MethodSig {
             generics: self.trans_generics(&method_sig.generics),
             fn_sig: self.trans_fn_sig(&method_sig.decl),
-            slf: self.trans_self(&method_sig.explicit_self.node),
+            sf: self.trans_self(&method_sig.explicit_self.node),
         }
     }
 
-    fn trans_self(&self, explicit_self: &rst::ExplicitSelf_) -> Option<String> {
+    fn trans_self(&self, explicit_self: &rst::ExplicitSelf_) -> Option<Sf> {
         match *explicit_self {
             rst::SelfStatic => None,
-            rst::SelfValue(_) => Some("self".to_string()),
+            rst::SelfValue(_) => Some(Sf::String("self".to_string())),
             rst::SelfRegion(lifetime, mutbl, _) => {
                 let mut s = String::new();
                 s.push_str("&");
@@ -1267,9 +1236,9 @@ impl Translator {
                 }
 
                 s.push_str("self");
-                Some(s)
+                Some(Sf::String(s))
             }
-            _ => unreachable!(),
+            rst::SelfExplicit(ref ty, _) => Some(Sf::Type(self.trans_type(ty)))
         }
     }
 
@@ -1320,7 +1289,7 @@ impl Translator {
                 ImplItemKind::Type(self.trans_type_impl_item(is_pub, ident, ty))
             }
             rst::ImplItemKind::Method(ref method_sig, ref block) => {
-                ImplItemKind::Method(self.trans_method_impl_item(is_pub, ident, method_sig, block))
+                ImplItemKind::Method(self.trans_method_impl_item(ident, method_sig, block))
             }
             rst::ImplItemKind::Macro(ref mac) => {
                 ImplItemKind::Macro(self.trans_macro_impl_item(mac))
@@ -1353,14 +1322,13 @@ impl Translator {
         }
     }
 
-    fn trans_method_impl_item(&self, is_pub: bool, ident: String, method_sig: &rst::MethodSig,
+    fn trans_method_impl_item(&self, ident: String, method_sig: &rst::MethodSig,
                               block: &rst::P<rst::Block>)
         -> MethodImplItem {
         MethodImplItem {
-            head: fn_head(is_pub,
-                          is_unsafe(method_sig.unsafety),
-                          is_const(method_sig.constness),
-                          Some(&abi_to_string(method_sig.abi))),
+            is_unsafe: is_unsafe(method_sig.unsafety),
+            is_const: is_const(method_sig.constness),
+            abi: abi_to_string(method_sig.abi),
             name: ident,
             method_sig: self.trans_method_sig(method_sig),
             block: self.trans_block(block),
