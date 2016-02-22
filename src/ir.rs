@@ -541,9 +541,8 @@ pub enum Sf {
 
 #[derive(Debug)]
 pub struct ImplDefault {
-    pub head: String,
+    pub is_unsafe: bool,
     pub trait_ref: TraitRef,
-    pub tail: &'static str,
 }
 
 #[derive(Debug)]

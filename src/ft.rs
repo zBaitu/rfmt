@@ -880,6 +880,7 @@ impl<'a> Formatter<'a> {
             ItemKind::Enum(ref item) => self.fmt_enum(item),
             ItemKind::Fn(ref item) => self.fmt_fn(item),
             ItemKind::Trait(ref item) => self.fmt_trait(item),
+            ItemKind::ImplDefault(ref item) => self.fmt_impl_default(item),
             _ => (),
         }
 
@@ -1402,12 +1403,22 @@ impl<'a> Formatter<'a> {
         }
     }
 
+    fn fmt_impl_default(&mut self, item: &ImplDefault) {
+        if item.is_unsafe {
+            self.ts.insert("unsafe ");
+        }
+        self.ts.insert("impl ");
+        self.fmt_trait_ref(&item.trait_ref);
+        self.ts.insert(" for .. {}");
+    }
+
+    fn fmt_fn_sig(&mut self, fn_sig: &FnSig) {}
+
     fn fmt_method_sig(&mut self, sig: &MethodSig) {
         self.fmt_generics(&sig.generics);
         self.fmt_where(&sig.generics.wh);
     }
 
-    fn fmt_fn_sig(&mut self, fn_sig: &FnSig) {}
     fn fmt_block(&mut self, block: &Block) {}
     fn fmt_expr(&mut self, expr: &Expr) {}
 

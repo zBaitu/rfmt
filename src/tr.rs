@@ -470,9 +470,7 @@ impl Translator {
                                                  items))
             }
             rst::ItemDefaultImpl(unsafety, ref trait_ref) => {
-                ItemKind::ImplDefault(self.trans_impl_default(is_pub,
-                                                              is_unsafe(unsafety),
-                                                              trait_ref))
+                ItemKind::ImplDefault(self.trans_impl_default(is_unsafe(unsafety), trait_ref))
             }
             rst::ItemImpl(unsafety, polarity, ref generics, ref trait_ref, ref ty, ref items) => {
                 ItemKind::Impl(self.trans_impl(is_pub,
@@ -1238,16 +1236,14 @@ impl Translator {
                 s.push_str("self");
                 Some(Sf::String(s))
             }
-            rst::SelfExplicit(ref ty, _) => Some(Sf::Type(self.trans_type(ty)))
+            rst::SelfExplicit(ref ty, _) => Some(Sf::Type(self.trans_type(ty))),
         }
     }
 
-    fn trans_impl_default(&self, is_pub: bool, is_unsafe: bool, trait_ref: &rst::TraitRef)
-        -> ImplDefault {
+    fn trans_impl_default(&self, is_unsafe: bool, trait_ref: &rst::TraitRef) -> ImplDefault {
         ImplDefault {
-            head: impl_head(is_pub, is_unsafe),
+            is_unsafe: is_unsafe,
             trait_ref: self.trans_trait_ref(trait_ref),
-            tail: " for .. {}",
         }
     }
 
