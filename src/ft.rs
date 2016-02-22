@@ -76,7 +76,7 @@ fn fn_head(is_unsafe: bool, is_const: bool, abi: &str) -> String {
 }
 
 macro_rules! display_lists {
-    ($f: expr, $open: expr, $sep: expr, $close: expr, $($lists: expr),+) => ({
+   ($f: expr, $open: expr, $sep: expr, $close: expr, $($lists: expr),+) => ({
         try!(write!($f, $open));
 
         let mut first = true;
@@ -89,7 +89,7 @@ macro_rules! display_lists {
         })+
 
         write!($f, $close)
-    })
+    });
 }
 
 impl Display for Chunk {
@@ -459,6 +459,49 @@ impl Display for TupleField {
 }
 
 impl Display for FnSig {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", self.arg, self.ret)
+    }
+}
+
+impl Display for FnArg {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.va {
+            try!(write!(f, "("));
+
+            let mut first = true;
+            for e in &self.args {
+                if !first {
+                    try!(write!(f, ", "));
+                }
+                try!(Display::fmt(e, f));
+                first = false;
+            }
+
+            write!(f, ", ...)")
+        } else {
+            display_lists!(f, "(", ", ", ")", &self.args)
+        }
+    }
+}
+
+impl Display for Arg {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}: {}", self.pat, self.ty)
+    }
+}
+
+impl Display for FnReturn {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            FnReturn::Unit => Ok(()),
+            FnReturn::Diverge => write!(f, " -> !"),
+            FnReturn::Normal(ref ty) => write!(f, " -> {}", ty),
+        }
+    }
+}
+
+impl Display for Patten {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         Debug::fmt(self, f)
     }
@@ -1489,7 +1532,56 @@ impl<'a> Formatter<'a> {
         self.fmt_block(&item.block);
     }
 
-    fn fmt_fn_sig(&mut self, fn_sig: &FnSig) {}
+    fn fmt_fn_sig(&mut self, fn_sig: &FnSig) {
+        self.fmt_fn_arg(&fn_sig.arg);
+        self.fmt_fn_return(&fn_sig.ret);
+    }
+
+    fn fmt_fn_arg(&mut self, arg: &FnArg) {
+        if arg.va {
+            self.ts.insert_mark_align("(");
+
+            let mut first = true;
+            for e in &arg.args {
+                if !first {
+                    insert_sep!(self, ",", e);
+                }
+
+                self.fmt_arg(e);
+                first = false;
+            }
+
+            self.ts.insert(", ...");
+            self.ts.insert_unmark_align(")");
+        } else {
+            fmt_comma_lists!(self, "(", ")", &arg.args, fmt_arg);
+        }
+    }
+
+    fn fmt_args(&mut self, args: &Vec<Arg>) {
+        fmt_items!(self, args, fmt_arg);
+    }
+
+    fn fmt_arg(&mut self, arg: &Arg) {
+        maybe_wrap!(self, arg);
+        self.fmt_patten(&arg.pat);
+        maybe_wrap!(self, ": ", ":", arg.ty, fmt_type);
+    }
+
+    fn fmt_fn_return(&mut self, ret: &FnReturn) {
+        match *ret {
+            FnReturn::Unit => (),
+            FnReturn::Diverge => {
+                maybe_nl_non_wrap!(self, " ", ret);
+                self.ts.insert("-> !");
+            }
+            FnReturn::Normal(ref ty) => {
+                maybe_nl_non_wrap!(self, " ", ret);
+                self.ts.insert("-> ");
+                self.fmt_type(ty);
+            }
+        }
+    }
 
     fn fmt_method_sig(&mut self, sig: &MethodSig) {
         self.fmt_generics(&sig.generics);
@@ -1498,6 +1590,7 @@ impl<'a> Formatter<'a> {
 
     fn fmt_block(&mut self, block: &Block) {}
     fn fmt_expr(&mut self, expr: &Expr) {}
+    fn fmt_patten(&mut self, pat: &Patten) {}
 
     fn fmt_macro(&mut self, mac: &Macro) {
         self.fmt_chunk(mac);

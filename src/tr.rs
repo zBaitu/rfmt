@@ -1339,16 +1339,18 @@ impl Translator {
     }
 
     fn trans_arg(&self, arg: &rst::Arg) -> Arg {
+        let pat = self.trans_patten(&arg.pat);
         Arg {
-            pat: self.trans_patten(&arg.pat),
+            loc: pat.loc.clone(),
+            pat: pat,
             ty: self.trans_type(&arg.ty),
         }
     }
 
     fn trans_fn_return(&self, output: &rst::FunctionRetTy) -> FnReturn {
         match *output {
-            rst::FunctionRetTy::NoReturn(_) => FnReturn::Diverge,
             rst::FunctionRetTy::DefaultReturn(_) => FnReturn::Unit,
+            rst::FunctionRetTy::NoReturn(_) => FnReturn::Diverge,
             rst::FunctionRetTy::Return(ref ty) => FnReturn::Normal(self.trans_type(ty)),
         }
     }

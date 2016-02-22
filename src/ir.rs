@@ -608,13 +608,14 @@ pub struct FnArg {
 
 #[derive(Debug)]
 pub enum FnReturn {
-    Diverge,
     Unit,
+    Diverge,
     Normal(Type),
 }
 
 #[derive(Debug)]
 pub struct Arg {
+    pub loc: Loc,
     pub pat: Patten,
     pub ty: Type,
 }
