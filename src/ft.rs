@@ -1128,14 +1128,15 @@ impl<'a> Formatter<'a> {
 
     fn fmt_path_type(&mut self, ty: &PathType) {
         match ty.qself {
-            Some(ref qself) => self.fmt_qself_path(ty, qself, &ty.path),
+            Some(ref qself) => {
+                maybe_wrap!(self, ty);
+                self.fmt_qself_path(qself, &ty.path);
+            }
             None => self.fmt_path(&ty.path),
         }
     }
 
-    fn fmt_qself_path(&mut self, ty: &PathType, qself: &QSelf, path: &Path) {
-        maybe_wrap!(self, ty);
-
+    fn fmt_qself_path(&mut self, qself: &QSelf, path: &Path) {
         self.ts.insert_mark_align("<");
         self.fmt_type(&qself.ty);
         if qself.pos > 0 {
@@ -1640,11 +1641,126 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_patten(&mut self, pat: &Patten) {
-        maybe_nl!(self, pat);
+        //maybe_nl!(self, pat);
         match pat.pat {
             PattenKind::Wildcard => self.ts.insert("_"),
-            _ => ()
+            PattenKind::Literal(ref pat) => self.fmt_expr(pat),
+            PattenKind::Range(ref pat) => self.fmt_range_patten(pat),
+            PattenKind::Ident(ref pat) => self.fmt_ident_patten(pat),
+            PattenKind::Ref(ref pat) => self.fmt_ref_patten(pat),
+            PattenKind::Path(ref pat) => self.fmt_path_patten(pat),
+            PattenKind::Enum(ref pat) => self.fmt_enum_patten(pat),
+            PattenKind::Struct(ref pat) => self.fmt_struct_patten(pat),
+            PattenKind::Vec(ref pat) => self.fmt_vec_patten(pat),
+            PattenKind::Tuple(ref pat) => self.fmt_tuple_patten(pat),
+            PattenKind::Box(ref pat) => self.fmt_box_patten(pat),
+            PattenKind::Macro(ref pat) => self.fmt_macro(pat),
         }
+    }
+
+    fn fmt_range_patten(&mut self, pat: &RangePatten) {
+        self.fmt_expr(&pat.start);
+        self.ts.insert("...");
+        self.fmt_expr(&pat.end);
+    }
+
+    fn fmt_ident_patten(&mut self, pat: &IdentPatten) {
+        let mut head = String::new();
+        if pat.is_ref {
+            head.push_str("ref ");
+        }
+        if pat.is_mut {
+            head.push_str("mut ");
+        }
+
+        self.ts.insert(&format!("{}{}", head, pat.name.s));
+        if let Some(ref binding) = pat.binding {
+            maybe_wrap!(self, " @ ", "@ ", binding, fmt_patten);
+        }
+    }
+
+    fn fmt_ref_patten(&mut self, pat: &RefPatten) {
+        self.ts.insert(&ref_head(&None, pat.is_mut));
+        self.fmt_patten(&pat.pat);
+    }
+
+    fn fmt_path_patten(&mut self, pat: &PathPatten) {
+        self.fmt_qself_path(&pat.qself, &pat.path);
+    }
+
+    fn fmt_enum_patten(&mut self, pat: &EnumPatten) {
+        self.fmt_path(&pat.path);
+        match pat.pats {
+            Some(ref pats) => fmt_comma_lists!(self, "(", ")", pats, fmt_patten),
+            None => self.ts.insert("(..)"),
+        }
+    }
+
+    fn fmt_struct_patten(&mut self, pat: &StructPatten) {
+        self.fmt_path(&pat.path);
+
+        if pat.fields.is_empty() {
+            self.ts.insert(" {}");
+            return;
+        }
+
+        self.ts.insert(" {");
+        self.ts.indent();
+        self.ts.nl();
+
+        self.fmt_struct_field_pattens(&pat.fields);
+        if pat.etc {
+            self.ts.insert_indent();
+            self.ts.insert("...");
+            self.ts.nl();
+        }
+
+        self.ts.outdent();
+        self.ts.insert_indent();
+        self.ts.insert("}");
+    }
+
+    fn fmt_struct_field_pattens(&mut self, fields: &Vec<StructFieldPatten>) {
+        for field in fields {
+            self.try_fmt_comments(&field.loc);
+            self.ts.insert_indent();
+
+            self.fmt_struct_field_patten(field);
+        }
+    }
+
+    fn fmt_struct_field_patten(&mut self, field: &StructFieldPatten) {
+        if field.shorthand {
+            self.fmt_patten(&field.pat);
+        } else {
+            self.ts.insert(&field.name);
+            maybe_wrap!(self, ": ", ":", field.pat, fmt_patten);
+        }
+
+        self.ts.raw_insert(",");
+        self.ts.nl();
+    }
+
+    fn fmt_vec_patten(&mut self, pat: &VecPatten) {
+        let emit = if let Some(_) = pat.emit {
+            vec![Chunk::new("..")]
+        } else {
+            Vec::new()
+        };
+        fmt_comma_lists!(self, "[", "]", &pat.start, fmt_patten, &emit, fmt_vec_emit_patten, &pat.end, fmt_patten);
+    }
+
+    fn fmt_vec_emit_patten(&mut self, emit: &Chunk) {
+        self.ts.insert(&emit.s);
+    }
+
+    fn fmt_tuple_patten(&mut self, pat: &TuplePatten) {
+        fmt_comma_lists!(self, "(", ")", &pat.pats, fmt_patten);
+    }
+
+    fn fmt_box_patten(&mut self, pat: &Patten) {
+        self.ts.insert("box ");
+        self.fmt_patten(pat);
     }
 
     fn fmt_expr_stmt(&mut self, expr: &Expr, is_semi: bool) {
@@ -1679,6 +1795,7 @@ impl<'a> Formatter<'a> {
 
     fn fmt_arm(&mut self, arm: &Arm) {
         self.fmt_attrs(&arm.attrs);
+        self.ts.insert_indent();
 
         fmt_lists!(self, " | ", "| ", &arm.pats, fmt_patten);
         if let Some(ref guard) = arm.guard {

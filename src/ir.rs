@@ -684,6 +684,12 @@ pub enum PattenKind {
 }
 
 #[derive(Debug)]
+pub struct RangePatten {
+    pub start: Expr,
+    pub end: Expr,
+}
+
+#[derive(Debug)]
 pub struct IdentPatten {
     pub is_ref: bool,
     pub is_mut: bool,
@@ -695,12 +701,6 @@ pub struct IdentPatten {
 pub struct RefPatten {
     pub is_mut: bool,
     pub pat: Patten,
-}
-
-#[derive(Debug)]
-pub struct RangePatten {
-    pub start: Expr,
-    pub end: Expr,
 }
 
 #[derive(Debug)]
