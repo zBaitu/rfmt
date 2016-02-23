@@ -681,6 +681,10 @@ macro_rules! fmt_block {
 macro_rules! fmt_items {
     ($sf: ident, $items: expr, $fmt_item: ident) => ({
         for item in $items {
+            $sf.try_fmt_comments(&item.loc);
+            $sf.fmt_attrs(&item.attrs);
+            $sf.ts.insert_indent();
+
             $sf.$fmt_item(item);
         }
     });
@@ -860,7 +864,6 @@ impl<'a> Formatter<'a> {
     fn fmt_use(&mut self, item: &Use) {
         p!(item);
 
-        self.ts.insert_indent();
         self.ts.insert(&format!("use {}", &item.base));
         self.fmt_use_names(&item.names);
     }
@@ -896,7 +899,13 @@ impl<'a> Formatter<'a> {
         for item in items {
             match item.item {
                 ItemKind::ExternCrate(_) | ItemKind::Use(_) | ItemKind::ModDecl(_) => (),
-                _ => self.fmt_item(item),
+                _ => {
+                    self.try_fmt_comments(&item.loc);
+                    self.fmt_attrs(&item.attrs);
+                    self.ts.insert_indent();
+
+                    self.fmt_item(item);
+                }
             }
         }
     }
@@ -904,10 +913,6 @@ impl<'a> Formatter<'a> {
     fn fmt_item(&mut self, item: &Item) {
         p!("---------- item ----------");
 
-        self.try_fmt_comments(&item.loc);
-        self.fmt_attrs(&item.attrs);
-
-        self.ts.insert_indent();
         if item.is_pub {
             self.ts.insert("pub ");
         }
@@ -949,7 +954,6 @@ impl<'a> Formatter<'a> {
         p!("---------- type alias ----------");
         p!(item);
 
-        self.ts.insert_indent();
         self.ts.insert(&format!("type {}", &item.name));
 
         self.fmt_generics(&item.generics);
@@ -1202,7 +1206,6 @@ impl<'a> Formatter<'a> {
     fn fmt_foreign_mod(&mut self, item: &ForeignMod) {
         p!("---------- foreign mod ----------");
 
-        self.ts.insert_indent();
         self.ts.insert(&format!("extern{}", abi_head(&item.abi)));
 
         if item.items.is_empty() {
@@ -1220,10 +1223,6 @@ impl<'a> Formatter<'a> {
     fn fmt_foreign_item(&mut self, item: &ForeignItem) {
         p!("---------- foreign item ----------");
 
-        self.try_fmt_comments(&item.loc);
-        self.fmt_attrs(&item.attrs);
-
-        self.ts.insert_indent();
         if item.is_pub {
             self.ts.insert("pub ");
         }
@@ -1256,7 +1255,6 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_const(&mut self, item: &Const) {
-        self.ts.insert_indent();
         self.ts.insert(&format!("const {}", item.name));
         insert_sep!(self, ":", item.ty);
         self.fmt_type(&item.ty);
@@ -1264,7 +1262,6 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_static(&mut self, item: &Static) {
-        self.ts.insert_indent();
         self.ts.insert(&format!("{}{}", static_head(item.is_mut), item.name));
         insert_sep!(self, ":", item.ty);
         self.fmt_type(&item.ty);
@@ -1272,7 +1269,6 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_struct(&mut self, item: &Struct) {
-        self.ts.insert_indent();
         self.ts.insert(&format!("struct {}", item.name));
         self.fmt_generics(&item.generics);
         self.fmt_struct_body(&item.body);
@@ -1305,10 +1301,6 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_struct_field(&mut self, field: &StructField) {
-        self.try_fmt_comments(&field.loc);
-        self.fmt_attrs(&field.attrs);
-
-        self.ts.insert_indent();
         if field.is_pub {
             self.ts.insert("pub ");
         }
@@ -1335,7 +1327,6 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_enum(&mut self, item: &Enum) {
-        self.ts.insert_indent();
         self.ts.insert(&format!("enum {}", item.name));
         self.fmt_generics(&item.generics);
         self.fmt_enum_body(&item.body);
@@ -1355,10 +1346,6 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_enum_field(&mut self, field: &EnumField) {
-        self.try_fmt_comments(&field.loc);
-        self.fmt_attrs(&field.attrs);
-
-        self.ts.insert_indent();
         self.ts.insert(&field.name);
         self.fmt_struct_body(&field.body);
         if let Some(ref expr) = field.expr {
@@ -1404,10 +1391,6 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_trait_item(&mut self, item: &TraitItem) {
-        self.try_fmt_comments(&item.loc);
-        self.fmt_attrs(&item.attrs);
-        self.ts.insert_indent();
-
         match item.item {
             TraitItemKind::Const(ref item) => self.fmt_const_trait_item(item),
             TraitItemKind::Type(ref item) => self.fmt_type_trait_item(item),
@@ -1489,10 +1472,6 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_impl_item(&mut self, item: &ImplItem) {
-        self.try_fmt_comments(&item.loc);
-        self.fmt_attrs(&item.attrs);
-        self.ts.insert_indent();
-
         match item.item {
             ImplItemKind::Const(ref item) => {
                 self.fmt_const_impl_item(item);
@@ -1616,31 +1595,33 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_stmts(&mut self, stmts: &Vec<Stmt>) {
-        fmt_items!(self, stmts, fmt_stmt);
+        for stmt in stmts {
+            self.fmt_stmt(stmt);
+        }
     }
 
     fn fmt_stmt(&mut self, stmt: &Stmt) {
         match stmt.stmt {
-            StmtKind::Decl(ref decl) => self.fmt_decl(decl),
-            StmtKind::Expr(ref expr, is_semi) => {
-                self.fmt_expr(expr);
-                if is_semi {
-                    self.ts.nl();
-                    return;
-                }
-            }
+            StmtKind::Decl(ref decl) => self.fmt_decl_stmt(decl),
+            StmtKind::Expr(ref expr, is_semi) => self.fmt_expr_stmt(expr, is_semi),
             StmtKind::Macro(ref mac) => self.fmt_macro(mac),
         }
 
-        self.ts.raw_insert(";");
         self.ts.nl();
     }
 
-    fn fmt_decl(&mut self, decl: &Decl) {
+    fn fmt_decl_stmt(&mut self, decl: &Decl) {
         match decl.decl {
             DeclKind::Local(ref local) => self.fmt_local(local),
-            DeclKind::Item(ref item) => self.fmt_item(item),
+            DeclKind::Item(ref item) => {
+                self.try_fmt_comments(&item.loc);
+                self.fmt_attrs(&item.attrs);
+                self.ts.insert_indent();
+                
+                self.fmt_item(item);
+            }
         }
+        self.ts.raw_insert(";");
     }
 
     fn fmt_local(&mut self, local: &Local) {
@@ -1658,8 +1639,56 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn fmt_expr(&mut self, expr: &Expr) {}
-    fn fmt_patten(&mut self, pat: &Patten) {}
+    fn fmt_patten(&mut self, pat: &Patten) {
+        maybe_nl!(self, pat);
+        match pat.pat {
+            PattenKind::Wildcard => self.ts.insert("_"),
+            _ => ()
+        }
+    }
+
+    fn fmt_expr_stmt(&mut self, expr: &Expr, is_semi: bool) {
+        self.try_fmt_comments(&expr.loc);
+        self.fmt_attrs(&expr.attrs);
+        self.ts.insert_indent();
+
+        self.fmt_expr(expr);
+        if !is_semi {
+            self.ts.raw_insert(";");
+        }
+    }
+
+    fn fmt_expr(&mut self, expr: &Expr) {
+        match expr.expr {
+            ExprKind::Match(ref expr) => self.fmt_match_expr(expr),
+            _ => (),
+        }
+    }
+
+    fn fmt_match_expr(&mut self, expr: &MatchExpr) {
+        self.ts.insert("match ");
+        self.fmt_expr(&expr.expr);
+        fmt_block!(self, fmt_arms, &expr.arms);
+    }
+
+    fn fmt_arms(&mut self, arms: &Vec<Arm>) {
+        for arm in arms {
+            self.fmt_arm(arm);
+        }
+    }
+
+    fn fmt_arm(&mut self, arm: &Arm) {
+        self.fmt_attrs(&arm.attrs);
+
+        fmt_lists!(self, " | ", "| ", &arm.pats, fmt_patten);
+        if let Some(ref guard) = arm.guard {
+            maybe_wrap!(self, " ", "", guard, fmt_expr);
+        }
+        maybe_wrap!(self, " => ", "=> ", arm.body, fmt_expr);
+
+        self.ts.raw_insert(",");
+        self.ts.nl();
+    }
 
     fn fmt_macro(&mut self, mac: &Macro) {
         self.fmt_chunk(mac);

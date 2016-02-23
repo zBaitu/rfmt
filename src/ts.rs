@@ -3,7 +3,7 @@ use std::fmt::{self, Debug};
 
 use zbase::zstr;
 
-const NL: &'static str = "\n";
+const NL: char = '\n';
 
 const MAX_WIDTH: usize = 40;
 const MAX_ALIGN_COL: usize = 20;
@@ -127,12 +127,12 @@ impl Typesetter {
     #[inline]
     pub fn nl(&mut self) {
         if let Some(ch) = self.s.chars().last() {
-            if ch.is_whitespace() {
+            if ch != NL && ch.is_whitespace() {
                 self.tailing_ws_lines.insert(self.line);
             }
         }
 
-        self.s.push_str(NL);
+        self.s.push(NL);
 
         self.line += 1;
         self.col = 0;
