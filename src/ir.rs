@@ -623,7 +623,7 @@ pub struct Arg {
 #[derive(Debug)]
 pub struct Block {
     pub loc: Loc,
-    pub head: &'static str,
+    pub is_unsafe: bool,
     pub stmts: Vec<Stmt>,
 }
 
@@ -631,13 +631,12 @@ pub struct Block {
 pub struct Stmt {
     pub loc: Loc,
     pub stmt: StmtKind,
-    pub tail: &'static str,
 }
 
 #[derive(Debug)]
 pub enum StmtKind {
     Decl(Decl),
-    Expr(Expr),
+    Expr(Expr, bool),
     Macro(Macro),
 }
 
@@ -657,7 +656,6 @@ pub enum DeclKind {
 pub struct Local {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
-    pub head: &'static str,
     pub pat: Patten,
     pub ty: Option<Type>,
     pub init: Option<Expr>,

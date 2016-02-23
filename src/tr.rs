@@ -161,23 +161,6 @@ struct Translator {
     last_loc: Cell<Loc>,
 }
 
-macro_rules! select_str {
-    ($fn_name:ident, $flag:ident, $true_value:expr, $false_value:expr) => (
-        #[inline]
-        fn $fn_name($flag: bool) -> &'static str {
-            static TRUE_HEAD: &'static str = $true_value;
-            static FALSE_HEAD: &'static str = $false_value;
-
-            if $flag {
-                TRUE_HEAD
-            } else {
-                FALSE_HEAD
-            }
-        }
-    );
-}
-select_str!(block_head, is_unsafe, "unsafe", "");
-
 macro_rules! trans_list {
     ($self_: ident, $list: ident, $trans_single: ident) => ({
         $list.iter().map(|ref e| $self_.$trans_single(e)).collect()
@@ -1366,7 +1349,7 @@ impl Translator {
 
         Block {
             loc: loc,
-            head: block_head(is_block_unsafe(block.rules)),
+            is_unsafe: is_block_unsafe(block.rules),
             stmts: stmts,
         }
     }
@@ -1379,18 +1362,17 @@ impl Translator {
     #[inline]
     fn trans_stmt(&self, stmt: &rst::P<rst::Stmt>) -> Stmt {
         let loc = self.loc(&stmt.span);
-        let (stmt, tail) = match stmt.node {
-            rst::StmtDecl(ref decl, _) => (StmtKind::Decl(self.trans_decl(decl)), ";"),
-            rst::StmtSemi(ref expr, _) => (StmtKind::Expr(self.trans_expr(expr)), ";"),
-            rst::StmtExpr(ref expr, _) => (StmtKind::Expr(self.trans_expr(expr)), ""),
-            rst::StmtMac(ref mac, _, _) => (StmtKind::Macro(self.trans_macro(mac)), ""),
+        let stmt = match stmt.node {
+            rst::StmtDecl(ref decl, _) => StmtKind::Decl(self.trans_decl(decl)),
+            rst::StmtSemi(ref expr, _) => StmtKind::Expr(self.trans_expr(expr), true),
+            rst::StmtExpr(ref expr, _) => StmtKind::Expr(self.trans_expr(expr), false),
+            rst::StmtMac(ref mac, _, _) => StmtKind::Macro(self.trans_macro(mac)),
         };
         self.set_loc(&loc);
 
         Stmt {
             loc: loc,
             stmt: stmt,
-            tail: tail,
         }
     }
 
@@ -1424,7 +1406,6 @@ impl Translator {
         Local {
             loc: loc,
             attrs: attrs,
-            head: "let ",
             pat: pat,
             ty: ty,
             init: init,
@@ -1571,8 +1552,7 @@ impl Translator {
     fn expr_to_stmt(&self, expr: Expr) -> Stmt {
         Stmt {
             loc: Default::default(),
-            stmt: StmtKind::Expr(expr),
-            tail: "",
+            stmt: StmtKind::Expr(expr, false),
         }
     }
 

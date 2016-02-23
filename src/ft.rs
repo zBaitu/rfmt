@@ -4,7 +4,7 @@ use std::fmt::{self, Debug, Display};
 use ir::*;
 use ts::*;
 
-pub fn fmt_crate(krate: &Crate, cmnts: &Vec<Comment>) -> (String, BTreeSet<u32>) {
+pub fn fmt_crate(krate: &Crate, cmnts: &Vec<Comment>) -> (String, BTreeSet<u32>, BTreeSet<u32>) {
     Formatter::new(cmnts).fmt_crate(krate)
 }
 
@@ -666,7 +666,7 @@ macro_rules! fmt_lists {
 
 macro_rules! fmt_block {
     ($sf: expr, $act: ident, $item: expr) => ({
-        $sf.ts.insert("{");
+        $sf.ts.insert(" {");
         $sf.ts.indent();
         $sf.ts.nl();
 
@@ -745,7 +745,7 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn fmt_crate(mut self, krate: &Crate) -> (String, BTreeSet<u32>) {
+    fn fmt_crate(mut self, krate: &Crate) -> (String, BTreeSet<u32>, BTreeSet<u32>) {
         self.try_fmt_comments(&krate.loc);
         self.fmt_attrs(&krate.attrs);
         self.fmt_mod(&krate.module);
@@ -935,7 +935,7 @@ impl<'a> Formatter<'a> {
         p!("---------- sub mod ----------");
         p!(item.name);
 
-        self.ts.insert(&format!("mod {} ", &item.name));
+        self.ts.insert(&format!("mod {}", &item.name));
 
         if item.items.is_empty() {
             self.ts.insert("{}");
@@ -1203,10 +1203,10 @@ impl<'a> Formatter<'a> {
         p!("---------- foreign mod ----------");
 
         self.ts.insert_indent();
-        self.ts.insert(&format!("extern{} ", abi_head(&item.abi)));
+        self.ts.insert(&format!("extern{}", abi_head(&item.abi)));
 
         if item.items.is_empty() {
-            self.ts.insert("{}");
+            self.ts.insert(" {}");
             return;
         }
 
@@ -1292,9 +1292,8 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_struct_field_block(&mut self, fields: &Vec<StructField>) {
-        self.ts.raw_insert(" ");
         if fields.is_empty() {
-            self.ts.insert("{}");
+            self.ts.insert(" {}");
             return;
         }
 
@@ -1337,14 +1336,14 @@ impl<'a> Formatter<'a> {
 
     fn fmt_enum(&mut self, item: &Enum) {
         self.ts.insert_indent();
-        self.ts.insert(&format!("enum {} ", item.name));
+        self.ts.insert(&format!("enum {}", item.name));
         self.fmt_generics(&item.generics);
         self.fmt_enum_body(&item.body);
     }
 
     fn fmt_enum_body(&mut self, body: &EnumBody) {
         if body.fields.is_empty() {
-            self.ts.insert("{}");
+            self.ts.insert(" {}");
             return;
         }
 
@@ -1392,9 +1391,8 @@ impl<'a> Formatter<'a> {
         }
         self.fmt_where(&item.generics.wh);
 
-        self.ts.raw_insert(" ");
         if item.items.is_empty() {
-            self.ts.insert("{}");
+            self.ts.insert(" {}");
             return;
         }
 
@@ -1478,9 +1476,8 @@ impl<'a> Formatter<'a> {
 
         self.fmt_where(&item.generics.wh);
 
-        self.ts.raw_insert(" ");
         if item.items.is_empty() {
-            self.ts.insert("{}");
+            self.ts.insert(" {}");
             return;
         }
 
@@ -1611,7 +1608,56 @@ impl<'a> Formatter<'a> {
         self.fmt_fn_return(&sig.fn_sig.ret);
     }
 
-    fn fmt_block(&mut self, block: &Block) {}
+    fn fmt_block(&mut self, block: &Block) {
+        if block.is_unsafe {
+            self.ts.insert("unsafe");
+        }
+        fmt_block!(self, fmt_stmts, &block.stmts);
+    }
+
+    fn fmt_stmts(&mut self, stmts: &Vec<Stmt>) {
+        fmt_items!(self, stmts, fmt_stmt);
+    }
+
+    fn fmt_stmt(&mut self, stmt: &Stmt) {
+        match stmt.stmt {
+            StmtKind::Decl(ref decl) => self.fmt_decl(decl),
+            StmtKind::Expr(ref expr, is_semi) => {
+                self.fmt_expr(expr);
+                if is_semi {
+                    self.ts.nl();
+                    return;
+                }
+            }
+            StmtKind::Macro(ref mac) => self.fmt_macro(mac),
+        }
+
+        self.ts.raw_insert(";");
+        self.ts.nl();
+    }
+
+    fn fmt_decl(&mut self, decl: &Decl) {
+        match decl.decl {
+            DeclKind::Local(ref local) => self.fmt_local(local),
+            DeclKind::Item(ref item) => self.fmt_item(item),
+        }
+    }
+
+    fn fmt_local(&mut self, local: &Local) {
+        self.try_fmt_comments(&local.loc);
+        self.fmt_attrs(&local.attrs);
+        self.ts.insert_indent();
+
+        self.ts.insert("let "); 
+        self.fmt_patten(&local.pat);
+        if let Some(ref ty) = local.ty {
+            maybe_wrap!(self, ": ", ":", ty, fmt_type);
+        }
+        if let Some(ref expr) = local.init {
+            maybe_wrap!(self, " = ", "= ", expr, fmt_expr);
+        }
+    }
+
     fn fmt_expr(&mut self, expr: &Expr) {}
     fn fmt_patten(&mut self, pat: &Patten) {}
 
