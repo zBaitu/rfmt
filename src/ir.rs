@@ -756,8 +756,9 @@ pub enum ExprKind {
     Unary(Box<UnaryExpr>),
     Ref(Box<RefExpr>),
     List(Box<ListExpr>),
-    Vec(Box<ListExpr>),
-    Tuple(Box<ListExpr>),
+    FixedSizeArray(Box<FixedSizeArrayExpr>),
+    Vec(Box<Vec<Expr>>),
+    Tuple(Box<Vec<Expr>>),
     FieldAccess(Box<FieldAccessExpr>),
     Struct(Box<StructExpr>),
     Index(Box<IndexExpr>),
@@ -803,6 +804,12 @@ pub struct ListExpr {
 }
 
 #[derive(Debug)]
+pub struct FixedSizeArrayExpr {
+    pub init: Expr,
+    pub len: Expr,
+}
+
+#[derive(Debug)]
 pub struct FieldAccessExpr {
     pub expr: Expr,
     pub field: Chunk,
@@ -836,31 +843,26 @@ pub struct RangeExpr {
 
 #[derive(Debug)]
 pub struct BoxExpr {
-    pub head: &'static str,
     pub expr: Expr,
 }
 
 #[derive(Debug)]
 pub struct CastExpr {
     pub expr: Expr,
-    pub op: &'static str,
     pub ty: Type,
 }
 
 #[derive(Debug)]
 pub struct TypeExpr {
     pub expr: Expr,
-    pub op: &'static str,
     pub ty: Type,
 }
 
 #[derive(Debug)]
 pub struct IfExpr {
-    pub head: &'static str,
     pub expr: Expr,
     pub block: Block,
-    pub tail: &'static str,
-    pub left: Option<Expr>,
+    pub br: Option<Expr>,
 }
 
 #[derive(Debug)]
@@ -868,7 +870,7 @@ pub struct IfLetExpr {
     pub pat: Patten,
     pub expr: Expr,
     pub block: Block,
-    pub left: Option<Expr>,
+    pub br: Option<Expr>,
 }
 
 #[derive(Debug)]

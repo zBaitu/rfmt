@@ -1585,12 +1585,12 @@ impl Translator {
             rst::ExprInPlace(ref left, ref right) => {
                 ExprKind::List(Box::new(self.trans_in_place_expr(left, right)))
             }
-            rst::ExprVec(ref exprs) => ExprKind::Vec(Box::new(self.trans_vec_expr(exprs))),
             rst::ExprRepeat(ref init, ref len) => {
-                ExprKind::Vec(Box::new(self.trans_array_expr(init, len)))
+                ExprKind::FixedSizeArray(Box::new(self.trans_fixed_size_array_expr(init, len)))
             }
-            rst::ExprTup(ref exprs) => ExprKind::Tuple(Box::new(self.trans_tuple_expr(exprs))),
-            rst::ExprParen(ref expr) => ExprKind::Tuple(Box::new(self.trans_paren_expr(expr))),
+            rst::ExprVec(ref exprs) => ExprKind::Vec(Box::new(self.trans_exprs(exprs))),
+            rst::ExprTup(ref exprs) => ExprKind::Tuple(Box::new(self.trans_exprs(exprs))),
+            rst::ExprParen(ref expr) => ExprKind::Tuple(Box::new(vec![self.trans_expr(expr)])),
             rst::ExprField(ref expr, ref ident) => {
                 ExprKind::FieldAccess(Box::new(self.trans_struct_field_access_expr(expr, ident)))
             }
@@ -1705,14 +1705,14 @@ impl Translator {
     fn trans_bop(&self, op: &rst::BinOp) -> Chunk {
         Chunk {
             loc: self.loc_leaf(&op.span),
-            s: format!(" {} ", op.node.to_string()),
+            s: op.node.to_string().to_string(),
         }
     }
 
     fn trans_bop_assign(&self, op: &rst::BinOp) -> Chunk {
         Chunk {
             loc: self.loc_leaf(&op.span),
-            s: format!(" {}= ", op.node.to_string()),
+            s: format!("{}=", op.node.to_string()),
         }
     }
 
@@ -1726,7 +1726,7 @@ impl Translator {
     fn trans_assign_expr(&self, left: &rst::Expr, right: &rst::Expr) -> ListExpr {
         ListExpr {
             exprs: vec![self.trans_expr(left), self.trans_expr(right)],
-            sep: Chunk::new(" = "),
+            sep: Chunk::new("="),
         }
     }
 
@@ -1740,36 +1740,14 @@ impl Translator {
     fn trans_in_place_expr(&self, left: &rst::Expr, right: &rst::Expr) -> ListExpr {
         ListExpr {
             exprs: vec![self.trans_expr(left), self.trans_expr(right)],
-            sep: Chunk::new(" <- "),
+            sep: Chunk::new("<-"),
         }
     }
 
-    fn trans_list_expr(&self, exprs: &Vec<rst::P<rst::Expr>>, sep: Chunk) -> ListExpr {
-        ListExpr {
-            exprs: self.trans_exprs(exprs),
-            sep: sep,
-        }
-    }
-
-    fn trans_vec_expr(&self, exprs: &Vec<rst::P<rst::Expr>>) -> ListExpr {
-        self.trans_list_expr(exprs, Chunk::new(", "))
-    }
-
-    fn trans_array_expr(&self, init: &rst::Expr, len: &rst::Expr) -> ListExpr {
-        ListExpr {
-            exprs: vec![self.trans_expr(init), self.trans_expr(len)],
-            sep: Chunk::new("; "),
-        }
-    }
-
-    fn trans_tuple_expr(&self, exprs: &Vec<rst::P<rst::Expr>>) -> ListExpr {
-        self.trans_list_expr(exprs, Chunk::new(", "))
-    }
-
-    fn trans_paren_expr(&self, expr: &rst::P<rst::Expr>) -> ListExpr {
-        ListExpr {
-            exprs: vec![self.trans_expr(expr)],
-            sep: Default::default(),
+    fn trans_fixed_size_array_expr(&self, init: &rst::Expr, len: &rst::Expr) -> FixedSizeArrayExpr {
+        FixedSizeArrayExpr {
+            init: self.trans_expr(init),
+            len: self.trans_expr(len),
         }
     }
 
@@ -1834,7 +1812,6 @@ impl Translator {
 
     fn trans_box_expr(&self, expr: &rst::Expr) -> BoxExpr {
         BoxExpr {
-            head: "box ",
             expr: self.trans_expr(expr),
         }
     }
@@ -1842,7 +1819,6 @@ impl Translator {
     fn trans_cast_expr(&self, expr: &rst::Expr, ty: &rst::Ty) -> CastExpr {
         CastExpr {
             expr: self.trans_expr(expr),
-            op: " as ",
             ty: self.trans_type(ty),
         }
     }
@@ -1850,31 +1826,28 @@ impl Translator {
     fn trans_type_expr(&self, expr: &rst::Expr, ty: &rst::Ty) -> TypeExpr {
         TypeExpr {
             expr: self.trans_expr(expr),
-            op: ": ",
             ty: self.trans_type(ty),
         }
     }
 
     fn trans_if_expr(&self, expr: &rst::Expr, block: &rst::Block, left: &Option<rst::P<rst::Expr>>)
         -> IfExpr {
-        let (tail, left) = match *left {
-            Some(ref expr) => (" else ", Some(self.trans_expr(expr))),
-            None => ("", None),
+        let br = match *left {
+            Some(ref expr) => Some(self.trans_expr(expr)),
+            None => None,
         };
 
         IfExpr {
-            head: "if ",
             expr: self.trans_expr(expr),
             block: self.trans_block(block),
-            tail: tail,
-            left: left,
+            br: br, 
         }
     }
 
     fn trans_if_let_expr(&self, pat: &rst::P<rst::Pat>, expr: &rst::Expr, block: &rst::Block,
                          left: &Option<rst::P<rst::Expr>>)
         -> IfLetExpr {
-        let left = match *left {
+        let br = match *left {
             Some(ref expr) => (Some(self.trans_expr(expr))),
             None => None,
         };
@@ -1883,7 +1856,7 @@ impl Translator {
             pat: self.trans_patten(pat),
             expr: self.trans_expr(expr),
             block: self.trans_block(block),
-            left: left,
+            br: br,
         }
     }
 

@@ -1592,6 +1592,12 @@ impl<'a> Formatter<'a> {
         if block.is_unsafe {
             self.ts.insert("unsafe");
         }
+
+        if block.stmts.is_empty() {
+            self.ts.insert(" {}");
+            return;
+        }
+
         fmt_block!(self, fmt_stmts, &block.stmts);
     }
 
@@ -1769,16 +1775,235 @@ impl<'a> Formatter<'a> {
         self.ts.insert_indent();
 
         self.fmt_expr(expr);
-        if !is_semi {
+        if is_semi {
             self.ts.raw_insert(";");
         }
     }
 
     fn fmt_expr(&mut self, expr: &Expr) {
         match expr.expr {
+            ExprKind::Literal(ref expr) => self.fmt_literal_expr(expr),
+            ExprKind::Path(ref expr) => self.fmt_path_expr(expr),
+            ExprKind::Unary(ref expr) => self.fmt_unary_expr(expr),
+            ExprKind::Ref(ref expr) => self.fmt_ref_expr(expr),
+            ExprKind::List(ref expr) => self.fmt_list_expr(expr),
+            ExprKind::FixedSizeArray(ref expr) => self.fmt_fixed_size_array_expr(expr),
+            ExprKind::Vec(ref exprs) => self.fmt_vec_expr(exprs),
+            ExprKind::Tuple(ref exprs) => self.fmt_tuple_expr(exprs),
+            ExprKind::FieldAccess(ref expr) => self.fmt_field_access_expr(expr),
+            ExprKind::Struct(ref expr) => self.fmt_struct_expr(expr),
+            ExprKind::Index(ref expr) => self.fmt_index_expr(expr),
+            ExprKind::Range(ref expr) => self.fmt_range_expr(expr),
+            ExprKind::Box(ref expr) => self.fmt_box_expr(expr),
+            ExprKind::Cast(ref expr) => self.fmt_cast_expr(expr),
+            ExprKind::Type(ref expr) => self.fmt_type_expr(expr),
+            ExprKind::Block(ref expr) => self.fmt_block(expr),
+            ExprKind::If(ref expr) => self.fmt_if_expr(expr),
+            ExprKind::IfLet(ref expr) => self.fmt_if_let_expr(expr),
+            ExprKind::While(ref expr) => self.fmt_while_expr(expr),
+            ExprKind::WhileLet(ref expr) => self.fmt_while_let_expr(expr),
+            ExprKind::For(ref expr) => self.fmt_for_expr(expr),
+            ExprKind::Loop(ref expr) => self.fmt_loop_expr(expr),
+            ExprKind::Break(ref expr) => self.fmt_break_expr(expr),
+            ExprKind::Continue(ref expr) => self.fmt_continue_expr(expr),
             ExprKind::Match(ref expr) => self.fmt_match_expr(expr),
-            _ => (),
+            ExprKind::FnCall(ref expr) => self.fmt_fn_call_expr(expr),
+            ExprKind::MethodCall(ref expr) => self.fmt_method_call_expr(expr),
+            ExprKind::Closure(ref expr) => self.fmt_closure_expr(expr),
+            ExprKind::Return(ref expr) => self.fmt_return_expr(expr),
+            ExprKind::Macro(ref expr) => self.fmt_macro(expr),
         }
+    }
+
+    fn fmt_literal_expr(&mut self, expr: &Chunk) {
+        self.fmt_chunk(expr);
+    }
+
+    fn fmt_path_expr(&mut self, expr: &PathExpr) {
+        self.fmt_path_type(expr);
+    }
+
+    fn fmt_unary_expr(&mut self, expr: &UnaryExpr) {
+        maybe_wrap!(self, &expr.op.s, &expr.op.s, expr.expr, fmt_expr);
+    }
+
+    fn fmt_ref_expr(&mut self, expr: &RefExpr) {
+        let head = &ref_head(&None, expr.is_mut);
+        maybe_wrap!(self, head, head, expr.expr, fmt_expr);
+    }
+
+    fn fmt_list_expr(&mut self, expr: &ListExpr) {
+        let sep = format!(" {} ", expr.sep);
+        let wrap_sep = format!("{} ", expr.sep);
+        fmt_lists!(self, &sep, &wrap_sep, &expr.exprs, fmt_expr);
+    }
+
+    fn fmt_fixed_size_array_expr(&mut self, expr: &FixedSizeArrayExpr) {
+        self.ts.insert_mark_align("[");
+        self.fmt_expr(&expr.init);
+        insert_sep!(self, ";", expr.len);
+        self.fmt_expr(&expr.len);
+        self.ts.insert_unmark_align("]");
+    }
+
+    fn fmt_vec_expr(&mut self, exprs: &Vec<Expr>) {
+        fmt_comma_lists!(self, "[", "]", exprs, fmt_expr);
+    }
+
+    fn fmt_tuple_expr(&mut self, exprs: &Vec<Expr>) {
+        fmt_comma_lists!(self, "(", ")", exprs, fmt_expr);
+    }
+
+    fn fmt_field_access_expr(&mut self, expr: &FieldAccessExpr) {
+        self.fmt_expr(&expr.expr);
+        self.ts.insert(&format!(".{}", &expr.field.s));
+    }
+
+    fn fmt_struct_expr(&mut self, expr: &StructExpr) {
+        self.fmt_path(&expr.path);
+
+        if expr.fields.is_empty() {
+            self.ts.insert(" {}");
+            return;
+        }
+
+        self.ts.insert(" {");
+        self.ts.indent();
+        self.ts.nl();
+
+        self.fmt_struct_field_exprs(&expr.fields);
+        if let Some(ref base) = expr.base {
+            self.ts.insert_indent();
+            self.ts.insert("..");
+            self.fmt_expr(base);
+            self.ts.nl();
+        }
+
+        self.ts.outdent();
+        self.ts.insert_indent();
+        self.ts.insert("}");
+    }
+
+    fn fmt_struct_field_exprs(&mut self, fields: &Vec<StructFieldExpr>) {
+        for field in fields {
+            self.try_fmt_comments(&field.loc);
+            self.ts.insert_indent();
+
+            self.fmt_struct_field_expr(field);
+        }
+    }
+
+    fn fmt_struct_field_expr(&mut self, field: &StructFieldExpr) {
+        self.ts.insert(&field.name.s);
+        maybe_wrap!(self, ": ", ":", &field.value, fmt_expr);
+        self.ts.raw_insert(",");
+        self.ts.nl();
+    }
+
+    fn fmt_index_expr(&mut self, expr: &IndexExpr) {
+        self.fmt_expr(&expr.obj);
+        self.ts.insert_mark_align("[");
+        self.fmt_expr(&expr.index);
+        self.ts.insert_unmark_align("]");
+    }
+
+    fn fmt_range_expr(&mut self, expr: &RangeExpr) {
+        if let Some(ref start) = expr.start {
+            self.fmt_expr(start);
+        }
+        self.ts.insert("..");
+        if let Some(ref end) = expr.end {
+            self.fmt_expr(end);
+        }
+    }
+
+    fn fmt_box_expr(&mut self, expr: &BoxExpr) {
+        maybe_wrap!(self, "box ", "box ", expr.expr, fmt_expr);
+    }
+
+    fn fmt_cast_expr(&mut self, expr: &CastExpr) {
+        self.fmt_expr(&expr.expr);
+        maybe_wrap!(self, " as ", "as ", expr.ty, fmt_type);
+    }
+
+    fn fmt_type_expr(&mut self, expr: &TypeExpr) {
+        self.fmt_expr(&expr.expr);
+        maybe_wrap!(self, ": ", ":", expr.ty, fmt_type);
+    }
+
+    fn fmt_if_expr(&mut self, expr: &IfExpr) {
+        self.ts.insert("if ");
+        self.fmt_expr(&expr.expr);
+        self.fmt_block(&expr.block);
+        if let Some(ref br) = expr.br {
+            self.ts.insert(" else ");
+            self.fmt_expr(br);
+        }
+    }
+
+    fn fmt_if_let_expr(&mut self, expr: &IfLetExpr) {
+        self.ts.insert("if let ");
+        self.fmt_patten(&expr.pat);
+        maybe_wrap!(self, " = ", "= ", expr.expr, fmt_expr);
+        self.fmt_block(&expr.block);
+        if let Some(ref br) = expr.br {
+            self.ts.insert(" else ");
+            self.fmt_expr(br);
+        }
+    }
+
+    fn fmt_label(&mut self, label: &Option<String>) {
+        if let Some(ref label) = *label {
+            self.ts.insert(&format!("{}:", label));
+            self.ts.nl();
+            self.ts.insert_indent();
+        }
+    }
+
+    fn fmt_while_expr(&mut self, expr: &WhileExpr) {
+        self.fmt_label(&expr.label);
+        self.ts.insert("while ");
+        self.fmt_expr(&expr.expr);
+        self.fmt_block(&expr.block);
+    }
+
+    fn fmt_while_let_expr(&mut self, expr: &WhileLetExpr) {
+        self.fmt_label(&expr.label);
+        self.ts.insert("while let ");
+        self.fmt_patten(&expr.pat);
+        maybe_wrap!(self, " = ", "= ", expr.expr, fmt_expr);
+        self.fmt_block(&expr.block);
+    }
+
+    fn fmt_for_expr(&mut self, expr: &ForExpr) {
+        self.fmt_label(&expr.label);
+        self.ts.insert("for ");
+        self.fmt_patten(&expr.pat);
+        maybe_wrap!(self, " in ", "in ", expr.expr, fmt_expr);
+        self.fmt_block(&expr.block);
+    }
+
+    fn fmt_loop_expr(&mut self, expr: &LoopExpr) {
+        self.fmt_label(&expr.label);
+        self.ts.insert("loop ");
+        self.fmt_block(&expr.block);
+    }
+
+    fn fmt_jump_label(&mut self, keyword: &str, label: &Option<Chunk>) {
+        let label = if let Some(ref label) = *label {
+            format!(" {}", label.s)
+        } else {
+            String::new()
+        };
+        self.ts.insert(&format!("{}{}", keyword, label));
+    }
+
+    fn fmt_break_expr(&mut self, expr: &BreakExpr) {
+        self.fmt_jump_label("break", &expr.label);
+    }
+
+    fn fmt_continue_expr(&mut self, expr: &ContinueExpr) {
+        self.fmt_jump_label("continue", &expr.label);
     }
 
     fn fmt_match_expr(&mut self, expr: &MatchExpr) {
@@ -1799,12 +2024,75 @@ impl<'a> Formatter<'a> {
 
         fmt_lists!(self, " | ", "| ", &arm.pats, fmt_patten);
         if let Some(ref guard) = arm.guard {
-            maybe_wrap!(self, " ", "", guard, fmt_expr);
+            maybe_wrap!(self, " if ", "if ", guard, fmt_expr);
         }
         maybe_wrap!(self, " => ", "=> ", arm.body, fmt_expr);
 
         self.ts.raw_insert(",");
         self.ts.nl();
+    }
+
+    fn fmt_fn_call_expr(&mut self, expr: &FnCallExpr) {
+        self.fmt_expr(&expr.name);
+        fmt_comma_lists!(self, "(", ")", &expr.args, fmt_expr);
+    }
+
+    fn fmt_method_call_expr(&mut self, expr: &MethodCallExpr) {
+        self.fmt_expr(&expr.obj);
+        self.ts.insert(&format!(".{}", &expr.name.s));
+        if !expr.types.is_empty() {
+            self.ts.insert("::");
+            fmt_comma_lists!(self, "<", ">", &expr.types, fmt_type);
+        }
+        fmt_comma_lists!(self, "(", ")", &expr.args, fmt_expr);
+    }
+
+    fn fmt_closure_expr(&mut self, expr: &ClosureExpr) {
+        if expr.moved {
+            self.ts.insert("move ");
+        }
+
+        self.fmt_closure_fn_arg(&expr.fn_sig.arg);
+        self.fmt_fn_return(&expr.fn_sig.ret);
+        self.fmt_block(&expr.block);
+    }
+
+    fn fmt_closure_fn_arg(&mut self, arg: &FnArg) {
+        if arg.va {
+            self.ts.insert_mark_align("|");
+
+            let mut first = true;
+            for e in &arg.args {
+                if !first {
+                    insert_sep!(self, ",", e);
+                }
+
+                self.fmt_arg(e);
+                first = false;
+            }
+
+            self.ts.insert(", ...");
+            self.ts.insert_unmark_align("|");
+        } else {
+            fmt_comma_lists!(self, "|", "|", &arg.args, fmt_closure_arg);
+        }
+    }
+
+    fn fmt_closure_arg(&mut self, arg: &Arg) {
+        maybe_wrap!(self, arg);
+        self.fmt_patten(&arg.pat);
+        if let TypeKind::Infer = arg.ty.ty {
+            return;
+        } else {
+            maybe_wrap!(self, ": ", ":", arg.ty, fmt_type);
+        }
+    }
+
+    fn fmt_return_expr(&mut self, expr: &ReturnExpr) {
+        self.ts.insert("return");
+        if let Some(ref expr) = expr.ret {
+            maybe_wrap!(self, " ", "", expr, fmt_expr);
+        }
     }
 
     fn fmt_macro(&mut self, mac: &Macro) {
