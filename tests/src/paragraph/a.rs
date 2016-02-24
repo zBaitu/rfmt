@@ -1,1 +1,3 @@
-#![crate_name = "syntax"]
+fn f() {
+    match a {}
+}

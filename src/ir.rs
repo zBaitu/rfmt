@@ -920,6 +920,7 @@ pub struct MatchExpr {
 
 #[derive(Debug)]
 pub struct Arm {
+    pub loc: Loc,
     pub attrs: Vec<AttrKind>,
     pub pats: Vec<Patten>,
     pub guard: Option<Expr>,

@@ -1943,7 +1943,15 @@ impl Translator {
     }
 
     fn trans_arm(&self, arm: &rst::Arm) -> Arm {
+        let pats = self.trans_pattens(&arm.pats);
+        let loc = if pats.is_empty() {
+            Default::default()
+        } else {
+            pats[0].loc
+        };
+
         Arm {
+            loc: loc,
             attrs: self.trans_attrs(&arm.attrs),
             pats: self.trans_pattens(&arm.pats),
             guard: zopt::map_ref(&arm.guard, |expr| self.trans_expr(expr)),
