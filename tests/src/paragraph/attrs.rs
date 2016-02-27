@@ -16,8 +16,8 @@
 
 #![crate_name = "syntax"] // abcdefg
 #![unstable(feature = "rustc_private", issue = "27812")] /* hijklmn */
-#![crate_type = "rlib"]
-#![crate_type = "dylib"]
+#![crate_type = "rlib"] // aaaaa
+#![crate_type = "dylib"] // bbbbb
 /* abcdefg
  * hijklmn
  */

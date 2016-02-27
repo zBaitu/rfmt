@@ -42,12 +42,6 @@ impl Chunk {
 }
 
 #[derive(Debug)]
-pub struct Comment {
-    pub pos: Pos,
-    pub lines: Vec<String>,
-}
-
-#[derive(Debug)]
 pub struct Crate {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,

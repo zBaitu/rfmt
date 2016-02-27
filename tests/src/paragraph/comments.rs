@@ -25,7 +25,11 @@ pub const c: i32 = -12_345;// fffffffffffffffffff
 // aaaaaaaaaaaaa
 pub struct Point {
     // ddddddddddd
-    pub x: i32, // aaa
-    y: i32,// bbb
-    pub x: i32, // ccc
+    pub x: i32, // Point aaa
+    y: i32, // Point bbb
+    // ccc
+    pub xxx: i32, // Point ddddddd
 }
+
+// ffffffffffffff
+type a /* aaaaaaaaaaaa */ = bool;

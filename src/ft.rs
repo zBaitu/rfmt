@@ -1,11 +1,11 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt::{self, Debug, Display};
 
 use ir::*;
 use ts::*;
 
-pub fn fmt_crate(krate: &Crate, cmnts: &Vec<Comment>) -> (String, BTreeSet<u32>, BTreeSet<u32>) {
-    Formatter::new(cmnts).fmt_crate(krate)
+pub fn fmt_crate(krate: &Crate, leading_cmnts: &HashMap<Pos, Vec<String>>, trailing_cmnts: &HashMap<Pos, String>) -> (String, BTreeSet<u32>, BTreeSet<u32>) {
+    Formatter::new(leading_cmnts, trailing_cmnts).fmt_crate(krate)
 }
 
 macro_rules! select_str {
@@ -552,11 +552,11 @@ macro_rules! fmt_item_groups {
         for item in $items {
             match item.item {
                 $item_kind(ref e) => {
-                    if $sf.is_after_comment(&item.loc) {
+                    if $sf.is_after_leading_comment(&item.loc) {
                         fmt_item_group!($sf, &group, $item_type, $fmt_item);
                         group.clear();
 
-                        $sf.fmt_comments(&item.loc);
+                        $sf.fmt_leading_comments(&item.loc);
                     }
 
                     group.push((&item.attrs, item.is_pub, e));
@@ -678,7 +678,7 @@ macro_rules! fmt_block {
 macro_rules! fmt_items {
     ($sf: ident, $items: expr, $fmt_item: ident) => ({
         for item in $items {
-            $sf.try_fmt_comments(&item.loc);
+            $sf.try_fmt_leading_comments(&item.loc);
             $sf.fmt_attrs(&item.attrs);
             $sf.insert_indent();
 
@@ -690,19 +690,21 @@ macro_rules! fmt_items {
 struct Formatter<'a> {
     ts: Typesetter,
 
-    cmnts: &'a Vec<Comment>,
-    cmnt_idx: usize,
+    leading_cmnts: &'a HashMap<Pos, Vec<String>>,
+    trailing_cmnts: &'a HashMap<Pos, String>,
+
     after_indent: bool,
     after_wrap: bool,
 }
 
 impl<'a> Formatter<'a> {
-    fn new(cmnts: &'a Vec<Comment>) -> Formatter<'a> {
+    fn new(leading_cmnts: &'a HashMap<Pos, Vec<String>>, trailing_cmnts: &'a HashMap<Pos, String>) -> Formatter<'a> {
         Formatter {
             ts: Typesetter::new(),
 
-            cmnts: cmnts,
-            cmnt_idx: 0,
+            leading_cmnts: leading_cmnts,
+            trailing_cmnts: trailing_cmnts,
+
             after_indent: false,
             after_wrap: false,
         }
@@ -761,43 +763,43 @@ impl<'a> Formatter<'a> {
     }
 
     #[inline]
-    fn is_after_comment(&self, loc: &Loc) -> bool {
-        self.cmnt_idx < self.cmnts.len() && self.cmnts[self.cmnt_idx].pos < loc.start
+    fn is_after_leading_comment(&self, loc: &Loc) -> bool {
+        self.leading_cmnts.contains_key(&loc.start)
     }
 
     #[inline]
-    fn try_fmt_comments(&mut self, loc: &Loc) {
-        if self.is_after_comment(loc) {
-            self.fmt_comments(loc);
+    fn try_fmt_leading_comments(&mut self, loc: &Loc) {
+        if self.is_after_leading_comment(loc) {
+            self.fmt_leading_comments(loc);
         }
     }
 
-    fn fmt_comments(&mut self, loc: &Loc) {
-        while self.cmnt_idx < self.cmnts.len() && self.cmnts[self.cmnt_idx].pos < loc.start {
-            let idx = self.cmnt_idx;
-            self.fmt_comment(&self.cmnts[idx]);
-            self.cmnt_idx += 1;
-        }
-    }
-
-    fn fmt_comment(&mut self, cmnt: &Comment) {
-        p!("---------- comment ----------");
-        p!("{:#?}", cmnt);
-
-        if cmnt.lines.is_empty() {
-            self.ts.nl();
-            return;
-        }
-
-        for line in &cmnt.lines {
+    fn fmt_leading_comments(&mut self, loc: &Loc) {
+        for cmnt in &self.leading_cmnts[&loc.start] {
             self.insert_indent();
-            self.raw_insert(line);
+            self.raw_insert(cmnt);
             self.ts.nl();
         }
+    }
+
+    #[inline]
+    fn has_trailing_comment(&self, loc: &Loc) -> bool {
+        self.trailing_cmnts.contains_key(&loc.start)
+    }
+
+    #[inline]
+    fn try_fmt_trailing_comment(&mut self, loc: &Loc) {
+        if self.has_trailing_comment(loc) {
+            self.fmt_trailing_comment(loc);
+        }
+    }
+
+    fn fmt_trailing_comment(&mut self, loc: &Loc) {
+        self.raw_insert(&self.trailing_cmnts[&loc.start]);
     }
 
     fn fmt_crate(mut self, krate: &Crate) -> (String, BTreeSet<u32>, BTreeSet<u32>) {
-        self.try_fmt_comments(&krate.loc);
+        self.try_fmt_leading_comments(&krate.loc);
         self.fmt_attrs(&krate.attrs);
         self.fmt_mod(&krate.module);
 
@@ -817,11 +819,11 @@ impl<'a> Formatter<'a> {
                     self.fmt_doc(doc);
                 }
                 AttrKind::Attr(ref attr) => {
-                    if self.is_after_comment(&attr.loc) {
+                    if self.is_after_leading_comment(&attr.loc) {
                         self.fmt_attr_group(&attr_group);
                         attr_group.clear();
 
-                        self.fmt_comments(&attr.loc);
+                        self.fmt_leading_comments(&attr.loc);
                     }
                     attr_group.push(attr);
                 }
@@ -832,7 +834,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_doc(&mut self, doc: &Doc) {
-        self.try_fmt_comments(&doc.loc);
+        self.try_fmt_leading_comments(&doc.loc);
         p!("---------- doc ----------");
         p!("{:#?}", doc);
 
@@ -857,6 +859,8 @@ impl<'a> Formatter<'a> {
         self.insert("[");
         self.fmt_attr_meta_item(&attr.item);
         self.insert("]");
+
+        self.try_fmt_trailing_comment(&attr.loc);
     }
 
     fn fmt_attr_meta_item(&mut self, item: &MetaItem) {
@@ -947,7 +951,7 @@ impl<'a> Formatter<'a> {
             match item.item {
                 ItemKind::ExternCrate(_) | ItemKind::Use(_) | ItemKind::ModDecl(_) => (),
                 _ => {
-                    self.try_fmt_comments(&item.loc);
+                    self.try_fmt_leading_comments(&item.loc);
                     self.fmt_attrs(&item.attrs);
                     self.insert_indent();
 
@@ -1357,6 +1361,7 @@ impl<'a> Formatter<'a> {
         self.fmt_type(&field.ty);
 
         self.raw_insert(",");
+        self.try_fmt_trailing_comment(&field.loc);
         self.ts.nl();
     }
 
@@ -1365,7 +1370,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_tuple_field(&mut self, field: &TupleField) {
-        self.try_fmt_comments(&field.loc);
+        self.try_fmt_leading_comments(&field.loc);
         self.fmt_attrs(&field.attrs);
 
         if field.is_pub {
@@ -1668,7 +1673,7 @@ impl<'a> Formatter<'a> {
         match decl.decl {
             DeclKind::Local(ref local) => self.fmt_local(local),
             DeclKind::Item(ref item) => {
-                self.try_fmt_comments(&item.loc);
+                self.try_fmt_leading_comments(&item.loc);
                 self.fmt_attrs(&item.attrs);
                 self.insert_indent();
 
@@ -1679,7 +1684,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_local(&mut self, local: &Local) {
-        self.try_fmt_comments(&local.loc);
+        self.try_fmt_leading_comments(&local.loc);
         self.fmt_attrs(&local.attrs);
         self.insert_indent();
 
@@ -1775,7 +1780,7 @@ impl<'a> Formatter<'a> {
 
     fn fmt_struct_field_pattens(&mut self, fields: &Vec<StructFieldPatten>) {
         for field in fields {
-            self.try_fmt_comments(&field.loc);
+            self.try_fmt_leading_comments(&field.loc);
             self.insert_indent();
 
             self.fmt_struct_field_patten(field);
@@ -1825,7 +1830,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_expr_stmt(&mut self, expr: &Expr, is_semi: bool) {
-        self.try_fmt_comments(&expr.loc);
+        self.try_fmt_leading_comments(&expr.loc);
         self.fmt_attrs(&expr.attrs);
         self.insert_indent();
 
@@ -1942,7 +1947,7 @@ impl<'a> Formatter<'a> {
 
     fn fmt_struct_field_exprs(&mut self, fields: &Vec<StructFieldExpr>) {
         for field in fields {
-            self.try_fmt_comments(&field.loc);
+            self.try_fmt_leading_comments(&field.loc);
             self.insert_indent();
 
             self.fmt_struct_field_expr(field);
@@ -2075,7 +2080,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_arm(&mut self, arm: &Arm) {
-        self.try_fmt_comments(&arm.loc);
+        self.try_fmt_leading_comments(&arm.loc);
         self.fmt_attrs(&arm.attrs);
         self.insert_indent();
 

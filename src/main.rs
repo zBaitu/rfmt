@@ -64,16 +64,12 @@ fn main() {
                                                                .to_string(),
                                                                &mut input);
 
-    let (krate, cmnts) = tr::trans(session, krate, lits, cmnts);
+    let (krate, leading_cmnts, trailing_cmnts) = tr::trans(session, krate, lits, cmnts);
     p!("{:#?}", krate);
-    for cmnt in &cmnts {
-        p!("{:?}", cmnt.pos);
-        p!("{:?}", cmnt.lines);
-    }
-    p!();
-    p!();
+    p!("{:#?}", leading_cmnts);
+    p!("{:#?}", trailing_cmnts);
 
-    let (s, exceed_lines, tailing_ws_lines) = ft::fmt_crate(&krate, &cmnts);
+    let (s, exceed_lines, tailing_ws_lines) = ft::fmt_crate(&krate, &leading_cmnts, &trailing_cmnts);
     p!();
     p!();
     p!("====================================================================================================");
