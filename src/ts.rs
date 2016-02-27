@@ -17,7 +17,7 @@ pub struct Typesetter {
     indent: String,
     align_stack: Vec<usize>,
     exceed_lines: BTreeSet<u32>,
-    tailing_ws_lines: BTreeSet<u32>,
+    trailing_ws_lines: BTreeSet<u32>,
 
     s: String,
 }
@@ -60,14 +60,14 @@ impl Typesetter {
             indent: String::new(),
             align_stack: Vec::new(),
             exceed_lines: BTreeSet::new(),
-            tailing_ws_lines: BTreeSet::new(),
+            trailing_ws_lines: BTreeSet::new(),
 
             s: String::new(),
         }
     }
 
     pub fn result(self) -> (String, BTreeSet<u32>, BTreeSet<u32>) {
-        (self.s, self.exceed_lines, self.tailing_ws_lines)
+        (self.s, self.exceed_lines, self.trailing_ws_lines)
     }
 
     #[inline]
@@ -128,7 +128,7 @@ impl Typesetter {
     pub fn nl(&mut self) {
         if let Some(ch) = self.s.chars().last() {
             if ch != NL && ch.is_whitespace() {
-                self.tailing_ws_lines.insert(self.line);
+                self.trailing_ws_lines.insert(self.line);
             }
         }
 

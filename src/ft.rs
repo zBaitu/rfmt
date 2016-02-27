@@ -515,9 +515,7 @@ impl Display for Expr {
 
 macro_rules! fmt_attr_group {
     ($sf: expr, $group: expr, $ty: ty, $fmt_attr: ident) => ({
-        let map: BTreeMap<String, $ty> = $group.into_iter()
-        .map(|e| (e.to_string(), *e))
-        .collect();
+        let map: BTreeMap<String, $ty> = $group.into_iter().map(|e| (e.to_string(), *e)).collect();
 
         for (_, e) in map {
             $sf.insert_indent();
@@ -529,9 +527,8 @@ macro_rules! fmt_attr_group {
 
 macro_rules! fmt_item_group {
     ($sf: expr, $group: expr, $ty: ty, $fmt_item: ident) => ({
-        let map: BTreeMap<String, (&Vec<AttrKind>, bool, $ty)> = $group.into_iter()
-        .map(|e| (e.2.to_string(), *e))
-        .collect();
+        let map: BTreeMap<String, (&Vec<AttrKind>, bool, $ty)>
+                = $group.into_iter().map(|e| (e.2.to_string(), *e)).collect();
 
         for (_, e) in map {
             $sf.fmt_attrs(e.0);
@@ -980,7 +977,7 @@ impl<'a> Formatter<'a> {
             ItemKind::Trait(ref item) => self.fmt_trait(item),
             ItemKind::ImplDefault(ref item) => self.fmt_impl_default(item),
             ItemKind::Impl(ref item) => self.fmt_impl(item),
-            _ => (),
+            ItemKind::Macro(ref item) => self.fmt_macro(item),
         }
 
         self.ts.nl();

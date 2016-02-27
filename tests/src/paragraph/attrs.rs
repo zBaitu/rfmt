@@ -14,8 +14,8 @@
 //!
 //! This API is completely unstable and subject to change.
 
-#![crate_name = "syntax"]
-#![unstable(feature = "rustc_private", issue = "27812")]
+#![crate_name = "syntax"] // abcdefg
+#![unstable(feature = "rustc_private", issue = "27812")] /* hijklmn */
 #![crate_type = "rlib"]
 #![crate_type = "dylib"]
 /* abcdefg

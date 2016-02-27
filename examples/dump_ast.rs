@@ -63,6 +63,7 @@ fn main() {
                                                               &mut input);
     println!("\n----------");
     for cmt in cmts {
+        println!("{:?}", cmt.style);
         println!("{:?}", cmt.pos);
         println!("{:?}", cmt.lines);
     }
