@@ -1,8 +1,8 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-use zbase::zopt;
 use rst;
+use zbase::zopt;
 
 use ir::*;
 
@@ -11,8 +11,11 @@ const MAX_BLANK_LINE: u8 = 2;
 pub fn trans(sess: rst::ParseSess, krate: rst::Crate, lits: Vec<rst::Literal>,
              cmnts: Vec<rst::Comment>)
     -> (Crate, HashMap<Pos, Vec<String>>, HashMap<Pos, String>) {
-    let cmnts = trans_comments(cmnts);
-    Translator::new(sess, &krate, to_lit_map(lits), cmnts).trans(krate)
+    Translator::new(sess, &krate, to_literal_map(lits), trans_comments(cmnts)).trans(krate)
+}
+
+fn to_literal_map(lits: Vec<rst::Literal>) -> HashMap<rst::BytePos, String> {
+    lits.into_iter().map(|e| (e.pos, e.lit)).collect()
 }
 
 #[derive(PartialEq)]
@@ -66,10 +69,6 @@ fn trans_comment(cmnt: rst::Comment) -> Comment {
         kind: kind,
         lines: cmnt.lines,
     }
-}
-
-fn to_lit_map(lits: Vec<rst::Literal>) -> HashMap<rst::BytePos, String> {
-    lits.into_iter().map(|e| (e.pos, e.lit)).collect()
 }
 
 #[inline]
@@ -178,14 +177,14 @@ struct Translator {
     leading_cmnts: HashMap<Pos, Vec<String>>,
     trailing_cmnts: HashMap<Pos, String>,
 
-    krate_end: rst::BytePos,
+    crate_end: rst::BytePos,
     last_loc: Loc,
 }
 
 macro_rules! trans_list {
-    ($self_: ident, $list: ident, $trans_single: ident) => ({
-        $list.iter().map(|ref e| $self_.$trans_single(e)).collect()
-    })
+    ($sf: ident, $list: ident, $trans_single: ident) => ({
+        $list.iter().map(|ref e| $sf.$trans_single(e)).collect()
+    });
 }
 
 impl Translator {
@@ -201,7 +200,7 @@ impl Translator {
             leading_cmnts: HashMap::new(),
             trailing_cmnts: HashMap::new(),
 
-            krate_end: krate.span.hi,
+            crate_end: krate.span.hi,
             last_loc: Loc {
                 end: krate.span.lo.0,
                 ..Default::default()
@@ -210,33 +209,9 @@ impl Translator {
     }
 
     #[inline]
-    fn is_nl(&mut self, sp: &rst::Span) -> bool {
-        let start = self.last_loc.end;
-        let end = sp.lo.0;
-        let snippet = self.span_to_snippet(span(start, end));
-        if snippet.is_err() {
-            return false;
-        }
-
-        let snippet = snippet.unwrap();
-        let mut nl = false;
-        let mut in_comment = false;
-        for ch in snippet.chars() {
-            if !in_comment {
-                if ch == '/' {
-                    in_comment = true;
-                } else if ch == '\n' {
-                    nl = true;
-                } else if ch != ',' && !ch.is_whitespace() {
-                    nl = false;
-                    break;
-                }
-            } else if ch == '/' {
-                in_comment = false;
-            }
-        }
-
-        nl
+    fn trans_comments(&mut self, pos: Pos) {
+        let cmnts = self.trans_trailing_comments(pos);
+        self.trans_leading_comments(pos, cmnts);
     }
 
     #[inline]
@@ -280,9 +255,25 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_comments(&mut self, pos: Pos) {
-        let cmnts = self.trans_trailing_comments(pos);
-        self.trans_leading_comments(pos, cmnts);
+    fn is_nl(&mut self, pos: Pos) -> bool {
+        let snippet = self.span_to_snippet(span(self.last_loc.end, pos));
+        if snippet.is_err() {
+            return false;
+        }
+
+        let snippet = snippet.unwrap();
+        let linefeed = snippet.find('\n');
+        if linefeed.is_none() {
+            return false;
+        }
+        
+        let start = linefeed.unwrap() + 1;
+        for ch in snippet[start..].chars() {
+            if !ch.is_whitespace() {
+                return false;
+            }
+        }
+        true
     }
 
     #[inline]
@@ -292,14 +283,14 @@ impl Translator {
         Loc {
             start: sp.lo.0,
             end: sp.hi.0,
-            nl: self.is_nl(sp),
+            nl: self.is_nl(sp.lo.0),
         }
     }
 
     #[inline]
-    fn loc_leaf(&mut self, sp: &rst::Span) -> Loc {
+    fn leaf_loc(&mut self, sp: &rst::Span) -> Loc {
         let loc = self.loc(sp);
-        self.set_loc(&loc);
+        self.last_loc = loc;
         loc
     }
 
@@ -323,7 +314,7 @@ impl Translator {
     }
 
     #[inline]
-    fn span_to_snippet(&mut self, sp: rst::Span) -> Result<String, rst::SpanSnippetError> {
+    fn span_to_snippet(&self, sp: rst::Span) -> Result<String, rst::SpanSnippetError> {
         self.sess.codemap().span_to_snippet(sp)
     }
 
@@ -337,7 +328,7 @@ impl Translator {
 
     #[inline]
     fn is_mod_decl(&self, sp: &rst::Span) -> bool {
-        sp.lo > self.krate_end
+        sp.lo > self.crate_end
     }
 
     fn trans(mut self, krate: rst::Crate) -> (Crate, HashMap<Pos, Vec<String>>, HashMap<Pos, String>) {
@@ -382,7 +373,7 @@ impl Translator {
         if let rst::MetaNameValue(_, ref value) = attr.node.value.node {
             if let rst::LitStr(ref s, _) = value.node {
                 return Doc {
-                    loc: self.loc_leaf(&attr.span),
+                    loc: self.leaf_loc(&attr.span),
                     s: s.to_string(),
                 };
             }
@@ -413,7 +404,7 @@ impl Translator {
         match meta_item.node {
             rst::MetaWord(ref ident) => {
                 MetaItem {
-                    loc: self.loc_leaf(&meta_item.span),
+                    loc: self.leaf_loc(&meta_item.span),
                     name: ident.to_string(),
                     items: None,
                 }
@@ -421,7 +412,7 @@ impl Translator {
             rst::MetaNameValue(ref ident, ref lit) => {
                 let s = format!("{} = {}", ident, self.lit_to_string(lit));
                 MetaItem {
-                    loc: self.loc_leaf(&meta_item.span),
+                    loc: self.leaf_loc(&meta_item.span),
                     name: s,
                     items: None,
                 }
@@ -555,7 +546,7 @@ impl Translator {
     fn trans_use(&mut self, view_path: &rst::ViewPath) -> Use {
         let (base, mut names) = match view_path.node {
             rst::ViewPathSimple(ref ident, ref path) => {
-                self.loc_leaf(&path.span);
+                self.leaf_loc(&path.span);
                 let mut base = path_to_string(path);
                 if path.segments.last().unwrap().identifier.name != ident.name {
                     base = format!("{} as {}", base, ident_to_string(ident));
@@ -563,7 +554,7 @@ impl Translator {
                 (base, Vec::new())
             }
             rst::ViewPathGlob(ref path) => {
-                self.loc_leaf(&path.span);
+                self.leaf_loc(&path.span);
                 let base = format!("{}::*", path_to_string(path));
                 (base, Vec::new())
             }
@@ -598,7 +589,7 @@ impl Translator {
     }
 
     fn trans_use_name(&mut self, item: &rst::PathListItem) -> Chunk {
-        let loc = self.loc_leaf(&item.span);
+        let loc = self.leaf_loc(&item.span);
         let (mut s, rename) = match item.node {
             rst::PathListIdent{ ref name, ref rename, .. } => (ident_to_string(name), rename),
             rst::PathListMod{ ref rename, .. } => ("self".to_string(), rename),
@@ -657,7 +648,7 @@ impl Translator {
 
     fn trans_lifetime(&mut self, lifetime: &rst::Lifetime) -> Lifetime {
         Lifetime {
-            loc: self.loc_leaf(&lifetime.span),
+            loc: self.leaf_loc(&lifetime.span),
             s: name_to_string(&lifetime.name),
         }
     }
@@ -705,7 +696,7 @@ impl Translator {
                             modifier: rst::TraitBoundModifier)
         -> PolyTraitRef {
         if is_sized(modifier) {
-            return PolyTraitRef::new_sized(self.loc_leaf(&poly_trait_ref.span));
+            return PolyTraitRef::new_sized(self.leaf_loc(&poly_trait_ref.span));
         }
 
         let loc = self.loc(&poly_trait_ref.span);
@@ -823,7 +814,7 @@ impl Translator {
 
     fn trans_type_binding(&mut self, binding: &rst::TypeBinding) -> TypeBinding {
         TypeBinding {
-            loc: self.loc_leaf(&binding.span),
+            loc: self.leaf_loc(&binding.span),
             name: ident_to_string(&binding.ident),
             ty: self.trans_type(&binding.ty),
         }
@@ -1745,21 +1736,21 @@ impl Translator {
 
     fn trans_ident(&mut self, ident: &rst::SpannedIdent) -> Chunk {
         Chunk {
-            loc: self.loc_leaf(&ident.span),
+            loc: self.leaf_loc(&ident.span),
             s: ident_to_string(&ident.node),
         }
     }
 
     fn trans_pos(&mut self, pos: &rst::Spanned<usize>) -> Chunk {
         Chunk {
-            loc: self.loc_leaf(&pos.span),
+            loc: self.leaf_loc(&pos.span),
             s: pos.node.to_string(),
         }
     }
 
     fn trans_literal_expr(&mut self, lit: &rst::Lit) -> Chunk {
         Chunk {
-            loc: self.loc_leaf(&lit.span),
+            loc: self.leaf_loc(&lit.span),
             s: self.lit_to_string(lit),
         }
     }
@@ -1784,14 +1775,14 @@ impl Translator {
 
     fn trans_bop(&mut self, op: &rst::BinOp) -> Chunk {
         Chunk {
-            loc: self.loc_leaf(&op.span),
+            loc: self.leaf_loc(&op.span),
             s: op.node.to_string().to_string(),
         }
     }
 
     fn trans_bop_assign(&mut self, op: &rst::BinOp) -> Chunk {
         Chunk {
-            loc: self.loc_leaf(&op.span),
+            loc: self.leaf_loc(&op.span),
             s: format!("{}=", op.node.to_string()),
         }
     }
@@ -2092,7 +2083,7 @@ impl Translator {
 
     fn trans_macro(&mut self, mac: &rst::Mac) -> Macro {
         Macro {
-            loc: self.loc_leaf(&mac.span),
+            loc: self.leaf_loc(&mac.span),
             s: self.span_to_snippet(mac.span).unwrap(),
         }
     }
