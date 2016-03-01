@@ -50,9 +50,11 @@ pub struct Crate {
 
 #[derive(Debug)]
 pub enum AttrKind {
-    Attr(Attr),
     Doc(Doc),
+    Attr(Attr),
 }
+
+pub type Doc = Chunk;
 
 #[derive(Debug)]
 pub struct Attr {
@@ -67,8 +69,6 @@ pub struct MetaItem {
     pub name: String,
     pub items: Option<Box<Vec<MetaItem>>>,
 }
-
-pub type Doc = Chunk;
 
 #[derive(Debug)]
 pub struct Mod {

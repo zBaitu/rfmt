@@ -4,7 +4,9 @@ use std::fmt::{self, Debug, Display};
 use ir::*;
 use ts::*;
 
-pub fn fmt_crate(krate: &Crate, leading_cmnts: &HashMap<Pos, Vec<String>>, trailing_cmnts: &HashMap<Pos, String>) -> (String, BTreeSet<u32>, BTreeSet<u32>) {
+pub fn fmt_crate(krate: &Crate, leading_cmnts: &HashMap<Pos, Vec<String>>,
+                 trailing_cmnts: &HashMap<Pos, String>)
+    -> (String, BTreeSet<u32>, BTreeSet<u32>) {
     Formatter::new(leading_cmnts, trailing_cmnts).fmt_crate(krate)
 }
 
@@ -698,7 +700,8 @@ struct Formatter<'a> {
 }
 
 impl<'a> Formatter<'a> {
-    fn new(leading_cmnts: &'a HashMap<Pos, Vec<String>>, trailing_cmnts: &'a HashMap<Pos, String>) -> Formatter<'a> {
+    fn new(leading_cmnts: &'a HashMap<Pos, Vec<String>>, trailing_cmnts: &'a HashMap<Pos, String>)
+        -> Formatter<'a> {
         Formatter {
             ts: Typesetter::new(),
 
@@ -722,11 +725,13 @@ impl<'a> Formatter<'a> {
         self.clear_flag();
     }
 
+    #[inline]
     fn insert(&mut self, s: &str) {
         self.ts.insert(s);
         self.clear_flag();
     }
 
+    #[inline]
     fn wrap(&mut self) {
         if !self.after_indent && !self.after_wrap {
             self.ts.wrap();
@@ -734,16 +739,13 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn insert_mark_align(&mut self, s: &str) {
-        self.ts.insert_mark_align(s);
-        self.clear_flag();
+    #[inline]
+    fn insert_indent(&mut self) {
+        self.ts.insert_indent();
+        self.after_indent = true;
     }
 
-    fn insert_unmark_align(&mut self, s: &str) {
-        self.ts.insert_unmark_align(s);
-        self.clear_flag();
-    }
-
+    #[inline]
     fn nl_indent(&mut self) {
         if !self.after_indent {
             self.ts.nl_indent();
@@ -751,9 +753,16 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn insert_indent(&mut self) {
-        self.ts.insert_indent();
-        self.after_indent = true;
+    #[inline]
+    fn insert_mark_align(&mut self, s: &str) {
+        self.ts.insert_mark_align(s);
+        self.clear_flag();
+    }
+
+    #[inline]
+    fn insert_unmark_align(&mut self, s: &str) {
+        self.ts.insert_unmark_align(s);
+        self.clear_flag();
     }
 
     #[inline]
@@ -784,7 +793,7 @@ impl<'a> Formatter<'a> {
 
     #[inline]
     fn has_trailing_comment(&self, loc: &Loc) -> bool {
-        self.trailing_cmnts.contains_key(&loc.start)
+        self.trailing_cmnts.contains_key(&loc.end)
     }
 
     #[inline]
@@ -795,7 +804,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_trailing_comment(&mut self, loc: &Loc) {
-        self.raw_insert(&self.trailing_cmnts[&loc.start]);
+        self.raw_insert(&self.trailing_cmnts[&loc.end]);
     }
 
     fn fmt_crate(mut self, krate: &Crate) -> (String, BTreeSet<u32>, BTreeSet<u32>) {

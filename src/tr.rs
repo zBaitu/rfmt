@@ -227,7 +227,7 @@ impl Translator {
         }
         self.cmnt_idx += 1;
 
-        self.trailing_cmnts.insert(self.last_loc.start, cmnt.lines[0].clone());
+        self.trailing_cmnts.insert(self.last_loc.end, cmnt.lines[0].clone());
         cmnts.extend_from_slice(&cmnt.lines[1..]);
         cmnts
     }
@@ -255,6 +255,11 @@ impl Translator {
     }
 
     #[inline]
+    fn span_to_snippet(&self, sp: rst::Span) -> Result<String, rst::SpanSnippetError> {
+        self.sess.codemap().span_to_snippet(sp)
+    }
+
+    #[inline]
     fn is_nl(&mut self, pos: Pos) -> bool {
         let snippet = self.span_to_snippet(span(self.last_loc.end, pos));
         if snippet.is_err() {
@@ -266,7 +271,7 @@ impl Translator {
         if linefeed.is_none() {
             return false;
         }
-        
+
         let start = linefeed.unwrap() + 1;
         for ch in snippet[start..].chars() {
             if !ch.is_whitespace() {
@@ -290,7 +295,7 @@ impl Translator {
     #[inline]
     fn leaf_loc(&mut self, sp: &rst::Span) -> Loc {
         let loc = self.loc(sp);
-        self.last_loc = loc;
+        self.set_loc(&loc);
         loc
     }
 
@@ -314,21 +319,16 @@ impl Translator {
     }
 
     #[inline]
-    fn span_to_snippet(&self, sp: rst::Span) -> Result<String, rst::SpanSnippetError> {
-        self.sess.codemap().span_to_snippet(sp)
+    fn is_mod_decl(&self, sp: &rst::Span) -> bool {
+        sp.lo > self.crate_end
     }
 
     #[inline]
-    fn lit_to_string(&mut self, lit: &rst::Lit) -> String {
+    fn literal_to_string(&mut self, lit: &rst::Lit) -> String {
         match lit.node {
             rst::LitBool(b) => b.to_string(),
             _ => self.lits[&lit.span.lo].clone(),
         }
-    }
-
-    #[inline]
-    fn is_mod_decl(&self, sp: &rst::Span) -> bool {
-        sp.lo > self.crate_end
     }
 
     fn trans(mut self, krate: rst::Crate) -> (Crate, HashMap<Pos, Vec<String>>, HashMap<Pos, String>) {
@@ -350,26 +350,28 @@ impl Translator {
 
     #[inline]
     fn trans_attrs(&mut self, attrs: &Vec<rst::Attribute>) -> Vec<AttrKind> {
-        trans_list!(self, attrs, trans_attr)
+        trans_list!(self, attrs, trans_attr_kind)
     }
 
     #[inline]
     fn trans_outer_attrs(&mut self, attrs: &Vec<rst::Attribute>) -> Vec<AttrKind> {
         attrs.iter()
              .filter(|ref e| is_outer(e.node.style))
-             .map(|ref e| self.trans_attr(e))
+             .map(|ref e| self.trans_attr_kind(e))
              .collect()
     }
 
-    fn trans_attr(&mut self, attr: &rst::Attribute) -> AttrKind {
+    #[inline]
+    fn trans_attr_kind(&mut self, attr: &rst::Attribute) -> AttrKind {
         if attr.node.is_sugared_doc {
-            AttrKind::Doc(self.trans_attr_doc(attr))
+            AttrKind::Doc(self.trans_doc(attr))
         } else {
-            AttrKind::Attr(self.trans_attr_attr(attr))
+            AttrKind::Attr(self.trans_attr(attr))
         }
     }
 
-    fn trans_attr_doc(&mut self, attr: &rst::Attribute) -> Doc {
+    #[inline]
+    fn trans_doc(&mut self, attr: &rst::Attribute) -> Doc {
         if let rst::MetaNameValue(_, ref value) = attr.node.value.node {
             if let rst::LitStr(ref s, _) = value.node {
                 return Doc {
@@ -382,7 +384,8 @@ impl Translator {
         unreachable!()
     }
 
-    fn trans_attr_attr(&mut self, attr: &rst::Attribute) -> Attr {
+    #[inline]
+    fn trans_attr(&mut self, attr: &rst::Attribute) -> Attr {
         let loc = self.loc(&attr.span);
         let is_inner = is_inner(attr.node.style);
         let item = self.trans_meta_item(&attr.node.value);
@@ -400,6 +403,7 @@ impl Translator {
         trans_list!(self, meta_items, trans_meta_item)
     }
 
+    #[inline]
     fn trans_meta_item(&mut self, meta_item: &rst::MetaItem) -> MetaItem {
         match meta_item.node {
             rst::MetaWord(ref ident) => {
@@ -410,7 +414,7 @@ impl Translator {
                 }
             }
             rst::MetaNameValue(ref ident, ref lit) => {
-                let s = format!("{} = {}", ident, self.lit_to_string(lit));
+                let s = format!("{} = {}", ident, self.literal_to_string(lit));
                 MetaItem {
                     loc: self.leaf_loc(&meta_item.span),
                     name: s,
@@ -1751,7 +1755,7 @@ impl Translator {
     fn trans_literal_expr(&mut self, lit: &rst::Lit) -> Chunk {
         Chunk {
             loc: self.leaf_loc(&lit.span),
-            s: self.lit_to_string(lit),
+            s: self.literal_to_string(lit),
         }
     }
 

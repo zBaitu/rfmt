@@ -11,6 +11,7 @@ const MAX_ALIGN_COL: usize = 20;
 const INDENT: &'static str = "    ";
 const WRAP_INDENT: &'static str = "        ";
 
+#[derive(Default)]
 pub struct Typesetter {
     line: u32,
     col: usize,
@@ -38,7 +39,7 @@ impl Debug for Typesetter {
 macro_rules! need_wrap {
     ($ts: expr, $($s: expr),+) => ({
         $ts.need_wrap(&[$($s),+])
-    })
+    });
 }
 
 macro_rules! raw_insert {
@@ -49,21 +50,12 @@ macro_rules! raw_insert {
         if $sf.col > MAX_WIDTH {
             $sf.exceed_lines.insert($sf.line);
         }
-    })
+    });
 }
 
 impl Typesetter {
     pub fn new() -> Typesetter {
-        Typesetter {
-            line: 0,
-            col: 0,
-            indent: String::new(),
-            align_stack: Vec::new(),
-            exceed_lines: BTreeSet::new(),
-            trailing_ws_lines: BTreeSet::new(),
-
-            s: String::new(),
-        }
+        Default::default()
     }
 
     pub fn result(self) -> (String, BTreeSet<u32>, BTreeSet<u32>) {
@@ -107,24 +99,6 @@ impl Typesetter {
     }
 
     #[inline]
-    pub fn insert_mark_align(&mut self, s: &str) {
-        self.insert(s);
-        self.mark_align();
-    }
-
-    #[inline]
-    pub fn insert_unmark_align(&mut self, s: &str) {
-        self.insert(s);
-        self.unmark_align();
-    }
-
-    #[inline]
-    pub fn nl_indent(&mut self) {
-        self.nl();
-        self.insert_indent();
-    }
-
-    #[inline]
     pub fn nl(&mut self) {
         if let Some(ch) = self.s.chars().last() {
             if ch != NL && ch.is_whitespace() {
@@ -133,9 +107,14 @@ impl Typesetter {
         }
 
         self.s.push(NL);
-
         self.line += 1;
         self.col = 0;
+    }
+
+    #[inline]
+    pub fn nl_indent(&mut self) {
+        self.nl();
+        self.insert_indent();
     }
 
     #[inline]
@@ -152,6 +131,18 @@ impl Typesetter {
     #[inline]
     pub fn insert_indent(&mut self) {
         raw_insert!(self, &self.indent);
+    }
+
+    #[inline]
+    pub fn insert_mark_align(&mut self, s: &str) {
+        self.raw_insert(s);
+        self.mark_align();
+    }
+
+    #[inline]
+    pub fn insert_unmark_align(&mut self, s: &str) {
+        self.raw_insert(s);
+        self.unmark_align();
     }
 
     #[inline]
