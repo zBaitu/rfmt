@@ -3,6 +3,8 @@ use std::fmt::{self, Debug};
 
 use zbase::zstr;
 
+use rfmt::Result;
+
 const NL: char = '\n';
 
 const MAX_WIDTH: usize = 40;
@@ -58,8 +60,12 @@ impl Typesetter {
         Default::default()
     }
 
-    pub fn result(self) -> (String, BTreeSet<u32>, BTreeSet<u32>) {
-        (self.s, self.exceed_lines, self.trailing_ws_lines)
+    pub fn result(self) -> Result {
+        Result {
+            s: self.s,
+            exceed_lines: self.exceed_lines,
+            trailing_ws_lines: self.trailing_ws_lines,
+        }
     }
 
     #[inline]

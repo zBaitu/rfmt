@@ -6,13 +6,7 @@
 extern crate zbase;
 extern crate rst;
 
-use rst::ast::CrateConfig;
-use rst::parse::{ParseSess, self};
-use rst::parse::lexer::comments;
-
 use std::env;
-use std::fs::File;
-use std::io::Read;
 use std::path::Path;
 
 #[macro_use]
@@ -21,6 +15,8 @@ mod ts;
 mod ft;
 mod ir;
 mod tr;
+
+mod rfmt;
 
 fn main() {
     let mut args = env::args();
@@ -41,40 +37,15 @@ fn main() {
     let mut path = env::current_dir().unwrap();
     path.push(file_name);
 
-    let mut file = File::open(&path).unwrap();
-    let mut src = String::new();
-    file.read_to_string(&mut src).unwrap();
-    let mut input = &src.as_bytes().to_vec()[..];
-
-    let cfg = CrateConfig::new();
-    let session = ParseSess::new();
-    let krate = parse::parse_crate_from_source_str(path.file_name()
-                                                   .unwrap()
-                                                   .to_str()
-                                                   .unwrap()
-                                                   .to_string(),
-                                                   src,
-                                                   cfg,
-                                                   &session);
-    let (cmnts, lits) = comments::gather_comments_and_literals(&session.span_diagnostic,
-                                                               path.file_name()
-                                                               .unwrap()
-                                                               .to_str()
-                                                               .unwrap()
-                                                               .to_string(),
-                                                               &mut input);
-
-    let (krate, leading_cmnts, trailing_cmnts) = tr::trans(session, krate, lits, cmnts);
-    p!("{:#?}", krate);
-    p!("{:#?}", leading_cmnts);
-    p!("{:#?}", trailing_cmnts);
-
-    let (s, exceed_lines, tailing_ws_lines) = ft::fmt_crate(&krate, &leading_cmnts, &trailing_cmnts);
+    let result = rfmt::fmt(path);
     p!();
     p!();
-    p!("====================================================================================================");
-    p!(s);
-    p!("====================================================================================================");
-    p!("{:?}", exceed_lines);
-    p!("{:?}", tailing_ws_lines);
+    p!("=========================================================================================\
+        ===========");
+    p!(result.s);
+    p!("=========================================================================================\
+        ===========");
+    p!("{:?}", result.exceed_lines);
+    p!("{:?}", result.trailing_ws_lines);
+
 }

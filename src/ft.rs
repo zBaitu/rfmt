@@ -1,12 +1,13 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::{self, Debug, Display};
 
 use ir::*;
 use ts::*;
+use rfmt::Result;
 
 pub fn fmt_crate(krate: &Crate, leading_cmnts: &HashMap<Pos, Vec<String>>,
                  trailing_cmnts: &HashMap<Pos, String>)
-    -> (String, BTreeSet<u32>, BTreeSet<u32>) {
+    -> Result {
     Formatter::new(leading_cmnts, trailing_cmnts).fmt_crate(krate)
 }
 
@@ -554,7 +555,7 @@ macro_rules! fmt_item_groups {
         for item in $items {
             match item.item {
                 $item_kind(ref e) => {
-                    if $sf.is_after_leading_comment(&item.loc) {
+                    if $sf.has_leading_comments(&item.loc) {
                         fmt_item_group!($sf, &group, $item_type, $fmt_item);
                         group.clear();
 
@@ -574,21 +575,12 @@ macro_rules! fmt_item_groups {
     })
 }
 
-macro_rules! insert_sep {
-    ($sf: expr, $sep: expr, $e: expr) => ({
-        $sf.raw_insert($sep);
-        if !$e.loc.nl && !need_wrap!($sf.ts, &$e.to_string()) {
-            $sf.raw_insert(" ");
-        }
-    });
-}
-
 macro_rules! maybe_nl {
     ($sf: expr, $e: ident) => ({
         if $e.loc.nl {
             $sf.wrap();
         }
-    })
+    });
 }
 
 macro_rules! maybe_wrap {
@@ -623,6 +615,15 @@ macro_rules! maybe_nl_non_wrap {
             $sf.insert($sep);
         } else {
             $sf.nl_indent();
+        }
+    });
+}
+
+macro_rules! insert_sep {
+    ($sf: expr, $sep: expr, $e: expr) => ({
+        $sf.raw_insert($sep);
+        if !$e.loc.nl && !need_wrap!($sf.ts, &$e.to_string()) {
+            $sf.raw_insert(" ");
         }
     });
 }
@@ -772,17 +773,18 @@ impl<'a> Formatter<'a> {
     }
 
     #[inline]
-    fn is_after_leading_comment(&self, loc: &Loc) -> bool {
+    fn has_leading_comments(&self, loc: &Loc) -> bool {
         self.leading_cmnts.contains_key(&loc.start)
     }
 
     #[inline]
     fn try_fmt_leading_comments(&mut self, loc: &Loc) {
-        if self.is_after_leading_comment(loc) {
+        if self.has_leading_comments(loc) {
             self.fmt_leading_comments(loc);
         }
     }
 
+    #[inline]
     fn fmt_leading_comments(&mut self, loc: &Loc) {
         for cmnt in &self.leading_cmnts[&loc.start] {
             self.insert_indent();
@@ -803,16 +805,17 @@ impl<'a> Formatter<'a> {
         }
     }
 
+    #[inline]
     fn fmt_trailing_comment(&mut self, loc: &Loc) {
+        self.raw_insert(" ");
         self.raw_insert(&self.trailing_cmnts[&loc.end]);
     }
 
-    fn fmt_crate(mut self, krate: &Crate) -> (String, BTreeSet<u32>, BTreeSet<u32>) {
+    fn fmt_crate(mut self, krate: &Crate) -> Result {
         self.try_fmt_leading_comments(&krate.loc);
         self.fmt_attrs(&krate.attrs);
         self.fmt_mod(&krate.module);
 
-        p!("{:?}", self.ts);
         self.ts.result()
     }
 
@@ -828,7 +831,7 @@ impl<'a> Formatter<'a> {
                     self.fmt_doc(doc);
                 }
                 AttrKind::Attr(ref attr) => {
-                    if self.is_after_leading_comment(&attr.loc) {
+                    if self.has_leading_comments(&attr.loc) {
                         self.fmt_attr_group(&attr_group);
                         attr_group.clear();
 
