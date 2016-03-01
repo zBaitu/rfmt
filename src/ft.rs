@@ -819,6 +819,7 @@ impl<'a> Formatter<'a> {
         self.ts.result()
     }
 
+    #[inline]
     fn fmt_attrs(&mut self, attrs: &Vec<AttrKind>) {
         let mut attr_group: Vec<&Attr> = Vec::new();
 
@@ -847,11 +848,9 @@ impl<'a> Formatter<'a> {
 
     fn fmt_doc(&mut self, doc: &Doc) {
         self.try_fmt_leading_comments(&doc.loc);
-        p!("---------- doc ----------");
-        p!("{:#?}", doc);
-
         self.insert_indent();
         self.raw_insert(&doc.s);
+        self.try_fmt_trailing_comment(&doc.loc);
         self.ts.nl();
     }
 

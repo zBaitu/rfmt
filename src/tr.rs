@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::result;
 
 use rst;
 use zbase::zopt;
@@ -8,9 +9,15 @@ use ir::*;
 
 const MAX_BLANK_LINE: u8 = 2;
 
+pub struct Result {
+    pub krate: Crate,
+    pub leading_cmnts: HashMap<Pos, Vec<String>>,
+    pub trailing_cmnts: HashMap<Pos, String>,
+}
+
 pub fn trans(sess: rst::ParseSess, krate: rst::Crate, lits: Vec<rst::Literal>,
              cmnts: Vec<rst::Comment>)
-    -> (Crate, HashMap<Pos, Vec<String>>, HashMap<Pos, String>) {
+    -> Result {
     Translator::new(sess, &krate, to_literal_map(lits), trans_comments(cmnts)).trans(krate)
 }
 
@@ -18,12 +25,13 @@ fn to_literal_map(lits: Vec<rst::Literal>) -> HashMap<rst::BytePos, String> {
     lits.into_iter().map(|e| (e.pos, e.lit)).collect()
 }
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 enum CommentKind {
     Leading,
     Trailing,
 }
 
+#[derive(Debug)]
 struct Comment {
     pos: Pos,
     kind: CommentKind,
@@ -34,7 +42,7 @@ fn trans_comments(cmnts: Vec<rst::Comment>) -> Vec<Comment> {
     let mut pre_blank_line_pos = 0;
     let mut blank_line = 0;
 
-    cmnts.into_iter().fold(Vec::new(), |mut cmnts, cmnt| {
+    let tmp = cmnts.into_iter().fold(Vec::new(), |mut cmnts, cmnt| {
         if cmnt.style == rst::CommentStyle::BlankLine {
             let cur_pos = cmnt.pos.0;
 
@@ -55,7 +63,9 @@ fn trans_comments(cmnts: Vec<rst::Comment>) -> Vec<Comment> {
         }
 
         cmnts
-    })
+    });
+    p!("{:#?}", tmp);
+    tmp
 }
 
 fn trans_comment(cmnt: rst::Comment) -> Comment {
@@ -177,7 +187,7 @@ struct Translator {
     leading_cmnts: HashMap<Pos, Vec<String>>,
     trailing_cmnts: HashMap<Pos, String>,
 
-    crate_end: rst::BytePos,
+    mod_end: rst::BytePos,
     last_loc: Loc,
 }
 
@@ -200,7 +210,7 @@ impl Translator {
             leading_cmnts: HashMap::new(),
             trailing_cmnts: HashMap::new(),
 
-            crate_end: krate.span.hi,
+            mod_end: krate.span.hi,
             last_loc: Loc {
                 end: krate.span.lo.0,
                 ..Default::default()
@@ -255,7 +265,7 @@ impl Translator {
     }
 
     #[inline]
-    fn span_to_snippet(&self, sp: rst::Span) -> Result<String, rst::SpanSnippetError> {
+    fn span_to_snippet(&self, sp: rst::Span) -> result::Result<String, rst::SpanSnippetError> {
         self.sess.codemap().span_to_snippet(sp)
     }
 
@@ -305,6 +315,14 @@ impl Translator {
     }
 
     #[inline]
+    fn literal_to_string(&mut self, lit: &rst::Lit) -> String {
+        match lit.node {
+            rst::LitBool(b) => b.to_string(),
+            _ => self.lits[&lit.span.lo].clone(),
+        }
+    }
+
+    #[inline]
     fn file_name(&mut self) -> String {
         self.sess.codemap().files.borrow().first().unwrap().name.clone()
     }
@@ -320,19 +338,20 @@ impl Translator {
 
     #[inline]
     fn is_mod_decl(&self, sp: &rst::Span) -> bool {
-        sp.lo > self.crate_end
+        sp.lo > self.mod_end
     }
 
     #[inline]
-    fn literal_to_string(&mut self, lit: &rst::Lit) -> String {
-        match lit.node {
-            rst::LitBool(b) => b.to_string(),
-            _ => self.lits[&lit.span.lo].clone(),
-        }
+    fn file_end(&mut self) -> Pos {
+        self.sess.codemap().files.borrow().first().unwrap().end_pos.0
     }
 
-    fn trans(mut self, krate: rst::Crate) -> (Crate, HashMap<Pos, Vec<String>>, HashMap<Pos, String>) {
-        (self.trans_crate(krate), self.leading_cmnts, self.trailing_cmnts)
+    fn trans(mut self, krate: rst::Crate) -> Result {
+        Result {
+            krate: self.trans_crate(krate),
+            leading_cmnts: self.leading_cmnts,
+            trailing_cmnts: self.trailing_cmnts,
+        }
     }
 
     fn trans_crate(&mut self, krate: rst::Crate) -> Crate {
@@ -340,6 +359,8 @@ impl Translator {
         let attrs = self.trans_attrs(&krate.attrs);
         let mod_name = self.mod_name();
         let module = self.trans_mod(mod_name, &krate.module);
+        let file_end = self.file_end();
+        self.trans_comments(file_end);
 
         Crate {
             loc: loc,

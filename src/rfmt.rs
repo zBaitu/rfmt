@@ -40,10 +40,10 @@ pub fn fmt(path: PathBuf) -> Result {
                                                                    .to_string(),
                                                                &mut input);
 
-    let (krate, leading_cmnts, trailing_cmnts) = tr::trans(session, krate, lits, cmnts);
-    p!("{:#?}", krate);
-    p!("{:#?}", leading_cmnts);
-    p!("{:#?}", trailing_cmnts);
+    let result = tr::trans(session, krate, lits, cmnts);
+    p!("{:#?}", result.krate);
+    p!("{:#?}", result.leading_cmnts);
+    p!("{:#?}", result.trailing_cmnts);
 
-    ft::fmt_crate(&krate, &leading_cmnts, &trailing_cmnts)
+    ft::fmt_crate(&result.krate, &result.leading_cmnts, &result.trailing_cmnts)
 }

@@ -3,7 +3,7 @@ use std::fmt::{self, Debug};
 
 use zbase::zstr;
 
-use rfmt::Result;
+use rfmt;
 
 const NL: char = '\n';
 
@@ -60,8 +60,8 @@ impl Typesetter {
         Default::default()
     }
 
-    pub fn result(self) -> Result {
-        Result {
+    pub fn result(self) -> rfmt::Result {
+        rfmt::Result {
             s: self.s,
             exceed_lines: self.exceed_lines,
             trailing_ws_lines: self.trailing_ws_lines,
