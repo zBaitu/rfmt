@@ -516,18 +516,6 @@ impl Display for Expr {
     }
 }
 
-macro_rules! fmt_attr_group {
-    ($sf: expr, $group: expr, $ty: ty, $fmt_attr: ident) => ({
-        let map: BTreeMap<String, $ty> = $group.into_iter().map(|e| (e.to_string(), *e)).collect();
-
-        for (_, e) in map {
-            $sf.insert_indent();
-            $sf.$fmt_attr(e);
-            $sf.ts.nl();
-        }
-    })
-}
-
 macro_rules! fmt_item_group {
     ($sf: expr, $group: expr, $ty: ty, $fmt_item: ident) => ({
         let map: BTreeMap<String, (&Vec<AttrKind>, bool, $ty)>
@@ -644,6 +632,7 @@ macro_rules! fmt_comma_lists {
 
         $sf.insert_unmark_align($close);
     });
+
     ($sf: expr, $($list: expr, $act: ident),+) => ({
         fmt_comma_lists!($sf, "", "", $($list, $act)+);
     });
@@ -747,6 +736,12 @@ impl Formatter {
     }
 
     #[inline]
+    fn nl(&mut self) {
+        self.ts.nl();
+        self.clear_flag();
+    }
+
+    #[inline]
     fn nl_indent(&mut self) {
         if !self.after_indent {
             self.ts.nl_indent();
@@ -789,18 +784,17 @@ impl Formatter {
         for cmnt in &self.leading_cmnts.remove(&loc.start).unwrap() {
             self.insert_indent();
             self.raw_insert(cmnt);
-            self.ts.nl();
+            self.nl();
         }
     }
 
-    #[inline]
     fn fmt_left_comments(&mut self) {
         let poses: Vec<_> = self.leading_cmnts.keys().cloned().collect();
         for pos in poses {
             for cmnt in &self.leading_cmnts.remove(&pos).unwrap() {
                 if !cmnt.is_empty() {
                     self.raw_insert(cmnt);
-                    self.ts.nl();
+                    self.nl();
                 }
             }
         }
@@ -860,45 +854,50 @@ impl Formatter {
         self.fmt_attr_group(&attr_group);
     }
 
+    #[inline]
     fn fmt_doc(&mut self, doc: &Doc) {
         self.try_fmt_leading_comments(&doc.loc);
         self.insert_indent();
         self.raw_insert(&doc.s);
         self.try_fmt_trailing_comment(&doc.loc);
-        self.ts.nl();
+        self.nl();
     }
 
     #[inline]
     fn fmt_attr_group(&mut self, attr_group: &Vec<&Attr>) {
-        p!("---------- attr ----------");
-        fmt_attr_group!(self, attr_group, &Attr, fmt_attr);
-    }
-
-    fn fmt_attr(&mut self, attr: &Attr) {
-        p!(attr);
-
-        self.insert("#");
-        if attr.is_inner {
-            self.insert("!");
+        let sorted_attrs: BTreeMap<_, _> = attr_group.into_iter().map(|e| (e.to_string(), *e)).collect();
+        for attr in sorted_attrs.values() {
+            self.insert_indent();
+            self.fmt_attr(attr);
+            self.try_fmt_trailing_comment(&attr.loc);
+            self.nl();
         }
-        self.insert("[");
-        self.fmt_attr_meta_item(&attr.item);
-        self.insert("]");
-
-        self.try_fmt_trailing_comment(&attr.loc);
     }
 
-    fn fmt_attr_meta_item(&mut self, item: &MetaItem) {
+    #[inline]
+    fn fmt_attr(&mut self, attr: &Attr) {
+        self.raw_insert("#");
+        if attr.is_inner {
+            self.raw_insert("!");
+        }
+        self.raw_insert("[");
+        self.fmt_meta_item(&attr.item);
+        self.raw_insert("]");
+    }
+
+    #[inline]
+    fn fmt_meta_item(&mut self, item: &MetaItem) {
         maybe_nl!(self, item);
         self.insert(&item.name);
 
         if let Some(ref items) = item.items {
-            self.fmt_attr_meta_items(&**items);
+            self.fmt_meta_items(&**items);
         }
     }
 
-    fn fmt_attr_meta_items(&mut self, items: &Vec<MetaItem>) {
-        fmt_comma_lists!(self, "(", ")", items, fmt_attr_meta_item);
+    #[inline]
+    fn fmt_meta_items(&mut self, items: &Vec<MetaItem>) {
+        fmt_comma_lists!(self, "(", ")", items, fmt_meta_item);
     }
 
     fn fmt_mod(&mut self, module: &Mod) {

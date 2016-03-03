@@ -1,3 +1,4 @@
 // aaaaa
-/*! AAAAA !*/ // bbbbb
-// ccccc
+/*! AAAAA !*/ /* bbbbb */
+/*! BBBBB !*/ /* ccccc */
+// ddddd
