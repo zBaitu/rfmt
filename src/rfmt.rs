@@ -45,5 +45,5 @@ pub fn fmt(path: PathBuf) -> Result {
     p!("{:#?}", result.leading_cmnts);
     p!("{:#?}", result.trailing_cmnts);
 
-    ft::fmt_crate(&result.krate, &result.leading_cmnts, &result.trailing_cmnts)
+    ft::fmt_crate(result.krate, result.leading_cmnts, result.trailing_cmnts)
 }

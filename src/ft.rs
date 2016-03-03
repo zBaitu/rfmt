@@ -5,8 +5,8 @@ use ir::*;
 use ts::*;
 use rfmt::Result;
 
-pub fn fmt_crate(krate: &Crate, leading_cmnts: &HashMap<Pos, Vec<String>>,
-                 trailing_cmnts: &HashMap<Pos, String>)
+pub fn fmt_crate(krate: Crate, leading_cmnts: HashMap<Pos, Vec<String>>,
+                 trailing_cmnts: HashMap<Pos, String>)
     -> Result {
     Formatter::new(leading_cmnts, trailing_cmnts).fmt_crate(krate)
 }
@@ -690,19 +690,19 @@ macro_rules! fmt_items {
     });
 }
 
-struct Formatter<'a> {
+struct Formatter {
     ts: Typesetter,
 
-    leading_cmnts: &'a HashMap<Pos, Vec<String>>,
-    trailing_cmnts: &'a HashMap<Pos, String>,
+    leading_cmnts: HashMap<Pos, Vec<String>>,
+    trailing_cmnts: HashMap<Pos, String>,
 
     after_indent: bool,
     after_wrap: bool,
 }
 
-impl<'a> Formatter<'a> {
-    fn new(leading_cmnts: &'a HashMap<Pos, Vec<String>>, trailing_cmnts: &'a HashMap<Pos, String>)
-        -> Formatter<'a> {
+impl Formatter {
+    fn new(leading_cmnts: HashMap<Pos, Vec<String>>, trailing_cmnts: HashMap<Pos, String>)
+        -> Formatter {
         Formatter {
             ts: Typesetter::new(),
 
@@ -786,10 +786,23 @@ impl<'a> Formatter<'a> {
 
     #[inline]
     fn fmt_leading_comments(&mut self, loc: &Loc) {
-        for cmnt in &self.leading_cmnts[&loc.start] {
+        for cmnt in &self.leading_cmnts.remove(&loc.start).unwrap() {
             self.insert_indent();
             self.raw_insert(cmnt);
             self.ts.nl();
+        }
+    }
+
+    #[inline]
+    fn fmt_left_comments(&mut self) {
+        let poses: Vec<_> = self.leading_cmnts.keys().cloned().collect();
+        for pos in poses {
+            for cmnt in &self.leading_cmnts.remove(&pos).unwrap() {
+                if !cmnt.is_empty() {
+                    self.raw_insert(cmnt);
+                    self.ts.nl();
+                }
+            }
         }
     }
 
@@ -808,10 +821,11 @@ impl<'a> Formatter<'a> {
     #[inline]
     fn fmt_trailing_comment(&mut self, loc: &Loc) {
         self.raw_insert(" ");
-        self.raw_insert(&self.trailing_cmnts[&loc.end]);
+        let cmnt = self.trailing_cmnts.remove(&loc.end).unwrap();
+        self.raw_insert(&cmnt);
     }
 
-    fn fmt_crate(mut self, krate: &Crate) -> Result {
+    fn fmt_crate(mut self, krate: Crate) -> Result {
         self.try_fmt_leading_comments(&krate.loc);
         self.fmt_attrs(&krate.attrs);
         self.fmt_mod(&krate.module);
@@ -888,11 +902,9 @@ impl<'a> Formatter<'a> {
     }
 
     fn fmt_mod(&mut self, module: &Mod) {
-        p!("---------- mod ----------");
-        p!(module.name);
-
         self.fmt_group_items(&module.items);
         self.fmt_items(&module.items);
+        self.fmt_left_comments();
     }
 
     fn fmt_group_items(&mut self, items: &Vec<Item>) {

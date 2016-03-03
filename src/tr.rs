@@ -42,7 +42,7 @@ fn trans_comments(cmnts: Vec<rst::Comment>) -> Vec<Comment> {
     let mut pre_blank_line_pos = 0;
     let mut blank_line = 0;
 
-    let tmp = cmnts.into_iter().fold(Vec::new(), |mut cmnts, cmnt| {
+    cmnts.into_iter().fold(Vec::new(), |mut cmnts, cmnt| {
         if cmnt.style == rst::CommentStyle::BlankLine {
             let cur_pos = cmnt.pos.0;
 
@@ -63,9 +63,7 @@ fn trans_comments(cmnts: Vec<rst::Comment>) -> Vec<Comment> {
         }
 
         cmnts
-    });
-    p!("{:#?}", tmp);
-    tmp
+    })
 }
 
 fn trans_comment(cmnt: rst::Comment) -> Comment {
