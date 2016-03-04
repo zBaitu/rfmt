@@ -1,16 +1,16 @@
 // a
 #[test]
-pub mod a;
+pub mod a; // a
 
-pub mod b;
+pub mod b; // b
 
 mod c {
     // abc
     #[test]
-    mod d;
+    mod d; // d
 
-    type a = bool;
-}
+    type a = bool; // ca
+} // c
 
 mod e {
 }

@@ -782,8 +782,10 @@ impl Formatter {
     #[inline]
     fn fmt_leading_comments(&mut self, loc: &Loc) {
         for cmnt in &self.leading_cmnts.remove(&loc.start).unwrap() {
-            self.insert_indent();
-            self.raw_insert(cmnt);
+            if !cmnt.is_empty() {
+                self.insert_indent();
+                self.raw_insert(cmnt);
+            }
             self.nl();
         }
     }
@@ -865,7 +867,9 @@ impl Formatter {
 
     #[inline]
     fn fmt_attr_group(&mut self, attr_group: &Vec<&Attr>) {
-        let sorted_attrs: BTreeMap<_, _> = attr_group.into_iter().map(|e| (e.to_string(), *e)).collect();
+        let sorted_attrs: BTreeMap<_, _> = attr_group.into_iter()
+                                                     .map(|e| (e.to_string(), *e))
+                                                     .collect();
         for attr in sorted_attrs.values() {
             self.insert_indent();
             self.fmt_attr(attr);

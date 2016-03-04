@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::path;
 use std::result;
 
 use rst;
@@ -186,6 +187,7 @@ struct Translator {
     trailing_cmnts: HashMap<Pos, String>,
 
     mod_end: rst::BytePos,
+    mod_paths: Vec<String>,
     last_loc: Loc,
 }
 
@@ -209,6 +211,7 @@ impl Translator {
             trailing_cmnts: HashMap::new(),
 
             mod_end: krate.span.hi,
+            mod_paths: Vec::new(),
             last_loc: Loc {
                 end: krate.span.lo.0,
                 ..Default::default()
@@ -268,7 +271,7 @@ impl Translator {
     }
 
     #[inline]
-    fn is_nl(&mut self, pos: Pos) -> bool {
+    fn is_nl(&self, pos: Pos) -> bool {
         let snippet = self.span_to_snippet(span(self.last_loc.end, pos));
         if snippet.is_err() {
             return false;
@@ -313,35 +316,11 @@ impl Translator {
     }
 
     #[inline]
-    fn literal_to_string(&mut self, lit: &rst::Lit) -> String {
+    fn literal_to_string(&self, lit: &rst::Lit) -> String {
         match lit.node {
             rst::LitBool(b) => b.to_string(),
             _ => self.lits[&lit.span.lo].clone(),
         }
-    }
-
-    #[inline]
-    fn file_name(&mut self) -> String {
-        self.sess.codemap().files.borrow().first().unwrap().name.clone()
-    }
-
-    #[inline]
-    fn mod_name(&mut self) -> String {
-        let mut name = self.file_name();
-        if let Some(dot_pos) = name.rfind('.') {
-            name.truncate(dot_pos);
-        }
-        name
-    }
-
-    #[inline]
-    fn is_mod_decl(&self, sp: &rst::Span) -> bool {
-        sp.lo > self.mod_end
-    }
-
-    #[inline]
-    fn file_end(&mut self) -> Pos {
-        self.sess.codemap().files.borrow().first().unwrap().end_pos.0
     }
 
     fn trans(mut self, krate: rst::Crate) -> Result {
@@ -355,16 +334,28 @@ impl Translator {
     fn trans_crate(&mut self, krate: rst::Crate) -> Crate {
         let loc = self.loc(&krate.span);
         let attrs = self.trans_attrs(&krate.attrs);
-        let mod_name = self.mod_name();
-        let module = self.trans_mod(mod_name, &krate.module);
-        let file_end = self.file_end();
-        self.trans_comments(file_end);
+        let crate_mod_name = self.crate_mod_name();
+        let module = self.trans_mod(crate_mod_name, &krate.module);
 
         Crate {
             loc: loc,
             attrs: attrs,
             module: module,
         }
+    }
+
+    #[inline]
+    fn crate_file_name(&self) -> String {
+        self.sess.codemap().files.borrow().first().unwrap().name.clone()
+    }
+
+    #[inline]
+    fn crate_mod_name(&self) -> String {
+        let mut name = self.crate_file_name();
+        if let Some(pos) = name.rfind('.') {
+            name.truncate(pos);
+        }
+        name
     }
 
     #[inline]
@@ -459,10 +450,45 @@ impl Translator {
         let items = self.trans_items(&module.items);
         self.set_loc(&loc);
 
+        let mod_file_end = self.mod_file_end(module);
+        self.trans_comments(mod_file_end);
+
         Mod {
             loc: loc,
             name: name,
             items: items,
+        }
+    }
+
+    #[inline]
+    fn is_mod_decl(&self, sp: &rst::Span) -> bool {
+        sp.lo > self.mod_end
+    }
+
+    #[inline]
+    fn mod_full_name(&self) -> String {
+        self.mod_paths.iter().fold(String::new(), |mut s, ref path| {
+            if !s.is_empty() {
+                s.push(path::MAIN_SEPARATOR);
+            }
+            s.push_str(path);
+            s
+        })
+    }
+
+    #[inline]
+    fn mod_full_file_name(&self) -> String {
+        join_str!(self.mod_full_name(), ".rs")
+    }
+
+    #[inline]
+    fn mod_file_end(&mut self, module: &rst::Mod) -> Pos {
+        if self.is_mod_decl(&module.inner) {
+            let file_name = self.mod_full_file_name();
+            p!("{}", file_name);
+            self.sess.codemap().files.borrow().iter().find(|e| e.name == file_name).unwrap().end_pos.0
+        } else {
+            module.inner.hi.0
         }
     }
 
@@ -499,7 +525,10 @@ impl Translator {
                 if self.is_mod_decl(&module.inner) {
                     ItemKind::ModDecl(self.trans_mod_decl(ident))
                 } else {
-                    ItemKind::Mod(self.trans_mod(ident, module))
+                    self.mod_paths.push(ident.clone());
+                    let item = ItemKind::Mod(self.trans_mod(ident, module));
+                    self.mod_paths.pop();
+                    item
                 }
             }
             rst::ItemTy(ref ty, ref generics) => {
