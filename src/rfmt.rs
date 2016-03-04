@@ -16,7 +16,7 @@ pub struct Result {
     pub trailing_ws_lines: BTreeSet<u32>,
 }
 
-pub fn fmt(path: PathBuf) -> Result {
+pub fn fmt(path: PathBuf, recursive: bool) {
     let mut file = File::open(&path).unwrap();
     let mut src = String::new();
     file.read_to_string(&mut src).unwrap();
@@ -45,5 +45,16 @@ pub fn fmt(path: PathBuf) -> Result {
     p!("{:#?}", result.leading_cmnts);
     p!("{:#?}", result.trailing_cmnts);
 
-    ft::fmt_crate(result.krate, result.leading_cmnts, result.trailing_cmnts)
+    let result = ft::fmt_crate(result.krate, result.leading_cmnts, result.trailing_cmnts);
+
+    p!("{}", recursive);
+    p!();
+    p!();
+    p!("=========================================================================================\
+        ===========");
+    p!(result.s);
+    p!("=========================================================================================\
+        ===========");
+    p!("{:?}", result.exceed_lines);
+    p!("{:?}", result.trailing_ws_lines);
 }

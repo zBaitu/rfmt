@@ -2,12 +2,15 @@
 #![feature(custom_derive)]
 #![feature(iter_arith)]
 
+extern crate getopts;
 #[macro_use]
 extern crate zbase;
 extern crate rst;
 
 use std::env;
 use std::path::Path;
+
+use getopts::Options;
 
 #[macro_use]
 mod ts;
@@ -18,12 +21,21 @@ mod tr;
 
 mod rfmt;
 
-fn main() {
-    let mut args = env::args();
-    args.next();
-    let file = args.next().unwrap();
-    let path = Path::new(&file);
+fn opt() -> (bool, String) {
+    let mut opts = Options::new();
+    opts.optflag("r", "recursive", ""); 
 
+    let args: Vec<String> = env::args().collect();
+    let mut matches = opts.parse(&args[1..]).unwrap();
+    let recursive = matches.opt_present("r");
+    let file = matches.free.pop().unwrap();
+    (recursive, file)
+}
+
+fn main() {
+    let (recursive, file) = opt();
+
+    let path = Path::new(&file);
     let dir = path.parent();
     if let Some(dir) = dir {
         if let Some(dir) = dir.to_str() {
@@ -37,15 +49,5 @@ fn main() {
     let mut path = env::current_dir().unwrap();
     path.push(file_name);
 
-    let result = rfmt::fmt(path);
-    p!();
-    p!();
-    p!("=========================================================================================\
-        ===========");
-    p!(result.s);
-    p!("=========================================================================================\
-        ===========");
-    p!("{:?}", result.exceed_lines);
-    p!("{:?}", result.trailing_ws_lines);
-
+    rfmt::fmt(path, recursive);
 }
