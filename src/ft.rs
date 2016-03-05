@@ -3,12 +3,22 @@ use std::fmt::{self, Debug, Display};
 
 use ir::*;
 use ts::*;
-use rfmt::Result;
+use rfmt;
 
 pub fn fmt_crate(krate: Crate, leading_cmnts: HashMap<Pos, Vec<String>>,
                  trailing_cmnts: HashMap<Pos, String>)
-    -> Result {
-    Formatter::new(leading_cmnts, trailing_cmnts).fmt_crate(krate)
+    -> rfmt::Result {
+    let mut fmt = Formatter::new(leading_cmnts, trailing_cmnts);
+    fmt.fmt_crate(krate);
+    fmt.result()
+}
+
+pub fn fmt_mod(module: Mod, leading_cmnts: HashMap<Pos, Vec<String>>,
+                 trailing_cmnts: HashMap<Pos, String>)
+    -> rfmt::Result {
+    let mut fmt = Formatter::new(leading_cmnts, trailing_cmnts);
+    fmt.fmt_mod(&module);
+    fmt.result()
 }
 
 macro_rules! select_str {
@@ -703,6 +713,10 @@ impl Formatter {
         }
     }
 
+    pub fn result(self) -> rfmt::Result {
+        self.ts.result()
+    }
+
     #[inline]
     fn clear_flag(&mut self) {
         self.after_indent = false;
@@ -821,12 +835,10 @@ impl Formatter {
         self.raw_insert(&cmnt);
     }
 
-    fn fmt_crate(mut self, krate: Crate) -> Result {
+    fn fmt_crate(&mut self, krate: Crate) {
         self.try_fmt_leading_comments(&krate.loc);
         self.fmt_attrs(&krate.attrs);
         self.fmt_mod(&krate.module);
-
-        self.ts.result()
     }
 
     #[inline]

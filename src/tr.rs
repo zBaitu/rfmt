@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::mem;
 use std::path;
 use std::result;
 
@@ -10,19 +11,7 @@ use ir::*;
 
 const MAX_BLANK_LINE: u8 = 2;
 
-pub struct Result {
-    pub krate: Crate,
-    pub leading_cmnts: HashMap<Pos, Vec<String>>,
-    pub trailing_cmnts: HashMap<Pos, String>,
-}
-
-pub fn trans(sess: rst::ParseSess, krate: rst::Crate, lits: Vec<rst::Literal>,
-             cmnts: Vec<rst::Comment>)
-    -> Result {
-    Translator::new(sess, &krate, to_literal_map(lits), trans_comments(cmnts)).trans(krate)
-}
-
-fn to_literal_map(lits: Vec<rst::Literal>) -> HashMap<rst::BytePos, String> {
+fn trans_literal(lits: Vec<rst::Literal>) -> HashMap<rst::BytePos, String> {
     lits.into_iter().map(|e| (e.pos, e.lit)).collect()
 }
 
@@ -177,18 +166,31 @@ fn uop_to_string(op: rst::UnOp) -> &'static str {
     rst::UnOp::to_string(op)
 }
 
-struct Translator {
+pub struct CrateResult {
+    pub krate: Crate,
+    pub leading_cmnts: HashMap<Pos, Vec<String>>,
+    pub trailing_cmnts: HashMap<Pos, String>,
+}
+
+pub struct ModResult {
+    pub module: Mod,
+    pub leading_cmnts: HashMap<Pos, Vec<String>>,
+    pub trailing_cmnts: HashMap<Pos, String>,
+}
+
+pub struct Translator {
     sess: rst::ParseSess,
     lits: HashMap<rst::BytePos, String>,
-
     cmnts: Vec<Comment>,
     cmnt_idx: usize,
+
+    mod_full_file_name: String,
+    mod_paths: Vec<String>,
+    mod_end: Pos,
+    last_loc: Loc,
+
     leading_cmnts: HashMap<Pos, Vec<String>>,
     trailing_cmnts: HashMap<Pos, String>,
-
-    mod_end: rst::BytePos,
-    mod_paths: Vec<String>,
-    last_loc: Loc,
 }
 
 macro_rules! trans_list {
@@ -198,24 +200,62 @@ macro_rules! trans_list {
 }
 
 impl Translator {
-    fn new(sess: rst::ParseSess, krate: &rst::Crate, lits: HashMap<rst::BytePos, String>,
-           cmnts: Vec<Comment>)
-        -> Translator {
+    pub fn new(sess: rst::ParseSess, lits: Vec<rst::Literal>, cmnts: Vec<rst::Comment>) -> Translator {
         Translator {
             sess: sess,
-            lits: lits,
-
-            cmnts: cmnts,
+            lits: trans_literal(lits),
+            cmnts: trans_comments(cmnts),
             cmnt_idx: 0,
+
+            mod_full_file_name: String::new(),
+            mod_paths: Vec::new(),
+            mod_end: 0,
+            last_loc: Default::default(),
+
             leading_cmnts: HashMap::new(),
             trailing_cmnts: HashMap::new(),
+        }
+    }
 
-            mod_end: krate.span.hi,
-            mod_paths: Vec::new(),
-            last_loc: Loc {
-                end: krate.span.lo.0,
-                ..Default::default()
+    pub fn trans_crate(&mut self, krate: &rst::Crate) -> CrateResult {
+        self.mod_end = krate.span.hi.0;
+        self.last_loc.start = krate.span.lo.0;
+
+        let loc = self.loc(&krate.span);
+        let attrs = self.trans_attrs(&krate.attrs);
+        let crate_mod_name = self.crate_mod_name();
+        let module = self.trans_mod_(crate_mod_name, &krate.module);
+
+        CrateResult {
+            krate: Crate {
+                loc: loc,
+                attrs: attrs,
+                module: module,
             },
+            leading_cmnts: mem::replace(&mut self.leading_cmnts, HashMap::new()),
+            trailing_cmnts: mem::replace(&mut self.trailing_cmnts, HashMap::new()),
+        }
+    }
+
+    #[inline]
+    fn crate_file_name(&self) -> String {
+        self.sess.codemap().files.borrow().first().unwrap().name.clone()
+    }
+
+    #[inline]
+    fn crate_mod_name(&self) -> String {
+        let mut name = self.crate_file_name();
+        if let Some(pos) = name.rfind('.') {
+            name.truncate(pos);
+        }
+        name
+    }
+
+    pub fn trans_mod(&mut self, name: String, module: &rst::Mod) -> ModResult {
+        ModResult {
+            module: self.trans_mod_(name, module),
+            leading_cmnts: mem::replace(&mut self.leading_cmnts, HashMap::new()),
+            trailing_cmnts: mem::replace(&mut self.trailing_cmnts, HashMap::new()),
         }
     }
 
@@ -323,41 +363,6 @@ impl Translator {
         }
     }
 
-    fn trans(mut self, krate: rst::Crate) -> Result {
-        Result {
-            krate: self.trans_crate(krate),
-            leading_cmnts: self.leading_cmnts,
-            trailing_cmnts: self.trailing_cmnts,
-        }
-    }
-
-    fn trans_crate(&mut self, krate: rst::Crate) -> Crate {
-        let loc = self.loc(&krate.span);
-        let attrs = self.trans_attrs(&krate.attrs);
-        let crate_mod_name = self.crate_mod_name();
-        let module = self.trans_mod(crate_mod_name, &krate.module);
-
-        Crate {
-            loc: loc,
-            attrs: attrs,
-            module: module,
-        }
-    }
-
-    #[inline]
-    fn crate_file_name(&self) -> String {
-        self.sess.codemap().files.borrow().first().unwrap().name.clone()
-    }
-
-    #[inline]
-    fn crate_mod_name(&self) -> String {
-        let mut name = self.crate_file_name();
-        if let Some(pos) = name.rfind('.') {
-            name.truncate(pos);
-        }
-        name
-    }
-
     #[inline]
     fn trans_attrs(&mut self, attrs: &Vec<rst::Attribute>) -> Vec<AttrKind> {
         trans_list!(self, attrs, trans_attr_kind)
@@ -445,7 +450,7 @@ impl Translator {
         }
     }
 
-    fn trans_mod(&mut self, name: String, module: &rst::Mod) -> Mod {
+    fn trans_mod_(&mut self, name: String, module: &rst::Mod) -> Mod {
         let loc = self.loc(&module.inner);
         let items = self.trans_items(&module.items);
         self.set_loc(&loc);
@@ -460,9 +465,13 @@ impl Translator {
         }
     }
 
+    pub fn set_mod_full_file_name(&mut self, name: String) {
+        self.mod_full_file_name = name;
+    }
+
     #[inline]
     fn is_mod_decl(&self, sp: &rst::Span) -> bool {
-        sp.lo > self.mod_end
+        sp.lo.0 > self.mod_end
     }
 
     #[inline]
@@ -478,7 +487,11 @@ impl Translator {
 
     #[inline]
     fn mod_full_file_name(&self) -> String {
-        join_str!(self.mod_full_name(), ".rs")
+        if self.mod_full_file_name.is_empty() {
+            join_str!(self.mod_full_name(), ".rs")
+        } else {
+            self.mod_full_file_name.clone()
+        }
     }
 
     #[inline]
@@ -526,7 +539,7 @@ impl Translator {
                     ItemKind::ModDecl(self.trans_mod_decl(ident))
                 } else {
                     self.mod_paths.push(ident.clone());
-                    let item = ItemKind::Mod(self.trans_mod(ident, module));
+                    let item = ItemKind::Mod(self.trans_mod_(ident, module));
                     self.mod_paths.pop();
                     item
                 }
