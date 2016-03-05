@@ -2196,6 +2196,9 @@ impl Formatter {
     }
 
     fn fmt_macro(&mut self, mac: &Macro) {
+        self.insert_indent();
         self.fmt_chunk(mac);
+        self.raw_insert(";");
+        self.nl();
     }
 }
