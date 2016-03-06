@@ -131,13 +131,7 @@ impl RustFmt {
     }
 
     fn mod_full_name(&self) -> String {
-        self.mod_paths.iter().fold(String::new(), |mut s, ref path| {
-            if !s.is_empty() {
-                s.push(path::MAIN_SEPARATOR);
-            }
-            s.push_str(path);
-            s
-        })
+        join_path_list!(&self.mod_paths)
     }
 
     fn fmt_mod(&mut self, name: String, module: &rst::Mod) {

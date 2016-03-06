@@ -1,8 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::mem;
-use std::path;
-use std::result;
 
 use rst;
 use zbase::zopt;
@@ -288,7 +286,7 @@ impl Translator {
     }
 
     #[inline]
-    fn span_to_snippet(&self, sp: rst::Span) -> result::Result<String, rst::SpanSnippetError> {
+    fn span_to_snippet(&self, sp: rst::Span) -> Result<String, rst::SpanSnippetError> {
         self.sess.codemap().span_to_snippet(sp)
     }
 
@@ -495,13 +493,7 @@ impl Translator {
 
     #[inline]
     fn mod_full_name(&self) -> String {
-        self.mod_paths.iter().fold(String::new(), |mut s, ref path| {
-            if !s.is_empty() {
-                s.push(path::MAIN_SEPARATOR);
-            }
-            s.push_str(path);
-            s
-        })
+        join_path_list!(&self.mod_paths)
     }
 
     #[inline]
@@ -525,14 +517,14 @@ impl Translator {
     }
 
     #[inline]
-    fn is_mod_decl(&self, sp: &rst::Span) -> bool {
-        sp.lo.0 > self.mod_end
+    fn is_mod_decl(&self, module: &rst::Mod) -> bool {
+        module.inner.lo.0 > self.mod_end
     }
 
     #[inline]
     fn is_mod_decl_item(&self, item: &rst::Item) -> bool {
         match item.node {
-            rst::ItemMod(ref module) if self.is_mod_decl(&module.inner) => true,
+            rst::ItemMod(ref module) if self.is_mod_decl(module) => true,
             _ => false,
         }
     }
@@ -559,7 +551,7 @@ impl Translator {
             }
             rst::ItemUse(ref view_path) => ItemKind::Use(self.trans_use(view_path)),
             rst::ItemMod(ref module) => {
-                if self.is_mod_decl(&module.inner) {
+                if self.is_mod_decl(module) {
                     ItemKind::ModDecl(self.trans_mod_decl(ident))
                 } else {
                     ItemKind::Mod(self.trans_mod_inner(ident, module))
