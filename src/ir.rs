@@ -101,7 +101,7 @@ pub enum ItemKind {
     Trait(Trait),
     ImplDefault(ImplDefault),
     Impl(Impl),
-    Macro(Macro),
+    Macro(Chunk),
 }
 
 #[derive(Debug)]
@@ -303,7 +303,7 @@ pub enum TypeKind {
     BareFn(Box<BareFnType>),
     Sum(Box<SumType>),
     PolyTraitRef(Box<PolyTraitRefType>),
-    Macro(Box<MacroType>),
+    Macro(Box<Macro>),
     Infer,
 }
 
@@ -562,7 +562,7 @@ pub enum ImplItemKind {
     Const(ConstImplItem),
     Type(TypeImplItem),
     Method(MethodImplItem),
-    Macro(MacroImplItem),
+    Macro(Macro),
 }
 
 #[derive(Debug)]
@@ -631,7 +631,7 @@ pub struct Stmt {
 pub enum StmtKind {
     Decl(Decl),
     Expr(Expr, bool),
-    Macro(Macro),
+    Macro(MacroStmt, bool),
 }
 
 #[derive(Debug)]
@@ -774,7 +774,7 @@ pub enum ExprKind {
     MethodCall(Box<MethodCallExpr>),
     Closure(Box<ClosureExpr>),
     Return(Box<ReturnExpr>),
-    Macro(MacroExpr),
+    Macro(Macro),
 }
 
 pub type PathExpr = PathType;
@@ -947,7 +947,24 @@ pub struct ReturnExpr {
     pub ret: Option<Expr>,
 }
 
-pub type MacroType = Macro;
-pub type MacroImplItem = Macro;
-pub type MacroExpr = Macro;
-pub type Macro = Chunk;
+#[derive(Debug)]
+pub enum MacroStyle {
+    Paren,
+    Bracket,
+    Brace,
+}
+
+#[derive(Debug)]
+pub struct MacroStmt {
+    pub loc: Loc,
+    pub attrs: Vec<AttrKind>,
+    pub mac: Macro,
+}
+
+#[derive(Debug)]
+pub struct Macro {
+    pub name: String,
+    pub style: MacroStyle,
+    pub exprs: Vec<Expr>,
+    pub seps: Vec<&'static str>,
+}

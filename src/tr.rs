@@ -166,6 +166,23 @@ fn uop_to_string(op: rst::UnOp) -> &'static str {
     rst::UnOp::to_string(op)
 }
 
+#[inline]
+fn token_to_string(token: &rst::Token) -> &'static str {
+    match *token {
+        rst::Token::Comma => ",",
+        rst::Token::Semi => ";",
+        _ => unreachable!(),
+    }
+}
+
+#[inline]
+fn is_macro_semi(style: &rst::MacStmtStyle) -> bool {
+    match *style {
+        rst::MacStmtStyle::MacStmtWithSemicolon => true,
+        _ => false,
+    }
+}
+
 pub struct CrateResult {
     pub krate: Crate,
     pub leading_cmnts: HashMap<Pos, Vec<String>>,
@@ -499,7 +516,15 @@ impl Translator {
         if self.is_mod_decl(&module.inner) {
             let file_name = self.mod_full_file_name();
             p!("{}", file_name);
-            self.sess.codemap().files.borrow().iter().find(|e| e.name == file_name).unwrap().end_pos.0
+            self.sess
+                .codemap()
+                .files
+                .borrow()
+                .iter()
+                .find(|e| e.name == file_name)
+                .unwrap()
+                .end_pos
+                .0
         } else {
             module.inner.hi.0
         }
@@ -585,7 +610,7 @@ impl Translator {
                                                ty,
                                                items))
             }
-            rst::ItemMac(ref mac) => ItemKind::Macro(self.trans_macro(mac)),
+            rst::ItemMac(ref mac) => ItemKind::Macro(self.trans_macro_item(mac)),
         };
 
         self.set_loc(&loc);
@@ -941,7 +966,7 @@ impl Translator {
             rst::TyPolyTraitRef(ref bounds) => {
                 TypeKind::PolyTraitRef(Box::new(self.trans_poly_trait_ref_type(bounds)))
             }
-            rst::TyMac(ref mac) => TypeKind::Macro(Box::new(self.trans_macro_type(mac))),
+            rst::TyMac(ref mac) => TypeKind::Macro(Box::new(self.trans_macro(mac))),
             rst::TyInfer => TypeKind::Infer,
             _ => unreachable!(),
         };
@@ -1394,9 +1419,7 @@ impl Translator {
             rst::ImplItemKind::Method(ref method_sig, ref block) => {
                 ImplItemKind::Method(self.trans_method_impl_item(ident, method_sig, block))
             }
-            rst::ImplItemKind::Macro(ref mac) => {
-                ImplItemKind::Macro(self.trans_macro_impl_item(mac))
-            }
+            rst::ImplItemKind::Macro(ref mac) => ImplItemKind::Macro(self.trans_macro(mac)),
         };
         self.set_loc(&loc);
 
@@ -1501,7 +1524,9 @@ impl Translator {
             rst::StmtDecl(ref decl, _) => StmtKind::Decl(self.trans_decl(decl)),
             rst::StmtSemi(ref expr, _) => StmtKind::Expr(self.trans_expr(expr), true),
             rst::StmtExpr(ref expr, _) => StmtKind::Expr(self.trans_expr(expr), false),
-            rst::StmtMac(ref mac, _, _) => StmtKind::Macro(self.trans_macro(mac)),
+            rst::StmtMac(ref mac, ref style, ref attrs) => {
+                StmtKind::Macro(self.trans_macro_stmt(attrs, mac), is_macro_semi(style))
+            }
         };
         self.set_loc(&loc);
 
@@ -1785,7 +1810,7 @@ impl Translator {
                 ExprKind::Closure(Box::new(self.trans_closure_expr(capture, fn_decl, block)))
             }
             rst::ExprRet(ref expr) => ExprKind::Return(Box::new(self.trans_return_expr(expr))),
-            rst::ExprMac(ref mac) => ExprKind::Macro(self.trans_macro_expr(mac)),
+            rst::ExprMac(ref mac) => ExprKind::Macro(self.trans_macro(mac)),
 
             // ExprInlineAsm
             _ => unreachable!(),
@@ -2134,22 +2159,79 @@ impl Translator {
         }
     }
 
-    fn trans_macro_type(&mut self, mac: &rst::Mac) -> MacroType {
-        self.trans_macro(mac)
+    fn trans_macro_item(&mut self, mac: &rst::Mac) -> Chunk {
+        Chunk {
+            loc: self.leaf_loc(&mac.span),
+            s: self.span_to_snippet(mac.span).unwrap(),
+        }
     }
 
-    fn trans_macro_impl_item(&mut self, mac: &rst::Mac) -> MacroImplItem {
-        self.trans_macro(mac)
-    }
+    fn trans_macro_stmt(&mut self, attrs: &rst::ThinAttributes, mac: &rst::Mac) -> MacroStmt {
+        let loc = self.loc(&mac.span);
+        let attrs = self.trans_thin_attrs(attrs);
+        let mac = self.trans_macro(mac);
+        self.set_loc(&loc);
 
-    fn trans_macro_expr(&mut self, mac: &rst::Mac) -> MacroExpr {
-        self.trans_macro(mac)
+        MacroStmt {
+            loc: loc,
+            attrs: attrs,
+            mac: mac,
+        }
     }
 
     fn trans_macro(&mut self, mac: &rst::Mac) -> Macro {
+        let name = path_to_string(&mac.node.path);
+        let style = self.macro_style(&mac);
+        let (exprs, seps) = self.trans_macro_exprs(&mac);
+        let exprs = self.trans_exprs(&exprs);
+
         Macro {
-            loc: self.leaf_loc(&mac.span),
-            s: self.span_to_snippet(mac.span).unwrap(),
+            name: name,
+            style: style,
+            exprs: exprs,
+            seps: seps,
+        }
+    }
+
+    fn trans_macro_exprs(&self, mac: &rst::Mac) -> (Vec<rst::P<rst::Expr>>, Vec<&'static str>) {
+        let mut exprs = Vec::new();
+        let mut seps = Vec::new();
+
+        if mac.node.tts.is_empty() {
+            return (exprs, seps);
+        }
+
+        let mut parser = rst::parse::tts_to_parser(&self.sess, mac.node.tts.clone(), Vec::new());
+        loop {
+            exprs.push(parser.parse_expr().unwrap());
+            match parser.token {
+                rst::Token::Eof => break,
+                ref other => seps.push(token_to_string(other)),
+            }
+
+            parser.bump().unwrap();
+            if parser.token == rst::parse::token::Token::Eof {
+                break;
+            }
+        }
+        p!("{:#?}", exprs);
+        p!("{:#?}", seps);
+        (exprs, seps)
+    }
+
+    #[inline]
+    fn macro_style(&self, mac: &rst::Mac) -> MacroStyle {
+        let s = self.span_to_snippet(mac.span).unwrap();
+        let paren_pos = s.find('(').unwrap_or(usize::max_value());
+        let bracket_pos = s.find('[').unwrap_or(usize::max_value());
+        let brace_pos = s.find('{').unwrap_or(usize::max_value());
+
+        if paren_pos < bracket_pos && paren_pos < bracket_pos {
+            MacroStyle::Paren
+        } else if bracket_pos < brace_pos {
+            MacroStyle::Bracket
+        } else {
+            MacroStyle::Brace
         }
     }
 }

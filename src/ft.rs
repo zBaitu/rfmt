@@ -362,7 +362,7 @@ impl Display for Type {
             TypeKind::BareFn(ref ty) => Display::fmt(ty, f),
             TypeKind::Sum(ref ty) => Display::fmt(ty, f),
             TypeKind::PolyTraitRef(ref ty) => Display::fmt(ty, f),
-            TypeKind::Macro(ref ty) => Display::fmt(ty, f),
+            TypeKind::Macro(ref ty) => Debug::fmt(ty, f),
             TypeKind::Infer => display_infer_type(f),
         }
     }
@@ -1019,7 +1019,7 @@ impl Formatter {
             ItemKind::Trait(ref item) => self.fmt_trait(item),
             ItemKind::ImplDefault(ref item) => self.fmt_impl_default(item),
             ItemKind::Impl(ref item) => self.fmt_impl(item),
-            ItemKind::Macro(ref item) => self.fmt_macro(item),
+            ItemKind::Macro(ref item) => self.fmt_chunk(item),
         }
 
         self.ts.nl();
@@ -1573,7 +1573,10 @@ impl Formatter {
                 self.raw_insert(";");
             }
             ImplItemKind::Method(ref item) => self.fmt_method_impl_item(item),
-            ImplItemKind::Macro(ref item) => self.fmt_macro(item),
+            ImplItemKind::Macro(ref item) => {
+                self.fmt_macro(item);
+                self.raw_insert(";");
+            }
         }
 
         self.ts.nl();
@@ -1701,7 +1704,7 @@ impl Formatter {
         match stmt.stmt {
             StmtKind::Decl(ref decl) => self.fmt_decl_stmt(decl),
             StmtKind::Expr(ref expr, is_semi) => self.fmt_expr_stmt(expr, is_semi),
-            StmtKind::Macro(ref mac) => self.fmt_macro(mac),
+            StmtKind::Macro(ref mac, is_semi) => self.fmt_macro_stmt(mac, is_semi),
         }
 
         self.ts.nl();
@@ -2195,10 +2198,35 @@ impl Formatter {
         }
     }
 
-    fn fmt_macro(&mut self, mac: &Macro) {
+    fn fmt_macro_stmt(&mut self, stmt: &MacroStmt, is_semi: bool) {
+        self.try_fmt_leading_comments(&stmt.loc);
+        self.fmt_attrs(&stmt.attrs);
         self.insert_indent();
-        self.fmt_chunk(mac);
-        self.raw_insert(";");
-        self.nl();
+        self.fmt_macro(&stmt.mac);
+
+        if is_semi {
+            self.raw_insert(";");
+        }
+   }
+
+    fn fmt_macro(&mut self, mac: &Macro) {
+        let (open, close) = match mac.style {
+            MacroStyle::Paren => ("(", ")"),
+            MacroStyle::Bracket => ("[", "]"),
+            MacroStyle::Brace => ("{", "}"),
+        };
+
+        self.insert(&format!("{}!", mac.name));  
+        self.insert_mark_align(open);
+        let expr_len = mac.exprs.len();
+        for i in 0..expr_len {
+            let expr = &mac.exprs[i];
+            if i > 0 {
+                insert_sep!(self, mac.seps[i - 1], expr);
+            }
+
+            self.fmt_expr(expr);
+        }
+        self.insert_unmark_align(close);
     }
 }

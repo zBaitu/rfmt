@@ -5,4 +5,5 @@ fn f() -> bool {
     a = true;
 
     type c = i32;
+    let f!(A);
 }
