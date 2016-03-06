@@ -8,17 +8,13 @@ use rfmt;
 pub fn fmt_crate(krate: Crate, leading_cmnts: HashMap<Pos, Vec<String>>,
                  trailing_cmnts: HashMap<Pos, String>)
     -> rfmt::Result {
-    let mut fmt = Formatter::new(leading_cmnts, trailing_cmnts);
-    fmt.fmt_crate(krate);
-    fmt.result()
+    Formatter::new(leading_cmnts, trailing_cmnts).fmt_crate(krate)
 }
 
 pub fn fmt_mod(module: Mod, leading_cmnts: HashMap<Pos, Vec<String>>,
-                 trailing_cmnts: HashMap<Pos, String>)
+               trailing_cmnts: HashMap<Pos, String>)
     -> rfmt::Result {
-    let mut fmt = Formatter::new(leading_cmnts, trailing_cmnts);
-    fmt.fmt_mod(&module);
-    fmt.result()
+    Formatter::new(leading_cmnts, trailing_cmnts).fmt_mod(module)
 }
 
 macro_rules! select_str {
@@ -627,7 +623,7 @@ macro_rules! insert_sep {
 }
 
 macro_rules! fmt_comma_lists {
-    ($sf: expr, $open: expr, $close: expr, $($list: expr, $act: ident),+) => ({
+    ($sf: expr, $open: expr, $close: expr, $($list: expr, $fmt: ident),+) => ({
         $sf.insert_mark_align($open);
 
         let mut first = true;
@@ -636,15 +632,15 @@ macro_rules! fmt_comma_lists {
                 insert_sep!($sf, ",", e);
             }
 
-            $sf.$act(e);
+            $sf.$fmt(e);
             first = false;
         })+
 
         $sf.insert_unmark_align($close);
     });
 
-    ($sf: expr, $($list: expr, $act: ident),+) => ({
-        fmt_comma_lists!($sf, "", "", $($list, $act)+);
+    ($sf: expr, $($list: expr, $fmt: ident),+) => ({
+        fmt_comma_lists!($sf, "", "", $($list, $fmt)+);
     });
 }
 
@@ -713,10 +709,6 @@ impl Formatter {
         }
     }
 
-    pub fn result(self) -> rfmt::Result {
-        self.ts.result()
-    }
-
     #[inline]
     fn clear_flag(&mut self) {
         self.after_indent = false;
@@ -775,10 +767,16 @@ impl Formatter {
         self.clear_flag();
     }
 
-    #[inline]
-    fn fmt_chunk(&mut self, chunk: &Chunk) {
-        maybe_nl!(self, chunk);
-        self.insert(&chunk.s);
+    fn fmt_crate(mut self, krate: Crate) -> rfmt::Result {
+        self.try_fmt_leading_comments(&krate.loc);
+        self.fmt_attrs(&krate.attrs);
+        self.fmt_mod(krate.module)
+    }
+
+    fn fmt_mod(mut self, module: Mod) -> rfmt::Result {
+        self.try_fmt_leading_comments(&module.loc);
+        self.fmt_mod_inner(&module);
+        self.ts.result()
     }
 
     #[inline]
@@ -804,6 +802,7 @@ impl Formatter {
         }
     }
 
+    #[inline]
     fn fmt_left_comments(&mut self) {
         let poses: Vec<_> = self.leading_cmnts.keys().cloned().collect();
         for pos in poses {
@@ -835,10 +834,10 @@ impl Formatter {
         self.raw_insert(&cmnt);
     }
 
-    fn fmt_crate(&mut self, krate: Crate) {
-        self.try_fmt_leading_comments(&krate.loc);
-        self.fmt_attrs(&krate.attrs);
-        self.fmt_mod(&krate.module);
+    #[inline]
+    fn fmt_chunk(&mut self, chunk: &Chunk) {
+        maybe_nl!(self, chunk);
+        self.insert(&chunk.s);
     }
 
     #[inline]
@@ -902,6 +901,11 @@ impl Formatter {
     }
 
     #[inline]
+    fn fmt_meta_items(&mut self, items: &Vec<MetaItem>) {
+        fmt_comma_lists!(self, "(", ")", items, fmt_meta_item);
+    }
+
+    #[inline]
     fn fmt_meta_item(&mut self, item: &MetaItem) {
         maybe_nl!(self, item);
         self.insert(&item.name);
@@ -911,12 +915,7 @@ impl Formatter {
         }
     }
 
-    #[inline]
-    fn fmt_meta_items(&mut self, items: &Vec<MetaItem>) {
-        fmt_comma_lists!(self, "(", ")", items, fmt_meta_item);
-    }
-
-    fn fmt_mod(&mut self, module: &Mod) {
+    fn fmt_mod_inner(&mut self, module: &Mod) {
         self.fmt_group_items(&module.items);
         self.fmt_items(&module.items);
         self.fmt_left_comments();
@@ -1036,7 +1035,7 @@ impl Formatter {
             return;
         }
 
-        fmt_block!(self, fmt_mod, item);
+        fmt_block!(self, fmt_mod_inner, item);
     }
 
     fn fmt_type_alias(&mut self, item: &TypeAlias) {
@@ -2207,7 +2206,7 @@ impl Formatter {
         if is_semi {
             self.raw_insert(";");
         }
-   }
+    }
 
     fn fmt_macro(&mut self, mac: &Macro) {
         let (open, close) = match mac.style {
@@ -2216,7 +2215,7 @@ impl Formatter {
             MacroStyle::Brace => ("{", "}"),
         };
 
-        self.insert(&format!("{}!", mac.name));  
+        self.insert(&format!("{}!", mac.name));
         self.insert_mark_align(open);
         let expr_len = mac.exprs.len();
         for i in 0..expr_len {

@@ -1,1 +1,1 @@
-type g = bool;
+type g = bool; // c/g

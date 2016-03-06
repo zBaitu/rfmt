@@ -1,1 +1,2 @@
-type d = bool;
+// leading c/d
+type d = bool; // c/d

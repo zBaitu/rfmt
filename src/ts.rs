@@ -39,13 +39,13 @@ impl Debug for Typesetter {
 
 #[macro_export]
 macro_rules! need_wrap {
-    ($ts: expr, $($s: expr),+) => ({
+    ($ts:expr, $($s:expr),+) => ({
         $ts.need_wrap(&[$($s),+])
     });
 }
 
 macro_rules! raw_insert {
-    ($sf: expr, $s: expr) => ({
+    ($sf:expr, $s:expr) => ({
         $sf.s.push_str($s);
 
         $sf.col += $s.len();
@@ -89,7 +89,7 @@ impl Typesetter {
 
     #[inline]
     pub fn need_wrap_len(&mut self, len: usize) -> bool {
-        len > self.left() && len <= self.nl_left()
+        (self.left() <= 0) || (len > self.left() && len <= self.nl_left())
     }
 
     #[inline]

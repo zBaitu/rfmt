@@ -11,6 +11,7 @@ use ir::*;
 
 const MAX_BLANK_LINE: u8 = 2;
 
+#[inline]
 fn trans_literal(lits: Vec<rst::Literal>) -> HashMap<rst::BytePos, String> {
     lits.into_iter().map(|e| (e.pos, e.lit)).collect()
 }
@@ -56,6 +57,7 @@ fn trans_comments(cmnts: Vec<rst::Comment>) -> Vec<Comment> {
     })
 }
 
+#[inline]
 fn trans_comment(cmnt: rst::Comment) -> Comment {
     let kind = match cmnt.style {
         rst::CommentStyle::Trailing => CommentKind::Trailing,
@@ -241,7 +243,7 @@ impl Translator {
         let loc = self.loc(&krate.span);
         let attrs = self.trans_attrs(&krate.attrs);
         let crate_mod_name = self.crate_mod_name();
-        let module = self.trans_mod_(crate_mod_name, &krate.module);
+        let module = self.trans_mod_inner(crate_mod_name, &krate.module);
 
         CrateResult {
             krate: Crate {
@@ -249,6 +251,17 @@ impl Translator {
                 attrs: attrs,
                 module: module,
             },
+            leading_cmnts: mem::replace(&mut self.leading_cmnts, HashMap::new()),
+            trailing_cmnts: mem::replace(&mut self.trailing_cmnts, HashMap::new()),
+        }
+    }
+
+    pub fn trans_mod(&mut self, name: String, module: &rst::Mod) -> ModResult {
+        self.mod_end = module.inner.hi.0;
+        self.last_loc.start = module.inner.lo.0;
+
+        ModResult {
+            module: self.trans_mod_inner(name, module),
             leading_cmnts: mem::replace(&mut self.leading_cmnts, HashMap::new()),
             trailing_cmnts: mem::replace(&mut self.trailing_cmnts, HashMap::new()),
         }
@@ -268,57 +281,11 @@ impl Translator {
         name
     }
 
-    pub fn trans_mod(&mut self, name: String, module: &rst::Mod) -> ModResult {
-        ModResult {
-            module: self.trans_mod_(name, module),
-            leading_cmnts: mem::replace(&mut self.leading_cmnts, HashMap::new()),
-            trailing_cmnts: mem::replace(&mut self.trailing_cmnts, HashMap::new()),
-        }
-    }
-
     #[inline]
-    fn trans_comments(&mut self, pos: Pos) {
-        let cmnts = self.trans_trailing_comments(pos);
-        self.trans_leading_comments(pos, cmnts);
-    }
-
-    #[inline]
-    fn trans_trailing_comments(&mut self, pos: Pos) -> Vec<String> {
-        let mut cmnts = Vec::new();
-
-        if self.cmnt_idx >= self.cmnts.len() {
-            return cmnts;
-        }
-        let cmnt = &self.cmnts[self.cmnt_idx];
-        if cmnt.pos >= pos || cmnt.kind != CommentKind::Trailing {
-            return cmnts;
-        }
-        self.cmnt_idx += 1;
-
-        self.trailing_cmnts.insert(self.last_loc.end, cmnt.lines[0].clone());
-        cmnts.extend_from_slice(&cmnt.lines[1..]);
-        cmnts
-    }
-
-    #[inline]
-    fn trans_leading_comments(&mut self, pos: Pos, mut cmnts: Vec<String>) {
-        while self.cmnt_idx < self.cmnts.len() {
-            let cmnt = &self.cmnts[self.cmnt_idx];
-            if cmnt.pos >= pos {
-                break;
-            }
-
-            if cmnt.lines.is_empty() {
-                cmnts.push(String::new());
-            } else {
-                cmnts.extend_from_slice(&cmnt.lines);
-            }
-
-            self.cmnt_idx += 1;
-        }
-
-        if !cmnts.is_empty() {
-            self.leading_cmnts.insert(pos, cmnts);
+    fn literal_to_string(&self, lit: &rst::Lit) -> String {
+        match lit.node {
+            rst::LitBool(b) => b.to_string(),
+            _ => self.lits[&lit.span.lo].clone(),
         }
     }
 
@@ -373,10 +340,48 @@ impl Translator {
     }
 
     #[inline]
-    fn literal_to_string(&self, lit: &rst::Lit) -> String {
-        match lit.node {
-            rst::LitBool(b) => b.to_string(),
-            _ => self.lits[&lit.span.lo].clone(),
+    fn trans_comments(&mut self, pos: Pos) {
+        let cmnts = self.trans_trailing_comments(pos);
+        self.trans_leading_comments(pos, cmnts);
+    }
+
+    #[inline]
+    fn trans_trailing_comments(&mut self, pos: Pos) -> Vec<String> {
+        let mut cmnts = Vec::new();
+
+        if self.cmnt_idx >= self.cmnts.len() {
+            return cmnts;
+        }
+        let cmnt = &self.cmnts[self.cmnt_idx];
+        if cmnt.pos >= pos || cmnt.kind != CommentKind::Trailing {
+            return cmnts;
+        }
+        self.cmnt_idx += 1;
+
+        self.trailing_cmnts.insert(self.last_loc.end, cmnt.lines[0].clone());
+        cmnts.extend_from_slice(&cmnt.lines[1..]);
+        cmnts
+    }
+
+    #[inline]
+    fn trans_leading_comments(&mut self, pos: Pos, mut cmnts: Vec<String>) {
+        while self.cmnt_idx < self.cmnts.len() {
+            let cmnt = &self.cmnts[self.cmnt_idx];
+            if cmnt.pos >= pos {
+                break;
+            }
+
+            if cmnt.lines.is_empty() {
+                cmnts.push(String::new());
+            } else {
+                cmnts.extend_from_slice(&cmnt.lines);
+            }
+
+            self.cmnt_idx += 1;
+        }
+
+        if !cmnts.is_empty() {
+            self.leading_cmnts.insert(pos, cmnts);
         }
     }
 
@@ -467,7 +472,7 @@ impl Translator {
         }
     }
 
-    fn trans_mod_(&mut self, name: String, module: &rst::Mod) -> Mod {
+    fn trans_mod_inner(&mut self, name: String, module: &rst::Mod) -> Mod {
         let loc = self.loc(&module.inner);
         let items = self.trans_items(&module.items);
         self.set_loc(&loc);
@@ -564,7 +569,7 @@ impl Translator {
                     ItemKind::ModDecl(self.trans_mod_decl(ident))
                 } else {
                     self.mod_paths.push(ident.clone());
-                    let item = ItemKind::Mod(self.trans_mod_(ident, module));
+                    let item = ItemKind::Mod(self.trans_mod_inner(ident, module));
                     self.mod_paths.pop();
                     item
                 }
@@ -2214,8 +2219,6 @@ impl Translator {
                 break;
             }
         }
-        p!("{:#?}", exprs);
-        p!("{:#?}", seps);
         (exprs, seps)
     }
 

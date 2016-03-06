@@ -5,6 +5,8 @@ pub mod a; // a
 pub mod b; // b
 
 mod c {
+    /// aaaaaaaaaaaaaaaaaaaaaaa
+    /// bbbbbbbbbbbbbbbbbbbbbb
     // abc
     #[test]
     mod d; // d
@@ -17,4 +19,7 @@ mod c {
 mod e {
 }
 
-mod f {}
+mod f {} // aaaaa
+
+// bbbbb
+// ccccc

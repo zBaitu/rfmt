@@ -1,1 +1,1 @@
-type e = bool;
+type e = bool; // c.e
