@@ -807,10 +807,8 @@ impl Formatter {
         let poses: Vec<_> = self.leading_cmnts.keys().cloned().collect();
         for pos in poses {
             for cmnt in &self.leading_cmnts.remove(&pos).unwrap() {
-                if !cmnt.is_empty() {
-                    self.raw_insert(cmnt);
-                    self.nl();
-                }
+                self.raw_insert(cmnt);
+                self.nl();
             }
         }
     }
@@ -922,36 +920,26 @@ impl Formatter {
     }
 
     fn fmt_group_items(&mut self, items: &Vec<Item>) {
-        p!("---------- group items begin ----------");
-
         self.fmt_extern_crate_items(items);
         self.fmt_use_items(items);
         self.fmt_mod_decl_items(items);
-
-        p!("---------- group items end ----------");
     }
 
     fn fmt_extern_crate_items(&mut self, items: &Vec<Item>) {
-        p!("---------- extern crate ----------");
         fmt_item_groups!(self, items, ItemKind::ExternCrate, &ExternCrate, fmt_extern_crate);
     }
 
     #[inline]
     fn fmt_extern_crate(&mut self, item: &ExternCrate) {
-        p!(item);
-
         self.insert(&format!("extern crate {}", &item.name));
     }
 
     fn fmt_use_items(&mut self, items: &Vec<Item>) {
-        p!("---------- use ----------");
         fmt_item_groups!(self, items, ItemKind::Use, &Use, fmt_use);
     }
 
     #[inline]
     fn fmt_use(&mut self, item: &Use) {
-        p!(item);
-
         self.insert(&format!("use {}", &item.base));
         self.fmt_use_names(&item.names);
     }
@@ -971,14 +959,11 @@ impl Formatter {
     }
 
     fn fmt_mod_decl_items(&mut self, items: &Vec<Item>) {
-        p!("---------- mod decl ----------");
         fmt_item_groups!(self, items, ItemKind::ModDecl, &ModDecl, fmt_mod_decl);
     }
 
     #[inline]
     fn fmt_mod_decl(&mut self, item: &ModDecl) {
-        p!(item);
-
         self.insert(&format!("mod {}", &item.name));
     }
 
@@ -999,8 +984,6 @@ impl Formatter {
     }
 
     fn fmt_item(&mut self, item: &Item) {
-        p!("---------- item ----------");
-
         if item.is_pub {
             self.insert("pub ");
         }
@@ -1025,9 +1008,6 @@ impl Formatter {
     }
 
     fn fmt_sub_mod(&mut self, item: &Mod) {
-        p!("---------- sub mod ----------");
-        p!(item.name);
-
         self.insert(&format!("mod {}", &item.name));
 
         if item.items.is_empty() {
@@ -1039,9 +1019,6 @@ impl Formatter {
     }
 
     fn fmt_type_alias(&mut self, item: &TypeAlias) {
-        p!("---------- type alias ----------");
-        p!(item);
-
         self.insert(&format!("type {}", &item.name));
 
         self.fmt_generics(&item.generics);
@@ -1293,8 +1270,6 @@ impl Formatter {
     }
 
     fn fmt_foreign_mod(&mut self, item: &ForeignMod) {
-        p!("---------- foreign mod ----------");
-
         self.insert(&format!("extern{}", abi_head(&item.abi)));
 
         if item.items.is_empty() {
@@ -1310,8 +1285,6 @@ impl Formatter {
     }
 
     fn fmt_foreign_item(&mut self, item: &ForeignItem) {
-        p!("---------- foreign item ----------");
-
         if item.is_pub {
             self.insert("pub ");
         }
@@ -1326,18 +1299,12 @@ impl Formatter {
     }
 
     fn fmt_foreign_static(&mut self, item: &ForeignStatic) {
-        p!("---------- foreign static ----------");
-        p!(item);
-
         self.insert(&format!("{}{}", static_head(item.is_mut), item.name));
         insert_sep!(self, ":", item.ty);
         self.fmt_type(&item.ty);
     }
 
     fn fmt_foreign_fn(&mut self, item: &ForeignFn) {
-        p!("---------- foreign fn ----------");
-        p!(item);
-
         self.insert(&format!("fn {}", item.name));
         self.fmt_generics(&item.generics);
         self.fmt_fn_sig(&item.fn_sig);

@@ -237,7 +237,6 @@ impl Translator {
     }
 
     pub fn trans_crate(&mut self, krate: &rst::Crate) -> CrateResult {
-        self.mod_end = krate.span.hi.0;
         self.last_loc.start = krate.span.lo.0;
 
         let loc = self.loc(&krate.span);
@@ -257,7 +256,6 @@ impl Translator {
     }
 
     pub fn trans_mod(&mut self, name: String, module: &rst::Mod) -> ModResult {
-        self.mod_end = module.inner.hi.0;
         self.last_loc.start = module.inner.lo.0;
 
         ModResult {
@@ -473,12 +471,16 @@ impl Translator {
     }
 
     fn trans_mod_inner(&mut self, name: String, module: &rst::Mod) -> Mod {
+        self.mod_paths.push(name.clone());
+        self.mod_end = self.mod_end(module);
+
         let loc = self.loc(&module.inner);
         let items = self.trans_items(&module.items);
         self.set_loc(&loc);
 
-        let mod_file_end = self.mod_file_end(module);
-        self.trans_comments(mod_file_end);
+        let mod_end = self.mod_end;
+        self.trans_comments(mod_end);
+        self.mod_paths.pop();
 
         Mod {
             loc: loc,
@@ -489,11 +491,6 @@ impl Translator {
 
     pub fn set_mod_full_file_name(&mut self, name: String) {
         self.mod_full_file_name = name;
-    }
-
-    #[inline]
-    fn is_mod_decl(&self, sp: &rst::Span) -> bool {
-        sp.lo.0 > self.mod_end
     }
 
     #[inline]
@@ -517,22 +514,19 @@ impl Translator {
     }
 
     #[inline]
-    fn mod_file_end(&mut self, module: &rst::Mod) -> Pos {
-        if self.is_mod_decl(&module.inner) {
-            let file_name = self.mod_full_file_name();
-            p!("{}", file_name);
-            self.sess
-                .codemap()
-                .files
-                .borrow()
-                .iter()
-                .find(|e| e.name == file_name)
-                .unwrap()
-                .end_pos
-                .0
-        } else {
-            module.inner.hi.0
+    fn mod_end(&self, module: &rst::Mod) -> Pos {
+        let file_name = self.mod_full_file_name();
+        let files = self.sess.codemap().files.borrow();
+        let file_map = files.iter().find(|ref file| file.name == file_name);
+        match file_map {
+            Some(ref file_map) => file_map.end_pos.0,
+            None => module.inner.hi.0,
         }
+    }
+
+    #[inline]
+    fn is_mod_decl(&self, sp: &rst::Span) -> bool {
+        sp.lo.0 > self.mod_end
     }
 
     #[inline]
@@ -568,10 +562,7 @@ impl Translator {
                 if self.is_mod_decl(&module.inner) {
                     ItemKind::ModDecl(self.trans_mod_decl(ident))
                 } else {
-                    self.mod_paths.push(ident.clone());
-                    let item = ItemKind::Mod(self.trans_mod_inner(ident, module));
-                    self.mod_paths.pop();
-                    item
+                    ItemKind::Mod(self.trans_mod_inner(ident, module))
                 }
             }
             rst::ItemTy(ref ty, ref generics) => {
