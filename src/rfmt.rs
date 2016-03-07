@@ -122,11 +122,11 @@ impl RustFmt {
     }
 
     fn mod_full_file_name(&self) -> String {
-        let file = join_str!(self.mod_full_name(), ".rs");
+        let file = self.mod_full_name() + ".rs";
         if self.files.contains(&file) {
             file
         } else {
-            join_str!(self.mod_full_name(), path::MAIN_SEPARATOR.to_string(), "mod.rs")
+            self.mod_full_name() + &path::MAIN_SEPARATOR.to_string() + "mod.rs"
         }
     }
 

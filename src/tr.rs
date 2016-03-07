@@ -9,7 +9,6 @@ use ir::*;
 
 const MAX_BLANK_LINE: u8 = 2;
 
-#[inline]
 fn trans_literal(lits: Vec<rst::Literal>) -> HashMap<rst::BytePos, String> {
     lits.into_iter().map(|e| (e.pos, e.lit)).collect()
 }
@@ -253,6 +252,18 @@ impl Translator {
         }
     }
 
+    fn crate_file_name(&self) -> String {
+        self.sess.codemap().files.borrow().first().unwrap().name.clone()
+    }
+
+    fn crate_mod_name(&self) -> String {
+        let mut name = self.crate_file_name();
+        if let Some(pos) = name.rfind('.') {
+            name.truncate(pos);
+        }
+        name
+    }
+
     pub fn trans_mod(&mut self, name: String, module: &rst::Mod) -> ModResult {
         self.last_loc.start = module.inner.lo.0;
 
@@ -261,20 +272,6 @@ impl Translator {
             leading_cmnts: mem::replace(&mut self.leading_cmnts, HashMap::new()),
             trailing_cmnts: mem::replace(&mut self.trailing_cmnts, HashMap::new()),
         }
-    }
-
-    #[inline]
-    fn crate_file_name(&self) -> String {
-        self.sess.codemap().files.borrow().first().unwrap().name.clone()
-    }
-
-    #[inline]
-    fn crate_mod_name(&self) -> String {
-        let mut name = self.crate_file_name();
-        if let Some(pos) = name.rfind('.') {
-            name.truncate(pos);
-        }
-        name
     }
 
     #[inline]
@@ -491,21 +488,18 @@ impl Translator {
         self.mod_full_file_name = name;
     }
 
-    #[inline]
     fn mod_full_name(&self) -> String {
         join_path_list!(&self.mod_paths)
     }
 
-    #[inline]
     fn mod_full_file_name(&self) -> String {
         if self.mod_full_file_name.is_empty() {
-            join_str!(self.mod_full_name(), ".rs")
+            self.mod_full_name() + ".rs"
         } else {
             self.mod_full_file_name.clone()
         }
     }
 
-    #[inline]
     fn mod_end(&self, module: &rst::Mod) -> Pos {
         let file_name = self.mod_full_file_name();
         let files = self.sess.codemap().files.borrow();
@@ -529,7 +523,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_items(&mut self, items: &Vec<rst::P<rst::Item>>) -> Vec<Item> {
         trans_list!(self, items, trans_item)
     }
@@ -546,8 +539,8 @@ impl Translator {
         let is_pub = is_pub(item.vis);
         let ident = ident_to_string(&item.ident);
         let item = match item.node {
-            rst::ItemExternCrate(ref name) => {
-                ItemKind::ExternCrate(self.trans_extren_crate(ident, name))
+            rst::ItemExternCrate(ref rename) => {
+                ItemKind::ExternCrate(self.trans_extren_crate(ident, rename))
             }
             rst::ItemUse(ref view_path) => ItemKind::Use(self.trans_use(view_path)),
             rst::ItemMod(ref module) => {
@@ -661,7 +654,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_use_names(&mut self, items: &Vec<rst::PathListItem>) -> Vec<Chunk> {
         trans_list!(self, items, trans_use_name)
     }

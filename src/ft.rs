@@ -85,7 +85,7 @@ fn fn_head(is_unsafe: bool, is_const: bool, abi: &str) -> String {
 }
 
 macro_rules! display_lists {
-   ($f: expr, $open: expr, $sep: expr, $close: expr, $($lists: expr),+) => ({
+   ($f:expr, $open:expr, $sep:expr, $close:expr, $($lists:expr),+) => ({
         try!(write!($f, $open));
 
         let mut first = true;
@@ -113,7 +113,6 @@ impl Display for Attr {
         if self.is_inner {
             try!(write!(f, "!"));
         }
-
         write!(f, "[{}]", self.item)
     }
 }
@@ -522,8 +521,34 @@ impl Display for Expr {
     }
 }
 
+macro_rules! fmt_item_groups {
+    ($sf:expr, $items:expr, $item_kind:path, $item_type:ty, $fmt_item:ident) => ({
+        let mut group: Vec<(&Vec<AttrKind>, bool, $item_type)> = Vec::new();
+
+        for item in $items {
+            match item.item {
+                $item_kind(ref e) => {
+                    if $sf.has_leading_comments(&item.loc) {
+                        fmt_item_group!($sf, &group, $item_type, $fmt_item);
+                        group.clear();
+
+                        $sf.fmt_leading_comments(&item.loc);
+                    }
+                    group.push((&item.attrs, item.is_pub, e));
+                }
+                _ => {
+                    fmt_item_group!($sf, &group, $item_type, $fmt_item);
+                    group.clear();
+                }
+            }
+        }
+
+        fmt_item_group!($sf, &group, $item_type, $fmt_item);
+    });
+}
+
 macro_rules! fmt_item_group {
-    ($sf: expr, $group: expr, $ty: ty, $fmt_item: ident) => ({
+    ($sf:expr, $group:expr, $ty:ty, $fmt_item:ident) => ({
         let map: BTreeMap<String, (&Vec<AttrKind>, bool, $ty)>
                 = $group.into_iter().map(|e| (e.2.to_string(), *e)).collect();
 
@@ -537,36 +562,9 @@ macro_rules! fmt_item_group {
             $sf.$fmt_item(e.2);
 
             $sf.raw_insert(";");
-            $sf.ts.nl();
+            $sf.nl();
         }
-    })
-}
-
-macro_rules! fmt_item_groups {
-    ($sf: expr, $items: expr, $item_kind: path, $item_type: ty, $fmt_item: ident) => ({
-        let mut group: Vec<(&Vec<AttrKind>, bool, $item_type)> = Vec::new();
-
-        for item in $items {
-            match item.item {
-                $item_kind(ref e) => {
-                    if $sf.has_leading_comments(&item.loc) {
-                        fmt_item_group!($sf, &group, $item_type, $fmt_item);
-                        group.clear();
-
-                        $sf.fmt_leading_comments(&item.loc);
-                    }
-
-                    group.push((&item.attrs, item.is_pub, e));
-                }
-                _ => {
-                    fmt_item_group!($sf, &group, $item_type, $fmt_item);
-                    group.clear();
-                }
-            }
-        }
-
-        fmt_item_group!($sf, &group, $item_type, $fmt_item);
-    })
+    });
 }
 
 macro_rules! maybe_nl {
@@ -597,7 +595,7 @@ macro_rules! maybe_wrap {
 
 macro_rules! maybe_wrap_len {
     ($sf: expr, $e: expr, $len: expr) => ({
-        if $sf.ts.need_wrap_len($e.to_string().len() + $len) {
+        if $sf.need_wrap_len($e.to_string().len() + $len) {
             $sf.wrap();
         }
     });
@@ -662,12 +660,12 @@ macro_rules! fmt_lists {
 macro_rules! fmt_block {
     ($sf: expr, $act: ident, $item: expr) => ({
         $sf.insert(" {");
-        $sf.ts.indent();
-        $sf.ts.nl();
+        $sf.indent();
+        $sf.nl();
 
         $sf.$act($item);
 
-        $sf.ts.outdent();
+        $sf.outdent();
         $sf.insert_indent();
         $sf.insert("}");
     });
@@ -728,17 +726,16 @@ impl Formatter {
     }
 
     #[inline]
+    fn need_wrap_len(&self, len: usize) -> bool {
+        self.ts.need_wrap_len(len)
+    }
+
+    #[inline]
     fn wrap(&mut self) {
         if !self.after_indent && !self.after_wrap {
             self.ts.wrap();
             self.after_wrap = true;
         }
-    }
-
-    #[inline]
-    fn insert_indent(&mut self) {
-        self.ts.insert_indent();
-        self.after_indent = true;
     }
 
     #[inline]
@@ -753,6 +750,22 @@ impl Formatter {
             self.ts.nl_indent();
             self.after_indent = true;
         }
+    }
+
+    #[inline]
+    fn indent(&mut self) {
+        self.ts.indent();
+    }
+
+    #[inline]
+    fn outdent(&mut self) {
+        self.ts.outdent();
+    }
+
+    #[inline]
+    fn insert_indent(&mut self) {
+        self.ts.insert_indent();
+        self.after_indent = true;
     }
 
     #[inline]
@@ -952,10 +965,9 @@ impl Formatter {
         self.insert("::");
         if names.len() == 1 {
             self.insert(&names[0].s);
-            return;
+        } else {
+            fmt_comma_lists!(self, "{", "}", names, fmt_chunk);
         }
-
-        fmt_comma_lists!(self, "{", "}", names, fmt_chunk);
     }
 
     fn fmt_mod_decl_items(&mut self, items: &Vec<Item>) {
@@ -1004,7 +1016,7 @@ impl Formatter {
             ItemKind::Macro(ref item) => self.fmt_chunk(item),
         }
 
-        self.ts.nl();
+        self.nl();
     }
 
     fn fmt_sub_mod(&mut self, item: &Mod) {
@@ -1295,7 +1307,7 @@ impl Formatter {
         }
 
         self.raw_insert(";");
-        self.ts.nl();
+        self.nl();
     }
 
     fn fmt_foreign_static(&mut self, item: &ForeignStatic) {
@@ -1366,7 +1378,7 @@ impl Formatter {
 
         self.raw_insert(",");
         self.try_fmt_trailing_comment(&field.loc);
-        self.ts.nl();
+        self.nl();
     }
 
     fn fmt_tuple_fields(&mut self, fields: &Vec<TupleField>) {
@@ -1410,7 +1422,7 @@ impl Formatter {
         }
 
         self.raw_insert(",");
-        self.ts.nl();
+        self.nl();
     }
 
     fn fmt_fn(&mut self, item: &Fn) {
@@ -1455,7 +1467,7 @@ impl Formatter {
         }
 
         self.raw_insert(";");
-        self.ts.nl();
+        self.nl();
     }
 
     fn fmt_const_trait_item(&mut self, item: &ConstTraitItem) {
@@ -1545,7 +1557,7 @@ impl Formatter {
             }
         }
 
-        self.ts.nl();
+        self.nl();
     }
 
     fn fmt_const_impl_item(&mut self, item: &ConstImplItem) {
@@ -1673,7 +1685,7 @@ impl Formatter {
             StmtKind::Macro(ref mac, is_semi) => self.fmt_macro_stmt(mac, is_semi),
         }
 
-        self.ts.nl();
+        self.nl();
     }
 
     fn fmt_decl_stmt(&mut self, decl: &Decl) {
@@ -1770,17 +1782,17 @@ impl Formatter {
         }
 
         self.insert(" {");
-        self.ts.indent();
-        self.ts.nl();
+        self.indent();
+        self.nl();
 
         self.fmt_struct_field_pattens(&pat.fields);
         if pat.etc {
             self.insert_indent();
             self.insert("...");
-            self.ts.nl();
+            self.nl();
         }
 
-        self.ts.outdent();
+        self.outdent();
         self.insert_indent();
         self.insert("}");
     }
@@ -1803,7 +1815,7 @@ impl Formatter {
         }
 
         self.raw_insert(",");
-        self.ts.nl();
+        self.nl();
     }
 
     fn fmt_vec_patten(&mut self, pat: &VecPatten) {
@@ -1936,18 +1948,18 @@ impl Formatter {
         }
 
         self.insert(" {");
-        self.ts.indent();
-        self.ts.nl();
+        self.indent();
+        self.nl();
 
         self.fmt_struct_field_exprs(&expr.fields);
         if let Some(ref base) = expr.base {
             self.insert_indent();
             self.insert("..");
             self.fmt_expr(base);
-            self.ts.nl();
+            self.nl();
         }
 
-        self.ts.outdent();
+        self.outdent();
         self.insert_indent();
         self.insert("}");
     }
@@ -1965,7 +1977,7 @@ impl Formatter {
         self.insert(&field.name.s);
         maybe_wrap!(self, ": ", ":", &field.value, fmt_expr);
         self.raw_insert(",");
-        self.ts.nl();
+        self.nl();
     }
 
     fn fmt_index_expr(&mut self, expr: &IndexExpr) {
@@ -2023,7 +2035,7 @@ impl Formatter {
     fn fmt_label(&mut self, label: &Option<String>) {
         if let Some(ref label) = *label {
             self.insert(&format!("{}:", label));
-            self.ts.nl();
+            self.nl();
             self.insert_indent();
         }
     }
@@ -2098,7 +2110,7 @@ impl Formatter {
         maybe_wrap!(self, " => ", "=> ", arm.body, fmt_expr);
 
         self.raw_insert(",");
-        self.ts.nl();
+        self.nl();
     }
 
     fn fmt_fn_call_expr(&mut self, expr: &FnCallExpr) {

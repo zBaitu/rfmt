@@ -83,12 +83,12 @@ impl Typesetter {
     }
 
     #[inline]
-    pub fn need_wrap(&mut self, list: &[&str]) -> bool {
+    pub fn need_wrap(&self, list: &[&str]) -> bool {
         self.need_wrap_len(list.iter().map(|s| s.len()).sum())
     }
 
     #[inline]
-    pub fn need_wrap_len(&mut self, len: usize) -> bool {
+    pub fn need_wrap_len(&self, len: usize) -> bool {
         (self.left() <= 0) || (len > self.left() && len <= self.nl_left())
     }
 
