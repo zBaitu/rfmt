@@ -30,7 +30,7 @@ fn trans_comments(cmnts: Vec<rst::Comment>) -> Vec<Comment> {
     let mut pre_blank_line_pos = 0;
     let mut blank_line = 0;
 
-    cmnts.into_iter().fold(Vec::new(), |mut cmnts, cmnt| {
+    let tmp = cmnts.into_iter().fold(Vec::new(), |mut cmnts, cmnt| {
         if cmnt.style == rst::CommentStyle::BlankLine {
             let cur_pos = cmnt.pos.0;
 
@@ -51,7 +51,9 @@ fn trans_comments(cmnts: Vec<rst::Comment>) -> Vec<Comment> {
         }
 
         cmnts
-    })
+    });
+    p!("{:?}", tmp);
+    tmp
 }
 
 #[inline]
@@ -202,7 +204,7 @@ pub struct Translator {
 
     mod_full_file_name: String,
     mod_paths: Vec<String>,
-    mod_end: Pos,
+    mod_ends: Vec<Pos>,
     last_loc: Loc,
 
     leading_cmnts: HashMap<Pos, Vec<String>>,
@@ -225,7 +227,7 @@ impl Translator {
 
             mod_full_file_name: String::new(),
             mod_paths: Vec::new(),
-            mod_end: 0,
+            mod_ends: Vec::new(),
             last_loc: Default::default(),
 
             leading_cmnts: HashMap::new(),
@@ -276,10 +278,13 @@ impl Translator {
 
     #[inline]
     fn literal_to_string(&self, lit: &rst::Lit) -> String {
+        self.span_to_snippet(lit.span).unwrap()
+        /*
         match lit.node {
             rst::LitBool(b) => b.to_string(),
             _ => self.lits[&lit.span.lo].clone(),
         }
+        */
     }
 
     #[inline]
@@ -467,18 +472,20 @@ impl Translator {
 
     fn trans_mod_inner(&mut self, name: String, module: &rst::Mod) -> Mod {
         self.mod_paths.push(name.clone());
-        self.mod_end = self.mod_end(module);
+        let mod_end = self.mod_end(module);
+        self.mod_ends.push(mod_end);
 
         let loc = self.loc(&module.inner);
         let items = self.trans_items(&module.items);
         self.set_loc(&loc);
 
-        let mod_end = self.mod_end;
+        let mod_end = self.mod_ends.pop().unwrap();
         self.trans_comments(mod_end);
         self.mod_paths.pop();
 
         Mod {
             loc: loc,
+            file_end: mod_end,
             name: name,
             items: items,
         }
@@ -512,7 +519,7 @@ impl Translator {
 
     #[inline]
     fn is_mod_decl(&self, module: &rst::Mod) -> bool {
-        module.inner.lo.0 > self.mod_end
+        module.inner.lo.0 > *self.mod_ends.last().unwrap()
     }
 
     #[inline]

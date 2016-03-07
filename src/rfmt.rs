@@ -35,6 +35,10 @@ pub fn fmt(path: PathBuf, recursive: bool) {
                                                                    .to_string(),
                                                                &mut input);
 
+    for cmnt in &cmnts {
+        p!("{:?}", cmnt.pos);
+        p!("{:?}", cmnt.lines);
+    }
     RustFmt::new(sess, lits, cmnts, recursive).fmt(krate);
 }
 

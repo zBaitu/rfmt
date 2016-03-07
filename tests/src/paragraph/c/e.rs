@@ -1,1 +1,2 @@
-type e = bool; // c.e
+// leading c/e
+type e = bool; // trailing c.e

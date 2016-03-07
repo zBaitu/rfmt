@@ -73,6 +73,7 @@ pub struct MetaItem {
 #[derive(Debug)]
 pub struct Mod {
     pub loc: Loc,
+    pub file_end: Pos,
     pub name: String,
     pub items: Vec<Item>,
 }

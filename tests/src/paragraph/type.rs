@@ -31,4 +31,7 @@ type a = for<'a, 'b: 'a> Foo<&'a Bar>;
 
 type a = a!("a");
 
-type a = _;
+type a = _; // a
+
+
+// b

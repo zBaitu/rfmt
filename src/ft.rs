@@ -134,7 +134,7 @@ fn display_meta_items(f: &mut fmt::Formatter, items: &Vec<MetaItem>) -> fmt::Res
 
 impl Display for ExternCrate {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "extern crate {};", self.name)
+        write!(f, "extern crate {}", self.name)
     }
 }
 
@@ -150,8 +150,7 @@ impl Display for Use {
                 try!(display_use_names(f, &self.names));
             }
         }
-
-        write!(f, ";")
+        Ok(())
     }
 }
 
@@ -162,7 +161,7 @@ fn display_use_names(f: &mut fmt::Formatter, names: &Vec<Chunk>) -> fmt::Result 
 
 impl Display for ModDecl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "mod {};", self.name)
+        write!(f, "mod {}", self.name)
     }
 }
 
@@ -523,7 +522,7 @@ impl Display for Expr {
 
 macro_rules! fmt_item_groups {
     ($sf:expr, $items:expr, $item_kind:path, $item_type:ty, $fmt_item:ident) => ({
-        let mut group: Vec<(&Vec<AttrKind>, bool, $item_type)> = Vec::new();
+        let mut group: Vec<(&Loc, bool, &Vec<AttrKind>, $item_type)> = Vec::new();
 
         for item in $items {
             match item.item {
@@ -534,7 +533,7 @@ macro_rules! fmt_item_groups {
 
                         $sf.fmt_leading_comments(&item.loc);
                     }
-                    group.push((&item.attrs, item.is_pub, e));
+                    group.push((&item.loc, item.is_pub, &item.attrs, e));
                 }
                 _ => {
                     fmt_item_group!($sf, &group, $item_type, $fmt_item);
@@ -549,19 +548,20 @@ macro_rules! fmt_item_groups {
 
 macro_rules! fmt_item_group {
     ($sf:expr, $group:expr, $ty:ty, $fmt_item:ident) => ({
-        let map: BTreeMap<String, (&Vec<AttrKind>, bool, $ty)>
-                = $group.into_iter().map(|e| (e.2.to_string(), *e)).collect();
+        let map: BTreeMap<String, (&Loc, bool, &Vec<AttrKind>, $ty)>
+                = $group.into_iter().map(|e| (e.3.to_string(), *e)).collect();
 
         for (_, e) in map {
-            $sf.fmt_attrs(e.0);
+            $sf.fmt_attrs(e.2);
 
             $sf.insert_indent();
             if e.1 {
                 $sf.insert("pub ");
             }
-            $sf.$fmt_item(e.2);
+            $sf.$fmt_item(e.3);
 
             $sf.raw_insert(";");
+            $sf.try_fmt_trailing_comment(e.0);
             $sf.nl();
         }
     });
@@ -816,7 +816,32 @@ impl Formatter {
     }
 
     #[inline]
-    fn fmt_left_comments(&mut self) {
+    fn has_left_comments(&self, pos: Pos) -> bool {
+        self.leading_cmnts.contains_key(&pos)
+    }
+
+    #[inline]
+    fn try_fmt_left_comments(&mut self, pos: Pos) {
+        if self.has_left_comments(pos) {
+            self.fmt_left_comments(pos);
+        }
+    }
+
+    #[inline]
+    fn fmt_left_comments(&mut self, pos: Pos) {
+        for cmnt in &self.leading_cmnts.remove(&pos).unwrap() {
+            if !cmnt.is_empty() {
+                self.insert_indent();
+                self.raw_insert(cmnt);
+            }
+            self.nl();
+        }
+    }
+
+    /*
+    #[inline]
+    fn fmt_left_comments(&mut self, loc: &Loc) {
+        let pos = self.leading_cmnts.
         let poses: Vec<_> = self.leading_cmnts.keys().cloned().collect();
         for pos in poses {
             for cmnt in &self.leading_cmnts.remove(&pos).unwrap() {
@@ -825,6 +850,7 @@ impl Formatter {
             }
         }
     }
+    */
 
     #[inline]
     fn has_trailing_comment(&self, loc: &Loc) -> bool {
@@ -929,7 +955,8 @@ impl Formatter {
     fn fmt_mod_inner(&mut self, module: &Mod) {
         self.fmt_group_items(&module.items);
         self.fmt_items(&module.items);
-        self.fmt_left_comments();
+        //self.fmt_left_comments();
+        self.try_fmt_left_comments(module.file_end);
     }
 
     fn fmt_group_items(&mut self, items: &Vec<Item>) {
