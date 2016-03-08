@@ -1,4 +1,3 @@
-use rst;
 use rst::ast::CrateConfig;
 use rst::parse::{self, ParseSess};
 use rst::parse::lexer::comments;
@@ -6,7 +5,7 @@ use rst::parse::lexer::comments;
 use std::collections::BTreeSet;
 use std::fs::File;
 use std::io::Read;
-use std::path::{self, PathBuf};
+use std::path::PathBuf;
 
 use ft;
 use tr;
@@ -34,79 +33,79 @@ pub fn fmt(path: PathBuf, recursive: bool) {
                                                    cfg,
                                                    &sess);
     let (cmnts, _) = comments::gather_comments_and_literals(&sess.span_diagnostic,
-                                                               path.file_name()
-                                                                   .unwrap()
-                                                                   .to_str()
-                                                                   .unwrap()
-                                                                   .to_string(),
-                                                               &mut input);
+                                                            path.file_name()
+                                                                .unwrap()
+                                                                .to_str()
+                                                                .unwrap()
+                                                                .to_string(),
+                                                            &mut input);
 
     p!("{:#?}", sess.codemap().files.borrow());
-        let result = tr::trans(sess, krate, cmnts);
-        p!("=====================================================================================\
-            ===============");
-        p!("{:#?}", result.krate);
-        p!("{:#?}", result.leading_cmnts);
-        p!("{:#?}", result.trailing_cmnts);
-        p!("-------------------------------------------------------------------------------------\
-            --------------");
-        let result = ft::fmt(result.krate, result.leading_cmnts, result.trailing_cmnts);
-        p!(result.s);
-        p!("-------------------------------------------------------------------------------------\
-            --------------");
-        p!("{:?}", result.exceed_lines);
-        p!("{:?}", result.trailing_ws_lines);
-        p!();
-        p!();
- 
-    //RustFmt::new(sess, lits, cmnts, recursive).fmt(krate);
+    let result = tr::trans(sess, krate, cmnts);
+    p!("=========================================================================================\
+        ===========");
+    p!("{:#?}", result.krate);
+    p!("{:#?}", result.leading_cmnts);
+    p!("{:#?}", result.trailing_cmnts);
+    p!("-----------------------------------------------------------------------------------------\
+        ----------");
+    let result = ft::fmt(result.krate, result.leading_cmnts, result.trailing_cmnts);
+    p!(result.s);
+    p!("-----------------------------------------------------------------------------------------\
+        ----------");
+    p!("{:?}", result.exceed_lines);
+    p!("{:?}", result.trailing_ws_lines);
+    p!();
+    p!();
+
+    // RustFmt::new(sess, lits, cmnts, recursive).fmt(krate);
 }
 
-/*
-struct RustFmt {
-    recursive: bool,
-    files: BTreeSet<String>,
-    mod_paths: Vec<String>,
-}
-
-impl RustFmt {
-    pub fn new(sess: rst::ParseSess, lits: Vec<rst::Literal>, cmnts: Vec<rst::Comment>,
-               recursive: bool)
-        -> RustFmt {
-        let files = if recursive {
-            sess.codemap().files.borrow().iter().map(|ref file| file.name.clone()).collect()
-        } else {
-            BTreeSet::new()
-        };
-
-        RustFmt {
-            recursive: recursive,
-            files: files,
-            mod_paths: Vec::new(),
-        }
-    }
-
-    pub fn fmt(&mut self, krate: rst::Crate) {
-        self.fmt_crate(&krate);
-    }
-
-    fn fmt_crate(&mut self, krate: &rst::Crate) {
-        let result = self.trans.trans(&krate);
-        p!("=====================================================================================\
-            ===============");
-        p!("{:#?}", result.krate);
-        p!("{:#?}", result.leading_cmnts);
-        p!("{:#?}", result.trailing_cmnts);
-        p!("-------------------------------------------------------------------------------------\
-            --------------");
-        let result = ft::fmt_crate(result.krate, result.leading_cmnts, result.trailing_cmnts);
-        p!(result.s);
-        p!("-------------------------------------------------------------------------------------\
-            --------------");
-        p!("{:?}", result.exceed_lines);
-        p!("{:?}", result.trailing_ws_lines);
-        p!();
-        p!();
-    }
-}
-*/
+//
+// struct RustFmt {
+// recursive: bool,
+// files: BTreeSet<String>,
+// mod_paths: Vec<String>,
+// }
+//
+// impl RustFmt {
+// pub fn new(sess: rst::ParseSess, lits: Vec<rst::Literal>, cmnts: Vec<rst::Comment>,
+// recursive: bool)
+// -> RustFmt {
+// let files = if recursive {
+// sess.codemap().files.borrow().iter().map(|ref file| file.name.clone()).collect()
+// } else {
+// BTreeSet::new()
+// };
+//
+// RustFmt {
+// recursive: recursive,
+// files: files,
+// mod_paths: Vec::new(),
+// }
+// }
+//
+// pub fn fmt(&mut self, krate: rst::Crate) {
+// self.fmt_crate(&krate);
+// }
+//
+// fn fmt_crate(&mut self, krate: &rst::Crate) {
+// let result = self.trans.trans(&krate);
+// p!("=====================================================================================\
+// ===============");
+// p!("{:#?}", result.krate);
+// p!("{:#?}", result.leading_cmnts);
+// p!("{:#?}", result.trailing_cmnts);
+// p!("-------------------------------------------------------------------------------------\
+// --------------");
+// let result = ft::fmt_crate(result.krate, result.leading_cmnts, result.trailing_cmnts);
+// p!(result.s);
+// p!("-------------------------------------------------------------------------------------\
+// --------------");
+// p!("{:?}", result.exceed_lines);
+// p!("{:?}", result.trailing_ws_lines);
+// p!();
+// p!();
+// }
+// }
+//

@@ -5,12 +5,11 @@ pub mod a; // a
 pub mod b; // b
 
 mod c {
-    /// aaaaaaaaaaaaaaaaaaaaaaa
     /// bbbbbbbbbbbbbbbbbbbbbb
     // abc
     #[test]
-    mod d; // d
-    mod e; // e
+    mod e;
+    mod d;
     mod g; // g
 
     type a = bool; // ca

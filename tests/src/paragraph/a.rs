@@ -1,2 +1,3 @@
-// sub a
-type a = bool;
+#[test]
+/// a
+pub mod a;

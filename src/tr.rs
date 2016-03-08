@@ -85,11 +85,6 @@ fn is_inner(style: rst::AttrStyle) -> bool {
 }
 
 #[inline]
-fn is_outer(style: rst::AttrStyle) -> bool {
-    !is_inner(style)
-}
-
-#[inline]
 fn is_pub(vis: rst::Visibility) -> bool {
     vis == rst::Visibility::Public
 }
@@ -224,6 +219,7 @@ impl Translator {
         let attrs = self.trans_attrs(&krate.attrs);
         let crate_mod_name = self.crate_mod_name();
         let module = self.trans_mod(crate_mod_name, &krate.module);
+
         let crate_file_end = self.crate_file_end();
         self.trans_comments(crate_file_end);
 
@@ -233,8 +229,6 @@ impl Translator {
                 attrs: attrs,
                 module: module,
             },
-            //leading_cmnts: mem::replace(&mut self.leading_cmnts, HashMap::new()),
-            //trailing_cmnts: mem::replace(&mut self.trailing_cmnts, HashMap::new()),
             leading_cmnts: self.leading_cmnts,
             trailing_cmnts: self.trailing_cmnts,
         }
@@ -363,14 +357,6 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_outer_attrs(&mut self, attrs: &Vec<rst::Attribute>) -> Vec<AttrKind> {
-        attrs.iter()
-             .filter(|ref e| is_outer(e.node.style))
-             .map(|ref e| self.trans_attr_kind(e))
-             .collect()
-    }
-
-    #[inline]
     fn trans_attr_kind(&mut self, attr: &rst::Attribute) -> AttrKind {
         if attr.node.is_sugared_doc {
             AttrKind::Doc(self.trans_doc(attr))
@@ -461,26 +447,13 @@ impl Translator {
         module.inner.lo == module.inner.hi
     }
 
-    #[inline]
-    fn is_mod_decl_item(&self, item: &rst::Item) -> bool {
-        match item.node {
-            rst::ItemMod(ref module) if self.is_mod_decl(module) => true,
-            _ => false,
-        }
-    }
-
     fn trans_items(&mut self, items: &Vec<rst::P<rst::Item>>) -> Vec<Item> {
         trans_list!(self, items, trans_item)
     }
 
     fn trans_item(&mut self, item: &rst::Item) -> Item {
         let loc = self.loc(&item.span);
-
-        let attrs = if self.is_mod_decl_item(item) {
-            self.trans_outer_attrs(&item.attrs)
-        } else {
-            self.trans_attrs(&item.attrs)
-        };
+        let attrs = self.trans_attrs(&item.attrs);
 
         let is_pub = is_pub(item.vis);
         let ident = ident_to_string(&item.ident);

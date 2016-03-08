@@ -550,7 +550,7 @@ macro_rules! fmt_item_group {
 
             $sf.insert_indent();
             if e.1 {
-                $sf.insert("pub ");
+                $sf.raw_insert("pub ");
             }
             $sf.$fmt_item(e.3);
 
@@ -572,10 +572,10 @@ macro_rules! maybe_nl {
 macro_rules! maybe_wrap {
     ($sf: expr, $sep: expr, $wrap_sep: expr, $e: expr) => ({
         if !need_wrap!($sf.ts, $sep, &$e.to_string()) {
-            $sf.insert($sep);
+            $sf.raw_insert($sep);
         } else {
             $sf.wrap();
-            $sf.insert($wrap_sep);
+            $sf.raw_insert($wrap_sep);
         }
     });
     ($sf: expr, $e: expr) => ({
@@ -598,7 +598,7 @@ macro_rules! maybe_wrap_len {
 macro_rules! maybe_nl_non_wrap {
     ($sf: expr, $sep: expr, $e: expr) => ({
         if !need_wrap!($sf.ts, $sep, &$e.to_string()) {
-            $sf.insert($sep);
+            $sf.raw_insert($sep);
         } else {
             $sf.nl_indent();
         }
@@ -653,7 +653,7 @@ macro_rules! fmt_lists {
 
 macro_rules! fmt_block {
     ($sf: expr, $act: ident, $item: expr) => ({
-        $sf.insert(" {");
+        $sf.raw_insert(" {");
         $sf.indent();
         $sf.nl();
 
@@ -661,7 +661,7 @@ macro_rules! fmt_block {
 
         $sf.outdent();
         $sf.insert_indent();
-        $sf.insert("}");
+        $sf.raw_insert("}");
     });
 }
 
@@ -931,7 +931,6 @@ impl Formatter {
         fmt_item_groups!(self, items, ItemKind::ExternCrate, &ExternCrate, fmt_extern_crate);
     }
 
-    #[inline]
     fn fmt_extern_crate(&mut self, item: &ExternCrate) {
         self.insert(&format!("extern crate {}", &item.name));
     }
@@ -940,7 +939,6 @@ impl Formatter {
         fmt_item_groups!(self, items, ItemKind::Use, &Use, fmt_use);
     }
 
-    #[inline]
     fn fmt_use(&mut self, item: &Use) {
         self.insert(&format!("use {}", &item.base));
         self.fmt_use_names(&item.names);
@@ -963,32 +961,27 @@ impl Formatter {
         fmt_item_groups!(self, items, ItemKind::ModDecl, &ModDecl, fmt_mod_decl);
     }
 
-    #[inline]
     fn fmt_mod_decl(&mut self, item: &ModDecl) {
         self.insert(&format!("mod {}", &item.name));
     }
 
-    #[inline]
     fn fmt_items(&mut self, items: &Vec<Item>) {
         for item in items {
             match item.item {
                 ItemKind::ExternCrate(_) | ItemKind::Use(_) | ItemKind::ModDecl(_) => (),
-                _ => {
-                    self.try_fmt_leading_comments(&item.loc);
-                    self.fmt_attrs(&item.attrs);
-                    self.insert_indent();
-
-                    self.fmt_item(item);
-                }
+                _ => self.fmt_item(item),
             }
         }
     }
 
     fn fmt_item(&mut self, item: &Item) {
-        if item.is_pub {
-            self.insert("pub ");
-        }
+        self.try_fmt_leading_comments(&item.loc);
+        self.fmt_attrs(&item.attrs);
+        self.insert_indent();
 
+        if item.is_pub {
+            self.raw_insert("pub ");
+        }
         match item.item {
             ItemKind::ExternCrate(_) | ItemKind::Use(_) | ItemKind::ModDecl(_) => unreachable!(),
             ItemKind::Mod(ref item) => self.fmt_sub_mod(item),
@@ -1005,6 +998,7 @@ impl Formatter {
             ItemKind::Macro(ref item) => self.fmt_chunk(item),
         }
 
+        self.try_fmt_trailing_comment(&item.loc);
         self.nl();
     }
 
@@ -1012,11 +1006,10 @@ impl Formatter {
         self.insert(&format!("mod {}", &item.name));
 
         if item.items.is_empty() {
-            self.insert("{}");
-            return;
+            self.raw_insert(" {}");
+        } else {
+            fmt_block!(self, fmt_mod, item);
         }
-
-        fmt_block!(self, fmt_mod, item);
     }
 
     fn fmt_type_alias(&mut self, item: &TypeAlias) {
@@ -1680,13 +1673,7 @@ impl Formatter {
     fn fmt_decl_stmt(&mut self, decl: &Decl) {
         match decl.decl {
             DeclKind::Local(ref local) => self.fmt_local(local),
-            DeclKind::Item(ref item) => {
-                self.try_fmt_leading_comments(&item.loc);
-                self.fmt_attrs(&item.attrs);
-                self.insert_indent();
-
-                self.fmt_item(item);
-            }
+            DeclKind::Item(ref item) => self.fmt_item(item),
         }
         self.raw_insert(";");
     }
