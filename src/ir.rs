@@ -281,12 +281,6 @@ pub struct ParenParam {
 }
 
 #[derive(Debug)]
-pub struct QSelf {
-    pub ty: Type,
-    pub pos: usize,
-}
-
-#[derive(Debug)]
 pub struct Type {
     pub loc: Loc,
     pub ty: TypeKind,
@@ -305,6 +299,12 @@ pub enum TypeKind {
     PolyTraitRef(Box<PolyTraitRefType>),
     Macro(Box<Macro>),
     Infer,
+}
+
+#[derive(Debug)]
+pub struct QSelf {
+    pub ty: Type,
+    pub pos: usize,
 }
 
 #[derive(Debug)]

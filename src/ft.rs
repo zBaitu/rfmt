@@ -611,8 +611,10 @@ macro_rules! maybe_nl_non_wrap {
 macro_rules! insert_sep {
     ($sf:expr, $sep:expr, $e:expr) => ({
         $sf.raw_insert($sep);
-        if !$e.loc.nl && !need_wrap!($sf.ts, &$e.to_string()) {
+        if !$e.loc.nl && !need_wrap!($sf.ts, " ", &$e.to_string()) {
             $sf.raw_insert(" ");
+        } else {
+            $sf.wrap();
         }
     });
 }

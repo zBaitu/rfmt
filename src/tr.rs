@@ -761,7 +761,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_path_segments(&mut self, segs: &Vec<rst::PathSegment>) -> Vec<PathSegment> {
         trans_list!(self, segs, trans_path_segment)
     }
@@ -788,39 +787,33 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_type_bindings(&mut self, bindings: &[rst::P<rst::TypeBinding>]) -> Vec<TypeBinding> {
         trans_list!(self, bindings, trans_type_binding)
     }
 
     fn trans_type_binding(&mut self, binding: &rst::TypeBinding) -> TypeBinding {
+        let loc = self.loc(&binding.span);
+        let name = ident_to_string(&binding.ident);
+        let ty = self.trans_type(&binding.ty);
+        self.set_loc(&loc);
+
         TypeBinding {
-            loc: self.leaf_loc(&binding.span),
-            name: ident_to_string(&binding.ident),
-            ty: self.trans_type(&binding.ty),
+            loc: loc,
+            name: name,
+            ty: ty,
         }
     }
 
     fn trans_paren_param(&mut self, param: &rst::ParenthesizedParameterData) -> ParenParam {
         let loc = self.loc(&param.span);
         let inputs = self.trans_types(&param.inputs);
-        let output = match param.output {
-            Some(ref ty) => Some(self.trans_type(ty)),
-            None => None,
-        };
+        let output = zopt::map_ref_mut(&param.output, |ty| self.trans_type(ty));
         self.set_loc(&loc);
 
         ParenParam {
             loc: loc,
             inputs: inputs,
             output: output,
-        }
-    }
-
-    fn trans_qself(&mut self, qself: &rst::QSelf) -> QSelf {
-        QSelf {
-            ty: self.trans_type(&qself.ty),
-            pos: qself.position,
         }
     }
 
@@ -866,6 +859,13 @@ impl Translator {
         Type {
             loc: loc,
             ty: ty,
+        }
+    }
+
+    fn trans_qself(&mut self, qself: &rst::QSelf) -> QSelf {
+        QSelf {
+            ty: self.trans_type(&qself.ty),
+            pos: qself.position,
         }
     }
 
