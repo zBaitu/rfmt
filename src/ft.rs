@@ -5,16 +5,10 @@ use ir::*;
 use ts::*;
 use rfmt;
 
-pub fn fmt_crate(krate: Crate, leading_cmnts: HashMap<Pos, Vec<String>>,
-                 trailing_cmnts: HashMap<Pos, String>)
+pub fn fmt(krate: Crate, leading_cmnts: HashMap<Pos, Vec<String>>,
+           trailing_cmnts: HashMap<Pos, String>)
     -> rfmt::Result {
     Formatter::new(leading_cmnts, trailing_cmnts).fmt_crate(krate)
-}
-
-pub fn fmt_mod(module: Mod, leading_cmnts: HashMap<Pos, Vec<String>>,
-               trailing_cmnts: HashMap<Pos, String>)
-    -> rfmt::Result {
-    Formatter::new(leading_cmnts, trailing_cmnts).fmt_mod(module)
 }
 
 macro_rules! select_str {
@@ -707,6 +701,14 @@ impl Formatter {
         }
     }
 
+    fn fmt_crate(mut self, krate: Crate) -> rfmt::Result {
+        self.try_fmt_leading_comments(&krate.loc);
+        self.fmt_attrs(&krate.attrs);
+        self.fmt_mod(&krate.module);
+        self.fmt_left_comments();
+        self.ts.result()
+    }
+
     #[inline]
     fn clear_flag(&mut self) {
         self.after_indent = false;
@@ -780,18 +782,6 @@ impl Formatter {
         self.clear_flag();
     }
 
-    fn fmt_crate(mut self, krate: Crate) -> rfmt::Result {
-        self.try_fmt_leading_comments(&krate.loc);
-        self.fmt_attrs(&krate.attrs);
-        self.fmt_mod(krate.module)
-    }
-
-    fn fmt_mod(mut self, module: Mod) -> rfmt::Result {
-        self.try_fmt_leading_comments(&module.loc);
-        self.fmt_mod_inner(&module);
-        self.ts.result()
-    }
-
     #[inline]
     fn has_leading_comments(&self, loc: &Loc) -> bool {
         self.leading_cmnts.contains_key(&loc.start)
@@ -816,32 +806,7 @@ impl Formatter {
     }
 
     #[inline]
-    fn has_left_comments(&self, pos: Pos) -> bool {
-        self.leading_cmnts.contains_key(&pos)
-    }
-
-    #[inline]
-    fn try_fmt_left_comments(&mut self, pos: Pos) {
-        if self.has_left_comments(pos) {
-            self.fmt_left_comments(pos);
-        }
-    }
-
-    #[inline]
-    fn fmt_left_comments(&mut self, pos: Pos) {
-        for cmnt in &self.leading_cmnts.remove(&pos).unwrap() {
-            if !cmnt.is_empty() {
-                self.insert_indent();
-                self.raw_insert(cmnt);
-            }
-            self.nl();
-        }
-    }
-
-    /*
-    #[inline]
-    fn fmt_left_comments(&mut self, loc: &Loc) {
-        let pos = self.leading_cmnts.
+    fn fmt_left_comments(&mut self) {
         let poses: Vec<_> = self.leading_cmnts.keys().cloned().collect();
         for pos in poses {
             for cmnt in &self.leading_cmnts.remove(&pos).unwrap() {
@@ -850,7 +815,6 @@ impl Formatter {
             }
         }
     }
-    */
 
     #[inline]
     fn has_trailing_comment(&self, loc: &Loc) -> bool {
@@ -952,11 +916,9 @@ impl Formatter {
         }
     }
 
-    fn fmt_mod_inner(&mut self, module: &Mod) {
+    fn fmt_mod(&mut self, module: &Mod) {
         self.fmt_group_items(&module.items);
         self.fmt_items(&module.items);
-        //self.fmt_left_comments();
-        self.try_fmt_left_comments(module.file_end);
     }
 
     fn fmt_group_items(&mut self, items: &Vec<Item>) {
@@ -1054,7 +1016,7 @@ impl Formatter {
             return;
         }
 
-        fmt_block!(self, fmt_mod_inner, item);
+        fmt_block!(self, fmt_mod, item);
     }
 
     fn fmt_type_alias(&mut self, item: &TypeAlias) {
