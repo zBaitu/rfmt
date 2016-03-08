@@ -1,6 +1,6 @@
 type a<T> = Option<T>;
 
-type a<'a, 'b, 
+type a<'a, 'b,
 'c: 'a + 'b, 
 T: 'a + for<'b> ::iter::Iterator, U, V, R = Result> where 'b: 'a, U: Eq , V: Fn(bool, i32) -> String = Option<'a, T, U  = Result>;
 

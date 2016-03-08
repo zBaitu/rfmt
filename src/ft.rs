@@ -159,6 +159,7 @@ impl Display for ModDecl {
     }
 }
 
+/*
 impl Display for TypeAlias {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "type {}{} = {};", self.name, self.generics, self.ty)
@@ -181,6 +182,7 @@ impl Display for Generics {
         Ok(())
     }
 }
+*/
 
 impl Display for LifetimeDef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -247,12 +249,11 @@ fn display_for_liftime_defs(f: &mut fmt::Formatter, lifetime_defs: &Vec<Lifetime
 
 impl Display for Where {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.is_empty() {
-            return Ok(());
+        if !self.is_empty() {
+            try!(write!(f, "where "));
+            try!(display_where_clauses(f, &self.clauses));
         }
-
-        try!(write!(f, "where "));
-        display_where_clauses(f, &self.clauses)
+        Ok(())
     }
 }
 
@@ -444,11 +445,13 @@ impl Display for ForeignStatic {
     }
 }
 
+/*
 impl Display for ForeignFn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "fn {}{}{}", self.name, self.generics, self.fn_sig)
     }
 }
+*/
 
 impl Display for TupleField {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -717,14 +720,18 @@ impl Formatter {
 
     #[inline]
     fn raw_insert(&mut self, s: &str) {
-        self.ts.raw_insert(s);
-        self.clear_flag();
+        if !s.is_empty() {
+            self.ts.raw_insert(s);
+            self.clear_flag();
+        }
     }
 
     #[inline]
     fn insert(&mut self, s: &str) {
-        self.ts.insert(s);
-        self.clear_flag();
+        if !s.is_empty() {
+            self.ts.insert(s);
+            self.clear_flag();
+        }
     }
 
     #[inline]
@@ -1035,9 +1042,12 @@ impl Formatter {
     }
 
     fn fmt_lifetime_def(&mut self, lifetime_def: &LifetimeDef) {
+        maybe_nl!(self, lifetime_def);
+        maybe_wrap!(self, lifetime_def);
+
         self.fmt_lifetime(&lifetime_def.lifetime);
         if !lifetime_def.bounds.is_empty() {
-            self.insert(": ");
+            self.raw_insert(": ");
             fmt_lists!(self, " + ", "+ ", &lifetime_def.bounds, fmt_lifetime)
         }
     }
@@ -1048,15 +1058,13 @@ impl Formatter {
 
     fn fmt_type_param(&mut self, type_param: &TypeParam) {
         maybe_nl!(self, type_param);
-        self.insert(&type_param.name);
+        maybe_wrap!(self, type_param);
 
+        self.insert(&type_param.name);
         if let Some(ref ty) = type_param.default {
             maybe_wrap!(self, " = ", "= ", ty, fmt_type);
-            return;
-        }
-
-        if !type_param.bounds.is_empty() {
-            self.insert(": ");
+        } else if !type_param.bounds.is_empty() {
+            self.raw_insert(": ");
             self.fmt_type_param_bounds(&type_param.bounds);
         }
     }
@@ -1092,7 +1100,7 @@ impl Formatter {
     fn fmt_where(&mut self, wh: &Where) {
         if !wh.is_empty() {
             maybe_nl_non_wrap!(self, " ", wh);
-            self.insert("where ");
+            self.raw_insert("where ");
             self.fmt_where_clauses(&wh.clauses);
         }
     }
@@ -1109,9 +1117,10 @@ impl Formatter {
     }
 
     fn fmt_where_bound(&mut self, bound: &WhereBound) {
+        maybe_wrap!(self, bound);
         self.fmt_for_lifetime_defs(&bound.lifetime_defs);
         self.fmt_type(&bound.ty);
-        self.insert(": ");
+        self.raw_insert(": ");
         self.fmt_type_param_bounds(&bound.bounds);
     }
 
