@@ -562,7 +562,7 @@ macro_rules! fmt_item_group {
 }
 
 macro_rules! maybe_nl {
-    ($sf: expr, $e: ident) => ({
+    ($sf:expr, $e:ident) => ({
         if $e.loc.nl {
             $sf.wrap();
         }
@@ -570,7 +570,7 @@ macro_rules! maybe_nl {
 }
 
 macro_rules! maybe_wrap {
-    ($sf: expr, $sep: expr, $wrap_sep: expr, $e: expr) => ({
+    ($sf:expr, $sep:expr, $wrap_sep:expr, $e:expr) => ({
         if !need_wrap!($sf.ts, $sep, &$e.to_string()) {
             $sf.raw_insert($sep);
         } else {
@@ -578,17 +578,17 @@ macro_rules! maybe_wrap {
             $sf.raw_insert($wrap_sep);
         }
     });
-    ($sf: expr, $e: expr) => ({
+    ($sf:expr, $e:expr) => ({
         maybe_wrap!($sf, "", "", $e);
     });
-    ($sf: expr, $sep: expr, $wrap_sep: expr, $e: expr, $act: ident) => ({
+    ($sf:expr, $sep:expr, $wrap_sep:expr, $e:expr, $act:ident) => ({
         maybe_wrap!($sf, $sep, $wrap_sep, $e);
         $sf.$act(&$e);
     });
 }
 
 macro_rules! maybe_wrap_len {
-    ($sf: expr, $e: expr, $len: expr) => ({
+    ($sf:expr, $e:expr, $len:expr) => ({
         if $sf.need_wrap_len($e.to_string().len() + $len) {
             $sf.wrap();
         }
@@ -596,7 +596,7 @@ macro_rules! maybe_wrap_len {
 }
 
 macro_rules! maybe_nl_non_wrap {
-    ($sf: expr, $sep: expr, $e: expr) => ({
+    ($sf:expr, $sep:expr, $e:expr) => ({
         if !need_wrap!($sf.ts, $sep, &$e.to_string()) {
             $sf.raw_insert($sep);
         } else {
@@ -606,7 +606,7 @@ macro_rules! maybe_nl_non_wrap {
 }
 
 macro_rules! insert_sep {
-    ($sf: expr, $sep: expr, $e: expr) => ({
+    ($sf:expr, $sep:expr, $e:expr) => ({
         $sf.raw_insert($sep);
         if !$e.loc.nl && !need_wrap!($sf.ts, &$e.to_string()) {
             $sf.raw_insert(" ");
@@ -615,7 +615,7 @@ macro_rules! insert_sep {
 }
 
 macro_rules! fmt_comma_lists {
-    ($sf: expr, $open: expr, $close: expr, $($list: expr, $fmt: ident),+) => ({
+    ($sf:expr, $open:expr, $close:expr, $($list:expr, $fmt:ident),+) => ({
         $sf.insert_mark_align($open);
 
         let mut first = true;
@@ -631,13 +631,13 @@ macro_rules! fmt_comma_lists {
         $sf.insert_unmark_align($close);
     });
 
-    ($sf: expr, $($list: expr, $fmt: ident),+) => ({
+    ($sf:expr, $($list:expr, $fmt:ident),+) => ({
         fmt_comma_lists!($sf, "", "", $($list, $fmt)+);
     });
 }
 
 macro_rules! fmt_lists {
-    ($sf: expr, $sep: expr, $wrap_sep: expr, $($list: expr, $act: ident),+) => ({
+    ($sf:expr, $sep:expr, $wrap_sep:expr, $($list:expr, $act:ident),+) => ({
         let mut first = true;
         $(for e in $list {
             if !first {
@@ -652,7 +652,7 @@ macro_rules! fmt_lists {
 }
 
 macro_rules! fmt_block {
-    ($sf: expr, $act: ident, $item: expr) => ({
+    ($sf:expr, $act:ident, $item:expr) => ({
         $sf.raw_insert(" {");
         $sf.indent();
         $sf.nl();
@@ -666,7 +666,7 @@ macro_rules! fmt_block {
 }
 
 macro_rules! fmt_items {
-    ($sf: ident, $items: expr, $fmt_item: ident) => ({
+    ($sf:ident, $items:expr, $fmt_item:ident) => ({
         for item in $items {
             $sf.try_fmt_leading_comments(&item.loc);
             $sf.fmt_attrs(&item.attrs);

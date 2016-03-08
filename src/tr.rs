@@ -302,6 +302,7 @@ impl Translator {
 
     #[inline]
     fn set_loc(&mut self, loc: &Loc) {
+        self.trans_comments(loc.end);
         self.last_loc = *loc;
     }
 
@@ -616,7 +617,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_lifetime_defs(&mut self, lifetime_defs: &Vec<rst::LifetimeDef>) -> Vec<LifetimeDef> {
         trans_list!(self, lifetime_defs, trans_lifetime_def)
     }
@@ -630,7 +630,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_lifetimes(&mut self, lifetimes: &Vec<rst::Lifetime>) -> Vec<Lifetime> {
         trans_list!(self, lifetimes, trans_lifetime)
     }
@@ -642,7 +641,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_type_params(&mut self, type_params: &[rst::TyParam]) -> Vec<TypeParam> {
         trans_list!(self, type_params, trans_type_param)
     }
@@ -651,10 +649,7 @@ impl Translator {
         let loc = self.loc(&type_param.span);
         let name = ident_to_string(&type_param.ident);
         let bounds = self.trans_type_param_bounds(&type_param.bounds);
-        let default = match type_param.default {
-            Some(ref ty) => Some(self.trans_type(ty)),
-            None => None,
-        };
+        let default = zopt::map_ref_mut(&type_param.default, |ty| self.trans_type(ty));
         self.set_loc(&loc);
 
         TypeParam {
@@ -665,7 +660,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_type_param_bounds(&mut self, bounds: &[rst::TyParamBound]) -> Vec<TypeParamBound> {
         trans_list!(self, bounds, trans_type_param_bound)
     }
@@ -704,14 +698,12 @@ impl Translator {
         self.trans_path(&trait_ref.path)
     }
 
-    #[inline]
     fn trans_where(&mut self, predicates: &Vec<rst::WherePredicate>) -> Where {
         Where {
             clauses: self.trans_where_clauses(predicates),
         }
     }
 
-    #[inline]
     fn trans_where_clauses(&mut self, predicates: &Vec<rst::WherePredicate>) -> Vec<WhereClause> {
         trans_list!(self, predicates, trans_where_clause)
     }
