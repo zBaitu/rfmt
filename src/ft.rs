@@ -1645,15 +1645,14 @@ impl Formatter {
 
     fn fmt_block(&mut self, block: &Block) {
         if block.is_unsafe {
-            self.insert("unsafe");
+            self.raw_insert("unsafe");
         }
 
         if block.stmts.is_empty() {
-            self.insert(" {}");
-            return;
+            self.raw_insert(" {}");
+        } else {
+            fmt_block!(self, &block.stmts, fmt_stmts);
         }
-
-        fmt_block!(self, &block.stmts, fmt_stmts);
     }
 
     fn fmt_stmts(&mut self, stmts: &Vec<Stmt>) {

@@ -1356,12 +1356,10 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_stmts(&mut self, stmts: &Vec<rst::P<rst::Stmt>>) -> Vec<Stmt> {
         trans_list!(self, stmts, trans_stmt)
     }
 
-    #[inline]
     fn trans_stmt(&mut self, stmt: &rst::P<rst::Stmt>) -> Stmt {
         let loc = self.loc(&stmt.span);
         let stmt = match stmt.node {
@@ -1398,14 +1396,9 @@ impl Translator {
         let loc = self.loc(&local.span);
         let attrs = self.trans_thin_attrs(&local.attrs);
         let pat = self.trans_patten(&local.pat);
-        let ty = match local.ty {
-            Some(ref ty) => Some(self.trans_type(ty)),
-            None => None,
-        };
-        let init = match local.init {
-            Some(ref init) => Some(self.trans_expr(init)),
-            None => None,
-        };
+        let ty = zopt::map_ref_mut(&local.ty, |ty| self.trans_type(ty));
+        let init = zopt::map_ref_mut(&local.init, |expr| self.trans_expr(expr));
+        self.set_loc(&loc);
 
         Local {
             loc: loc,
@@ -1416,6 +1409,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_thin_attrs(&mut self, attrs: &rst::ThinAttributes) -> Vec<AttrKind> {
         match *attrs {
             Some(ref attrs) => self.trans_attrs(attrs),
@@ -1423,7 +1417,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_pattens(&mut self, pats: &Vec<rst::P<rst::Pat>>) -> Vec<Patten> {
         trans_list!(self, pats, trans_patten)
     }

@@ -1,7 +1,7 @@
 fn f() -> bool {
-    let a;
+    let a; // aaaaa
     a = true;
     if true {} else {}
     a!();
-    true
+    true // ddddddddd
 }
