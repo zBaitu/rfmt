@@ -1,8 +1,9 @@
 pub struct Point {
-    pub x: i32,
+    pub x: i32, // a
 
-    y: i32,
-}
+    // b
+    y: i32, // c
+} // aaaaaaaaaaa
 struct A(bool,      pub i32, str, 
          String,
          [[bool]]);

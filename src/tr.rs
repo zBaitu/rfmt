@@ -817,7 +817,13 @@ impl Translator {
         }
     }
 
-    #[inline]
+    fn trans_qself(&mut self, qself: &rst::QSelf) -> QSelf {
+        QSelf {
+            ty: self.trans_type(&qself.ty),
+            pos: qself.position,
+        }
+    }
+
     fn trans_types(&mut self, types: &[rst::P<rst::Ty>]) -> Vec<Type> {
         trans_list!(self, types, trans_type)
     }
@@ -862,23 +868,10 @@ impl Translator {
         }
     }
 
-    fn trans_qself(&mut self, qself: &rst::QSelf) -> QSelf {
-        QSelf {
-            ty: self.trans_type(&qself.ty),
-            pos: qself.position,
-        }
-    }
-
     fn trans_path_type(&mut self, qself: &Option<rst::QSelf>, path: &rst::Path) -> PathType {
-        let qself = match *qself {
-            Some(ref qself) => Some(self.trans_qself(&qself)),
-            None => None,
-        };
-        let path = self.trans_path(path);
-
         PathType {
-            qself: qself,
-            path: path,
+            qself: zopt::map_ref_mut(qself, |qself| self.trans_qself(qself)),
+            path: self.trans_path(path),
         }
     }
 
@@ -890,17 +883,10 @@ impl Translator {
     }
 
     fn trans_ref_type(&mut self, lifetime: &Option<rst::Lifetime>, mut_type: &rst::MutTy) -> RefType {
-        let lifetime = match *lifetime {
-            Some(ref lifetime) => Some(self.trans_lifetime(lifetime)),
-            None => None,
-        };
-        let is_mut = is_mut(mut_type.mutbl);
-        let ty = self.trans_type(&mut_type.ty);
-
         RefType {
-            lifetime: lifetime,
-            is_mut: is_mut,
-            ty: ty,
+            lifetime: zopt::map_ref_mut(lifetime, |lifetime| self.trans_lifetime(lifetime)),
+            is_mut: is_mut(mut_type.mutbl),
+            ty: self.trans_type(&mut_type.ty),
         }
     }
 
@@ -952,7 +938,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_foreign_items(&mut self, items: &Vec<rst::P<rst::ForeignItem>>) -> Vec<ForeignItem> {
         trans_list!(self, items, trans_foreign_item)
     }
@@ -1036,7 +1021,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_struct_fields(&mut self, fields: &Vec<rst::StructField>) -> Vec<StructField> {
         trans_list!(self, fields, trans_struct_field)
     }
@@ -1063,7 +1047,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_tuple_fields(&mut self, fields: &Vec<rst::StructField>) -> Vec<TupleField> {
         trans_list!(self, fields, trans_tuple_field)
     }
@@ -1102,7 +1085,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_enum_fields(&mut self, variants: &Vec<rst::P<rst::Variant>>) -> Vec<EnumField> {
         trans_list!(self, variants, trans_enum_field)
     }
@@ -1112,10 +1094,7 @@ impl Translator {
         let attrs = self.trans_attrs(&variant.node.attrs);
         let name = ident_to_string(&variant.node.name);
         let body = self.trans_struct_body(&variant.node.data);
-        let expr = match variant.node.disr_expr {
-            Some(ref expr) => Some(self.trans_expr(expr)),
-            None => None,
-        };
+        let expr = zopt::map_ref_mut(&variant.node.disr_expr, |expr| self.trans_expr(expr));
         self.set_loc(&loc);
 
         EnumField {

@@ -11,6 +11,8 @@ type a = &'a mut bool;
 type a = [bool];
 type a = [[bool]];
 type a = [bool; 8];
+type a = [usize;
+8];
 
 type a = &[bool];
 type a = &'a bool;

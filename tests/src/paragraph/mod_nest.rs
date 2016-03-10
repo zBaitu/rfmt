@@ -16,6 +16,7 @@ mod c {
 } // c
 
 mod e {
+    // eeeeeeeeee
 }
 
 mod f {} // aaaaa
