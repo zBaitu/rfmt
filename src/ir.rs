@@ -521,19 +521,6 @@ pub struct MethodTraitItem {
 }
 
 #[derive(Debug)]
-pub struct MethodSig {
-    pub generics: Generics,
-    pub fn_sig: FnSig,
-    pub sf: Option<Sf>,
-}
-
-#[derive(Debug)]
-pub enum Sf {
-    String(String),
-    Type(Type),
-}
-
-#[derive(Debug)]
 pub struct ImplDefault {
     pub is_unsafe: bool,
     pub trait_ref: TraitRef,
@@ -612,6 +599,19 @@ pub struct Arg {
     pub loc: Loc,
     pub pat: Patten,
     pub ty: Type,
+}
+
+#[derive(Debug)]
+pub struct MethodSig {
+    pub generics: Generics,
+    pub sf: Option<Sf>,
+    pub fn_sig: FnSig,
+}
+
+#[derive(Debug)]
+pub enum Sf {
+    String(String),
+    Type(Type),
 }
 
 #[derive(Debug)]

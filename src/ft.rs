@@ -136,15 +136,10 @@ impl Display for MetaItem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(Display::fmt(&self.name, f));
         if let Some(ref items) = self.items {
-            try!(display_meta_items(f, &**items));
+            try!(display_lists!(f, "(", ", ", ")", &**items));
         }
         Ok(())
     }
-}
-
-#[inline]
-fn display_meta_items(f: &mut fmt::Formatter, items: &Vec<MetaItem>) -> fmt::Result {
-    display_lists!(f, "(", ", ", ")", items)
 }
 
 impl Display for ExternCrate {
@@ -162,16 +157,11 @@ impl Display for Use {
             if self.names.len() == 1 {
                 try!(write!(f, "{}", self.names[0]))
             } else {
-                try!(display_use_names(f, &self.names));
+                try!(display_lists!(f, "{{", ", ", "}}", &self.names));
             }
         }
         Ok(())
     }
-}
-
-#[inline]
-fn display_use_names(f: &mut fmt::Formatter, names: &Vec<Chunk>) -> fmt::Result {
-    display_lists!(f, "{{", ", ", "}}", names)
 }
 
 impl Display for ModDecl {
@@ -180,45 +170,15 @@ impl Display for ModDecl {
     }
 }
 
-//
-// impl Display for TypeAlias {
-// fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-// write!(f, "type {}{} = {};", self.name, self.generics, self.ty)
-// }
-// }
-//
-// impl Display for Generics {
-// fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-// if self.is_empty() {
-// return Ok(());
-// } else {
-// try!(display_lists!(f, "<", ", ", ">", &self.lifetime_defs, &self.type_params));
-// }
-//
-// if !self.wh.is_empty() {
-// try!(write!(f, " "));
-// try!(Display::fmt(&self.wh, f));
-// }
-//
-// Ok(())
-// }
-// }
-//
-
 impl Display for LifetimeDef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(write!(f, "{}", self.lifetime));
         if !self.bounds.is_empty() {
             try!(write!(f, ": "));
-            try!(display_lifetime_def_bounds(f, &self.bounds));
+            try!(display_lists!(f, " + ", &self.bounds))
         }
         Ok(())
     }
-}
-
-#[inline]
-fn display_lifetime_def_bounds(f: &mut fmt::Formatter, bounds: &Vec<Lifetime>) -> fmt::Result {
-    display_lists!(f, " + ", bounds)
 }
 
 impl Display for TypeParam {
@@ -269,13 +229,8 @@ fn display_for_liftime_defs(f: &mut fmt::Formatter, lifetime_defs: &Vec<Lifetime
 
 impl Display for Where {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        display_where_clauses(f, &self.clauses)
+        display_lists!(f, ", ", &self.clauses)
     }
-}
-
-#[inline]
-fn display_where_clauses(f: &mut fmt::Formatter, clauses: &Vec<WhereClause>) -> fmt::Result {
-    display_lists!(f, ", ", clauses)
 }
 
 impl Display for WhereClause {
@@ -524,6 +479,7 @@ impl Display for Patten {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.pat {
             PattenKind::Ident(ref pat) => Display::fmt(pat, f),
+            PattenKind::Tuple(ref pat) => Display::fmt(pat, f),
             _ => Debug::fmt(self, f),
         }
     }
@@ -536,6 +492,12 @@ impl Display for IdentPatten {
             try!(write!(f, " @ {}", pat));
         }
         Ok(())
+    }
+}
+
+impl Display for TuplePatten {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_lists!(f, "(", ", ", ")", &self.pats)
     }
 }
 

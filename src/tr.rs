@@ -1193,39 +1193,6 @@ impl Translator {
         }
     }
 
-    fn trans_method_sig(&mut self, method_sig: &rst::MethodSig) -> MethodSig {
-        MethodSig {
-            generics: self.trans_generics(&method_sig.generics),
-            fn_sig: self.trans_fn_sig(&method_sig.decl),
-            sf: self.trans_self(&method_sig.explicit_self.node),
-        }
-    }
-
-    fn trans_self(&mut self, explicit_self: &rst::ExplicitSelf_) -> Option<Sf> {
-        match *explicit_self {
-            rst::SelfStatic => None,
-            rst::SelfValue(_) => Some(Sf::String("self".to_string())),
-            rst::SelfRegion(lifetime, mutbl, _) => {
-                let mut s = String::new();
-                s.push_str("&");
-
-                if let Some(ref lifetime) = lifetime {
-                    let lifetime = self.trans_lifetime(lifetime);
-                    s.push_str(&lifetime.s);
-                    s.push_str(" ");
-                }
-
-                if is_mut(mutbl) {
-                    s.push_str("mut ");
-                }
-
-                s.push_str("self");
-                Some(Sf::String(s))
-            }
-            rst::SelfExplicit(ref ty, _) => Some(Sf::Type(self.trans_type(ty))),
-        }
-    }
-
     fn trans_impl_default(&mut self, is_unsafe: bool, trait_ref: &rst::TraitRef) -> ImplDefault {
         ImplDefault {
             is_unsafe: is_unsafe,
@@ -1322,7 +1289,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_args(&mut self, inputs: &Vec<rst::Arg>) -> Vec<Arg> {
         trans_list!(self, inputs, trans_arg)
     }
@@ -1341,6 +1307,36 @@ impl Translator {
             rst::FunctionRetTy::DefaultReturn(_) => FnReturn::Unit,
             rst::FunctionRetTy::NoReturn(_) => FnReturn::Diverge,
             rst::FunctionRetTy::Return(ref ty) => FnReturn::Normal(self.trans_type(ty)),
+        }
+    }
+
+    fn trans_method_sig(&mut self, method_sig: &rst::MethodSig) -> MethodSig {
+        MethodSig {
+            generics: self.trans_generics(&method_sig.generics),
+            sf: self.trans_self(&method_sig.explicit_self.node),
+            fn_sig: self.trans_fn_sig(&method_sig.decl),
+        }
+    }
+
+    fn trans_self(&mut self, explicit_self: &rst::ExplicitSelf_) -> Option<Sf> {
+        match *explicit_self {
+            rst::SelfStatic => None,
+            rst::SelfValue(_) => Some(Sf::String("self".to_string())),
+            rst::SelfRegion(lifetime, mutbl, _) => {
+                let mut s = String::new();
+                s.push_str("&");
+                if let Some(ref lifetime) = lifetime {
+                    let lifetime = self.trans_lifetime(lifetime);
+                    s.push_str(&lifetime.s);
+                    s.push_str(" ");
+                }
+                if is_mut(mutbl) {
+                    s.push_str("mut ");
+                }
+                s.push_str("self");
+                Some(Sf::String(s))
+            }
+            rst::SelfExplicit(ref ty, _) => Some(Sf::Type(self.trans_type(ty))),
         }
     }
 
