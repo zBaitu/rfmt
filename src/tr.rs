@@ -1132,7 +1132,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_trait_items(&mut self, items: &Vec<rst::P<rst::TraitItem>>) -> Vec<TraitItem> {
         trans_list!(self, items, trans_trait_item)
     }
@@ -1164,48 +1163,33 @@ impl Translator {
     fn trans_const_trait_item(&mut self, ident: String, ty: &rst::Ty,
                               expr: &Option<rst::P<rst::Expr>>)
         -> ConstTraitItem {
-        let expr = match *expr {
-            Some(ref expr) => Some(self.trans_expr(expr)),
-            None => None,
-        };
-
         ConstTraitItem {
             name: ident,
             ty: self.trans_type(ty),
-            expr: expr,
+            expr: zopt::map_ref_mut(expr, |expr| self.trans_expr(expr)),
         }
     }
 
     fn trans_type_trait_item(&mut self, ident: String, bounds: &rst::TyParamBounds,
                              ty: &Option<rst::P<rst::Ty>>)
         -> TypeTraitItem {
-        let ty = match *ty {
-            Some(ref ty) => Some(self.trans_type(ty)),
-            None => None,
-        };
-
         TypeTraitItem {
             name: ident,
             bounds: self.trans_type_param_bounds(bounds),
-            ty: ty,
+            ty: zopt::map_ref_mut(ty, |ty| self.trans_type(ty)),
         }
     }
 
     fn trans_method_trait_item(&mut self, ident: String, method_sig: &rst::MethodSig,
                                block: &Option<rst::P<rst::Block>>)
         -> MethodTraitItem {
-        let block = match *block {
-            Some(ref block) => Some(self.trans_block(block)),
-            None => None,
-        };
-
         MethodTraitItem {
             is_unsafe: is_unsafe(method_sig.unsafety),
             is_const: is_const(method_sig.constness),
             abi: abi_to_string(method_sig.abi),
             name: ident,
             method_sig: self.trans_method_sig(method_sig),
-            block: block,
+            block: zopt::map_ref_mut(block, |block| self.trans_block(block)),
         }
     }
 
@@ -1253,22 +1237,16 @@ impl Translator {
                   trait_ref: &Option<rst::TraitRef>, ty: &rst::Ty,
                   items: &Vec<rst::P<rst::ImplItem>>)
         -> Impl {
-        let trait_ref = match *trait_ref {
-            Some(ref trait_ref) => Some(self.trans_trait_ref(trait_ref)),
-            None => None,
-        };
-
         Impl {
             is_unsafe: is_unsafe,
             is_neg: is_neg,
             generics: self.trans_generics(generics),
-            trait_ref: trait_ref,
+            trait_ref: zopt::map_ref_mut(trait_ref, |trait_ref| self.trans_trait_ref(trait_ref)),
             ty: self.trans_type(ty),
             items: self.trans_impl_items(items),
         }
     }
 
-    #[inline]
     fn trans_impl_items(&mut self, items: &Vec<rst::P<rst::ImplItem>>) -> Vec<ImplItem> {
         trans_list!(self, items, trans_impl_item)
     }

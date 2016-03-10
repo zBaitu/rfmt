@@ -44,6 +44,13 @@ macro_rules! need_wrap {
     });
 }
 
+#[macro_export]
+macro_rules! need_nl_indent {
+    ($ts:expr, $($s:expr),+) => ({
+        $ts.need_nl_indent(&[$($s),+])
+    });
+}
+
 macro_rules! raw_insert {
     ($sf:expr, $s:expr) => ({
         $sf.s.push_str($s);
@@ -88,8 +95,8 @@ impl Typesetter {
     }
 
     #[inline]
-    pub fn need_wrap_len(&self, len: usize) -> bool {
-        (self.left() <= 0) || (len > self.left() && len <= self.nl_left())
+    pub fn need_nl_indent(&self, list: &[&str]) -> bool {
+        self.need_nl_indent_len(list.iter().map(|s| s.len()).sum())
     }
 
     #[inline]
@@ -152,6 +159,16 @@ impl Typesetter {
     }
 
     #[inline]
+    fn need_wrap_len(&self, len: usize) -> bool {
+        (self.left() <= 0) || (len > self.left() && len <= self.nl_left())
+    }
+
+    #[inline]
+    fn need_nl_indent_len(&self, len: usize) -> bool {
+        (self.left() <= 0) || (len > self.left() && len <= self.nl_indent_left())
+    }
+
+    #[inline]
     fn left(&self) -> usize {
         minus_nf!(MAX_WIDTH, self.col)
     }
@@ -181,6 +198,11 @@ impl Typesetter {
     #[inline]
     fn nl_wrap_left(&self) -> usize {
         minus_nf!(MAX_WIDTH, self.indent.len() + WRAP_INDENT.len())
+    }
+
+    #[inline]
+    fn nl_indent_left(&self) -> usize {
+        minus_nf!(MAX_WIDTH, self.indent.len())
     }
 
     #[inline]
