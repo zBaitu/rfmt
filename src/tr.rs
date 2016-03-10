@@ -320,7 +320,7 @@ impl Translator {
             return cmnts;
         }
         let cmnt = &self.cmnts[self.cmnt_idx];
-        if cmnt.pos >= pos || cmnt.kind != CommentKind::Trailing {
+        if cmnt.pos > pos || cmnt.kind != CommentKind::Trailing {
             return cmnts;
         }
         self.cmnt_idx += 1;
@@ -1360,6 +1360,7 @@ impl Translator {
         trans_list!(self, stmts, trans_stmt)
     }
 
+    #[inline]
     fn trans_stmt(&mut self, stmt: &rst::P<rst::Stmt>) -> Stmt {
         let loc = self.loc(&stmt.span);
         let stmt = match stmt.node {
@@ -1549,12 +1550,11 @@ impl Translator {
 
     fn expr_to_stmt(&mut self, expr: Expr) -> Stmt {
         Stmt {
-            loc: Default::default(),
+            loc: expr.loc,
             stmt: StmtKind::Expr(expr, false),
         }
     }
 
-    #[inline]
     fn trans_exprs(&mut self, exprs: &[rst::P<rst::Expr>]) -> Vec<Expr> {
         trans_list!(self, exprs, trans_expr)
     }

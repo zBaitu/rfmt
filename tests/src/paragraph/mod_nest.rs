@@ -13,6 +13,7 @@ mod c {
     mod g; // g
 
     type a = bool; // ca
+    // zzzzzzzzzzzzzzzz
 } // c
 
 mod e {

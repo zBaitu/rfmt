@@ -1661,6 +1661,7 @@ impl Formatter {
         }
     }
 
+    #[inline]
     fn fmt_stmt(&mut self, stmt: &Stmt) {
         match stmt.stmt {
             StmtKind::Decl(ref decl) => self.fmt_decl_stmt(decl),
@@ -1668,6 +1669,7 @@ impl Formatter {
             StmtKind::Macro(ref mac, is_semi) => self.fmt_macro_stmt(mac, is_semi),
         }
 
+        self.try_fmt_trailing_comment(&stmt.loc);
         self.nl();
     }
 
@@ -1684,7 +1686,7 @@ impl Formatter {
         self.fmt_attrs(&local.attrs);
         self.insert_indent();
 
-        self.insert("let ");
+        self.raw_insert("let ");
         self.fmt_patten(&local.pat);
         if let Some(ref ty) = local.ty {
             maybe_wrap!(self, ": ", ":", ty, fmt_type);
@@ -2157,8 +2159,8 @@ impl Formatter {
         self.try_fmt_leading_comments(&stmt.loc);
         self.fmt_attrs(&stmt.attrs);
         self.insert_indent();
-        self.fmt_macro(&stmt.mac);
 
+        self.fmt_macro(&stmt.mac);
         if is_semi {
             self.raw_insert(";");
         }
@@ -2179,7 +2181,6 @@ impl Formatter {
             if i > 0 {
                 insert_sep!(self, mac.seps[i - 1], expr);
             }
-
             self.fmt_expr(expr);
         }
         self.insert_unmark_align(close);

@@ -56,7 +56,7 @@ macro_rules! raw_insert {
         $sf.s.push_str($s);
 
         $sf.col += $s.len();
-        if $sf.col > MAX_WIDTH {
+        if $sf.col > MAX_WIDTH + 1 {
             $sf.exceed_lines.insert($sf.line);
         }
     });

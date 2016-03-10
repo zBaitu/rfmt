@@ -1,3 +1,3 @@
-#[test]
-/// a
-pub mod a;
+mod a {
+    type a = bool; // aaaaaaaaaaa
+}
