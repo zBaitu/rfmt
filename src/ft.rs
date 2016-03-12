@@ -102,7 +102,7 @@ macro_rules! display_lists {
         let mut first = true;
         $(for e in $lists {
             if !first {
-                try!(write!($f, $sep));
+                try!(write!($f, "{}", $sep));
             }
             try!(Display::fmt(e, $f));
             first = false;
@@ -337,7 +337,7 @@ impl Display for Type {
             TypeKind::Sum(ref ty) => Display::fmt(ty, f),
             TypeKind::PolyTraitRef(ref ty) => Display::fmt(ty, f),
             TypeKind::Macro(ref ty) => Debug::fmt(ty, f),
-            TypeKind::Infer => display_infer_type(f),
+            TypeKind::Infer => write!(f, "_"),
         }
     }
 }
@@ -403,10 +403,6 @@ impl Display for PolyTraitRefType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         display_type_param_bounds(f, &self.bounds)
     }
-}
-
-fn display_infer_type(f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "_")
 }
 
 //
@@ -487,10 +483,25 @@ impl Display for Sf {
 impl Display for Patten {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.pat {
+            PattenKind::Wildcard => write!(f, "_"),
+            PattenKind::Literal(ref pat) => Display::fmt(pat, f),
+            PattenKind::Range(ref pat) => Display::fmt(pat, f),
             PattenKind::Ident(ref pat) => Display::fmt(pat, f),
+            PattenKind::Ref(ref pat) => Display::fmt(pat, f),
+            PattenKind::Path(ref pat) => Display::fmt(pat, f),
+            PattenKind::Enum(ref pat) => Display::fmt(pat, f),
+            PattenKind::Struct(ref pat) => Debug::fmt(pat, f),
+            PattenKind::Vec(ref pat) => Debug::fmt(pat, f),
             PattenKind::Tuple(ref pat) => Display::fmt(pat, f),
-            _ => Debug::fmt(self, f),
+            PattenKind::Box(ref pat) => write!(f, "box {}", pat),
+            PattenKind::Macro(ref pat) => Display::fmt(pat, f),
         }
+    }
+}
+
+impl Display for RangePatten {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}...{}", self.start, self.end)
     }
 }
 
@@ -504,6 +515,39 @@ impl Display for IdentPatten {
     }
 }
 
+impl Display for RefPatten {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", ref_head(&None, self.is_mut), self.pat)
+    }
+}
+
+impl Display for PathPatten {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_qself(f, &self.qself, &self.path)
+    }
+}
+
+impl Display for EnumPatten {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(Display::fmt(&self.path, f));
+        match self.pats {
+            Some(ref pats) => display_lists!(f, "(", ", ", ")", pats),
+            None => write!(f, "(..)"),
+        }
+    }
+}
+
+impl Display for VecPatten {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let emit = if let Some(_) = self.emit {
+            vec![Chunk::new("..")]
+        } else {
+            Vec::new()
+        };
+        display_lists!(f, "[", ", ", "]", &self.start, &emit, &self.end)
+    }
+}
+
 impl Display for TuplePatten {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         display_lists!(f, "(", ", ", ")", &self.pats)
@@ -513,15 +557,58 @@ impl Display for TuplePatten {
 impl Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.expr {
-            ExprKind::Literal(ref chunk) => Display::fmt(chunk, f),
+            ExprKind::Literal(ref expr) => Display::fmt(expr, f),
+            ExprKind::Path(ref expr) => Display::fmt(expr, f),
+            ExprKind::Unary(ref expr) => Display::fmt(expr, f),
+            ExprKind::Ref(ref expr) => Display::fmt(expr, f),
+            ExprKind::List(ref expr) => Display::fmt(expr, f),
+            ExprKind::FixedSizeArray(ref expr) => Display::fmt(expr, f),
+            ExprKind::Vec(ref exprs) => display_lists!(f, "[", ", ", "]", &**exprs),
+            ExprKind::Tuple(ref exprs) => display_lists!(f, "(", ", ", ")", &**exprs),
+            ExprKind::Range(ref expr) => Display::fmt(expr, f),
+            ExprKind::Box(ref expr) => Display::fmt(expr, f),
+            ExprKind::Cast(ref expr) => Display::fmt(expr, f),
+            ExprKind::Type(ref expr) => Display::fmt(expr, f),
+            ExprKind::Macro(ref expr) => Display::fmt(expr, f),
             _ => Debug::fmt(self, f),
         }
+    }
+}
+
+impl Display for UnaryExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", self.op, self.expr)
+    }
+}
+
+impl Display for RefExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", ref_head(&None, self.is_mut), self.expr)
+    }
+}
+
+impl Display for ListExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let sep = format!(" {} ", self.sep);
+        display_lists!(f, sep, &self.exprs)
+    }
+}
+
+impl Display for FixedSizeArrayExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[{}; {}]", &self.init, &self.len)
     }
 }
 
 impl Display for FieldAccessExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}.{}", self.expr, self.field.s)
+    }
+}
+
+impl Display for IndexExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}[{}]", self.obj, self.index)
     }
 }
 
@@ -535,6 +622,46 @@ impl Display for RangeExpr {
             try!(write!(f, "{}", end));
         }
         Ok(())
+    }
+}
+
+impl Display for BoxExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "box {}", self.expr)
+    }
+}
+
+impl Display for CastExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} as {}", self.expr, self.ty)
+    }
+}
+
+impl Display for TypeExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}: {}", self.expr, self.ty)
+    }
+}
+
+impl Display for Macro {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let (open, close) = match self.style {
+            MacroStyle::Paren => ("(", ")"),
+            MacroStyle::Bracket => ("[", "]"),
+            MacroStyle::Brace => ("{", "}"),
+        };
+
+        try!(write!(f, "{}!", self.name));
+        try!(write!(f, "{}", open));
+        let expr_len = self.exprs.len();
+        for i in 0..expr_len {
+            let expr = &self.exprs[i];
+            if i > 0 {
+                try!(write!(f, "{}", self.seps[i - 1]));
+            }
+            try!(Display::fmt(expr, f));
+        }
+        write!(f, "{}", close)
     }
 }
 
@@ -1695,7 +1822,7 @@ impl Formatter {
         maybe_nl!(self, pat);
         match pat.pat {
             PattenKind::Wildcard => self.insert("_"),
-            PattenKind::Literal(ref expr) => self.fmt_expr(expr),
+            PattenKind::Literal(ref pat) => self.fmt_expr(pat),
             PattenKind::Range(ref pat) => self.fmt_range_patten(pat),
             PattenKind::Ident(ref pat) => self.fmt_ident_patten(pat),
             PattenKind::Ref(ref pat) => self.fmt_ref_patten(pat),
@@ -1757,7 +1884,7 @@ impl Formatter {
         self.fmt_path(&pat.path);
 
         if pat.fields.is_empty() {
-            self.raw_insert(" {}");
+            self.raw_insert("{}");
             return;
         }
 
