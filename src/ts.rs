@@ -94,12 +94,24 @@ impl Typesetter {
 
     #[inline]
     pub fn need_wrap(&self, list: &[&str]) -> bool {
-        self.need_wrap_len(list.iter().map(|s| s.len()).sum())
+        let prefix_len = if list.len() > 1 {
+            list.iter().take(list.len() - 1).map(|s| s.len()).sum()
+        } else {
+            0
+        };
+        let len = list.iter().map(|s| s.len()).sum();
+        self.need_wrap_len(prefix_len, len)
     }
 
     #[inline]
     pub fn need_nl_indent(&self, list: &[&str]) -> bool {
-        self.need_nl_indent_len(list.iter().map(|s| s.len()).sum())
+        let prefix_len = if list.len() > 1 {
+            list.iter().take(list.len() - 1).map(|s| s.len()).sum()
+        } else {
+            0
+        };
+        let len = list.iter().map(|s| s.len()).sum();
+        self.need_nl_indent_len(prefix_len, len)
     }
 
     #[inline]
@@ -162,13 +174,13 @@ impl Typesetter {
     }
 
     #[inline]
-    fn need_wrap_len(&self, len: usize) -> bool {
-        (self.left() <= 0) || (len > self.left() && len <= self.nl_left())
+    fn need_wrap_len(&self, prefix_len: usize, len: usize) -> bool {
+        (minus_nf!(self.left(), prefix_len) <= 0) || (len > self.left() && len <= self.nl_left())
     }
 
     #[inline]
-    fn need_nl_indent_len(&self, len: usize) -> bool {
-        (self.left() <= 0) || (len > self.left() && len <= self.nl_indent_left())
+    fn need_nl_indent_len(&self, prefix_len: usize, len: usize) -> bool {
+        (minus_nf!(self.left(), prefix_len) <= 0) || (len > self.left() && len <= self.nl_indent_left())
     }
 
     #[inline]

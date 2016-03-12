@@ -2299,7 +2299,12 @@ impl Formatter {
 
         self.fmt_closure_fn_arg(&expr.fn_sig.arg);
         self.fmt_fn_return(&expr.fn_sig.ret);
-        self.fmt_block(&expr.block);
+
+        if expr.block.stmts.len() > 1 {
+            self.fmt_block(&expr.block);
+        } else {
+            self.fmt_closure_stmt(&expr.block.stmts[0]);
+        }
     }
 
     #[inline]
@@ -2326,13 +2331,27 @@ impl Formatter {
 
     #[inline]
     fn fmt_closure_arg(&mut self, arg: &Arg) {
+        maybe_nl!(self, arg);
         maybe_wrap!(self, arg);
+
         self.fmt_patten(&arg.pat);
         if let TypeKind::Infer = arg.ty.ty {
             return;
         } else {
             maybe_wrap!(self, ": ", ":", arg.ty, fmt_type);
         }
+    }
+
+    #[inline]
+    fn fmt_closure_stmt(&mut self, stmt: &Stmt) {
+        self.try_fmt_leading_comments(&stmt.loc);
+        match stmt.stmt {
+            StmtKind::Expr(ref expr, is_semi) if !is_semi => {
+                maybe_wrap!(self, " ", "", expr, fmt_expr)
+            }
+            _ => unreachable!(),
+        }
+        self.try_fmt_trailing_comment(&stmt.loc);
     }
 
     #[inline]

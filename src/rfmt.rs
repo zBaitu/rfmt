@@ -42,6 +42,7 @@ pub fn fmt(path: PathBuf, recursive: bool) {
 
     //p!("{:#?}", sess.codemap().files.borrow());
     let result = tr::trans(sess, krate, cmnts);
+    p!("{:#?}", result.krate);
     /*
     p!("=========================================================================================\
         ===========");
