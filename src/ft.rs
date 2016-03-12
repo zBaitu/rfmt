@@ -405,20 +405,6 @@ impl Display for PolyTraitRefType {
     }
 }
 
-//
-// impl Display for ForeignStatic {
-// fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-// write!(f, "{}{}: {}", static_head(self.is_mut), self.name, self.ty)
-// }
-// }
-//
-// impl Display for ForeignFn {
-// fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-// write!(f, "fn {}{}{}", self.name, self.generics, self.fn_sig)
-// }
-// }
-//
-
 impl Display for TupleField {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.is_pub {
@@ -565,7 +551,9 @@ impl Display for Expr {
             ExprKind::FixedSizeArray(ref expr) => Display::fmt(expr, f),
             ExprKind::Vec(ref exprs) => display_lists!(f, "[", ", ", "]", &**exprs),
             ExprKind::Tuple(ref exprs) => display_lists!(f, "(", ", ", ")", &**exprs),
+            ExprKind::FieldAccess(ref expr) => Display::fmt(expr, f),
             ExprKind::Range(ref expr) => Display::fmt(expr, f),
+            ExprKind::Index(ref expr) => Display::fmt(expr, f),
             ExprKind::Box(ref expr) => Display::fmt(expr, f),
             ExprKind::Cast(ref expr) => Display::fmt(expr, f),
             ExprKind::Type(ref expr) => Display::fmt(expr, f),
@@ -807,7 +795,12 @@ macro_rules! fmt_lists {
 macro_rules! fmt_block {
     ($sf:expr, $items: expr, $block:expr, $fmt:ident) => ({
         if $items.is_empty() {
-            $sf.raw_insert("{}");
+            if $sf.block_non_sep {
+                $sf.raw_insert("{}");
+                $sf.block_non_sep = false;
+            } else {
+                $sf.raw_insert(" {}");
+            }
             return;
         }
 
@@ -1785,12 +1778,12 @@ impl Formatter {
 
     #[inline]
     fn fmt_stmt(&mut self, stmt: &Stmt) {
+        self.try_fmt_leading_comments(&stmt.loc);
         match stmt.stmt {
             StmtKind::Decl(ref decl) => self.fmt_decl_stmt(decl),
             StmtKind::Expr(ref expr, is_semi) => self.fmt_expr_stmt(expr, is_semi),
             StmtKind::Macro(ref mac, is_semi) => self.fmt_macro_stmt(mac, is_semi),
         }
-
         self.try_fmt_trailing_comment(&stmt.loc);
         self.nl();
     }
@@ -2152,9 +2145,9 @@ impl Formatter {
 
     #[inline]
     fn fmt_if_expr(&mut self, expr: &IfExpr) {
+        self.block_non_sep = false;
         self.raw_insert("if ");
         self.fmt_expr(&expr.expr);
-        self.raw_insert(" ");
         self.fmt_block(&expr.block);
         if let Some(ref br) = expr.br {
             self.block_non_sep = true;
@@ -2165,6 +2158,7 @@ impl Formatter {
 
     #[inline]
     fn fmt_if_let_expr(&mut self, expr: &IfLetExpr) {
+        self.block_non_sep = false;
         self.raw_insert("if let ");
         self.fmt_patten(&expr.pat);
         maybe_wrap!(self, " = ", "= ", expr.expr, fmt_expr);
