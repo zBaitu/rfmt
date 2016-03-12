@@ -56,7 +56,7 @@ macro_rules! raw_insert {
         $sf.s.push_str($s);
 
         $sf.col += $s.len();
-        if $sf.col > MAX_WIDTH + 1 {
+        if $sf.col > MAX_WIDTH {
             $sf.exceed_lines.insert($sf.line);
         }
     });
@@ -64,7 +64,10 @@ macro_rules! raw_insert {
 
 impl Typesetter {
     pub fn new() -> Typesetter {
-        Default::default()
+        Typesetter {
+            line: 1,
+            ..Default::default()
+        }
     }
 
     pub fn result(self) -> rfmt::Result {

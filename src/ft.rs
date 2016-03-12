@@ -557,6 +557,8 @@ impl Display for Expr {
             ExprKind::Box(ref expr) => Display::fmt(expr, f),
             ExprKind::Cast(ref expr) => Display::fmt(expr, f),
             ExprKind::Type(ref expr) => Display::fmt(expr, f),
+            ExprKind::FnCall(ref expr) => Display::fmt(expr, f),
+            ExprKind::MethodCall(ref expr) => Display::fmt(expr, f),
             ExprKind::Macro(ref expr) => Display::fmt(expr, f),
             _ => Debug::fmt(self, f),
         }
@@ -628,6 +630,24 @@ impl Display for CastExpr {
 impl Display for TypeExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}: {}", self.expr, self.ty)
+    }
+}
+
+impl Display for FnCallExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(f, "{}", self.name));
+        display_lists!(f, "(", ", ", ")", &self.args)
+    }
+}
+
+impl Display for MethodCallExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(f, "{}.{}", self.obj, self.name));
+        if !self.types.is_empty() {
+            try!(write!(f, "::"));
+            try!(display_lists!(f, "<", ", ", ">", &self.types));
+        }
+        display_lists!(f, "(", ", ", ")", &self.args)
     }
 }
 
@@ -1159,7 +1179,7 @@ impl Formatter {
             ItemKind::Trait(ref item) => self.fmt_trait(item),
             ItemKind::ImplDefault(ref item) => self.fmt_impl_default(item),
             ItemKind::Impl(ref item) => self.fmt_impl(item),
-            ItemKind::Macro(ref item) => self.fmt_chunk(item),
+            ItemKind::Macro(ref item) => self.fmt_macro_item(item),
         }
 
         self.try_fmt_trailing_comment(&item.loc);
@@ -2320,6 +2340,18 @@ impl Formatter {
         self.raw_insert("return");
         if let Some(ref expr) = expr.ret {
             maybe_wrap!(self, " ", "", expr, fmt_expr);
+        }
+    }
+
+    #[inline]
+    fn fmt_macro_item(&mut self, item: &Chunk) {
+        let mut first = true;
+        for line in item.s.split('\n') {
+            if !first {
+                self.nl();
+            }
+            self.raw_insert(line);
+            first = false;
         }
     }
 

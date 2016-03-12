@@ -40,8 +40,9 @@ pub fn fmt(path: PathBuf, recursive: bool) {
                                                                 .to_string(),
                                                             &mut input);
 
-    p!("{:#?}", sess.codemap().files.borrow());
+    //p!("{:#?}", sess.codemap().files.borrow());
     let result = tr::trans(sess, krate, cmnts);
+    /*
     p!("=========================================================================================\
         ===========");
     p!("{:#?}", result.krate);
@@ -49,6 +50,7 @@ pub fn fmt(path: PathBuf, recursive: bool) {
     p!("{:#?}", result.trailing_cmnts);
     p!("-----------------------------------------------------------------------------------------\
         ----------");
+        */
     let result = ft::fmt(result.krate, result.leading_cmnts, result.trailing_cmnts);
     p!(result.s);
     p!("-----------------------------------------------------------------------------------------\
