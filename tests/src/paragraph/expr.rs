@@ -32,7 +32,7 @@ fn f() {
     box a;
     a as bool;
     a: bool;
-    {};
+    {{}};
     { true };
 
     if true {} else if false {} else {}

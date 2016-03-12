@@ -678,8 +678,18 @@ macro_rules! fmt_lists {
 }
 
 macro_rules! fmt_block {
-    ($sf:expr, $block:expr, $fmt:ident) => ({
-        $sf.raw_insert(" {");
+    ($sf:expr, $items: expr, $block:expr, $fmt:ident) => ({
+        if $items.is_empty() {
+            $sf.raw_insert("{}");
+            return;
+        }
+
+        if $sf.block_non_sep {
+            $sf.raw_insert("{");
+            $sf.block_non_sep = false;
+        } else {
+            $sf.raw_insert(" {");
+        }
         $sf.indent();
         $sf.nl();
 
@@ -689,6 +699,10 @@ macro_rules! fmt_block {
         $sf.insert_indent();
         $sf.raw_insert("}");
     });
+
+    ($sf:expr, $items:expr, $fmt:ident) => ({
+        fmt_block!($sf, $items, $items, $fmt);
+    })
 }
 
 macro_rules! fmt_items {
@@ -714,6 +728,7 @@ struct Formatter {
 
     after_indent: bool,
     after_wrap: bool,
+    block_non_sep: bool,
 }
 
 impl Formatter {
@@ -727,6 +742,7 @@ impl Formatter {
 
             after_indent: false,
             after_wrap: false,
+            block_non_sep: false,
         }
     }
 
@@ -1032,12 +1048,7 @@ impl Formatter {
 
     fn fmt_sub_mod(&mut self, item: &Mod) {
         self.insert(&format!("mod {}", &item.name));
-
-        if item.items.is_empty() {
-            self.raw_insert(" {}");
-        } else {
-            fmt_block!(self, item, fmt_mod);
-        }
+        fmt_block!(self, item.items, item, fmt_mod);
     }
 
     fn fmt_type_alias(&mut self, item: &TypeAlias) {
@@ -1292,11 +1303,7 @@ impl Formatter {
 
     fn fmt_foreign_mod(&mut self, item: &ForeignMod) {
         self.insert(&foreign_head(&item.abi));
-        if item.items.is_empty() {
-            self.raw_insert(" {}");
-        } else {
-            fmt_block!(self, &item.items, fmt_foreign_items);
-        }
+        fmt_block!(self, &item.items, fmt_foreign_items);
     }
 
     fn fmt_foreign_items(&mut self, items: &Vec<ForeignItem>) {
@@ -1357,17 +1364,9 @@ impl Formatter {
 
     fn fmt_struct_body(&mut self, body: &StructBody) {
         match *body {
-            StructBody::Struct(ref fields) => self.fmt_struct_field_block(fields),
+            StructBody::Struct(ref fields) => fmt_block!(self, fields, fmt_struct_fields),
             StructBody::Tuple(ref fields) => self.fmt_tuple_fields(fields),
             StructBody::Unit => (),
-        }
-    }
-
-    fn fmt_struct_field_block(&mut self, fields: &Vec<StructField>) {
-        if fields.is_empty() {
-            self.raw_insert(" {}");
-        } else {
-            fmt_block!(self, &fields, fmt_struct_fields);
         }
     }
 
@@ -1405,15 +1404,7 @@ impl Formatter {
     fn fmt_enum(&mut self, item: &Enum) {
         self.insert(&format!("enum {}", item.name));
         self.fmt_generics(&item.generics);
-        self.fmt_enum_body(&item.body);
-    }
-
-    fn fmt_enum_body(&mut self, body: &EnumBody) {
-        if body.fields.is_empty() {
-            self.raw_insert(" {}");
-        } else {
-            fmt_block!(self, &body.fields, fmt_enum_fields);
-        }
+        fmt_block!(self, &item.body.fields, fmt_enum_fields);
     }
 
     fn fmt_enum_fields(&mut self, fields: &Vec<EnumField>) {
@@ -1450,12 +1441,7 @@ impl Formatter {
             self.fmt_type_param_bounds(&item.bounds);
         }
         self.fmt_where(&item.generics.wh);
-
-        if item.items.is_empty() {
-            self.raw_insert(" {}");
-        } else {
-            fmt_block!(self, &item.items, fmt_trait_items);
-        }
+        fmt_block!(self, &item.items, fmt_trait_items);
     }
 
     fn fmt_trait_items(&mut self, items: &Vec<TraitItem>) {
@@ -1527,12 +1513,7 @@ impl Formatter {
             self.fmt_type(&item.ty);
         }
         self.fmt_where(&item.generics.wh);
-
-        if item.items.is_empty() {
-            self.insert(" {}");
-        } else {
-            fmt_block!(self, &item.items, fmt_impl_items);
-        }
+        fmt_block!(self, &item.items, fmt_impl_items);
     }
 
     fn fmt_impl_items(&mut self, items: &Vec<ImplItem>) {
@@ -1666,12 +1647,7 @@ impl Formatter {
         if block.is_unsafe {
             self.raw_insert("unsafe");
         }
-
-        if block.stmts.is_empty() {
-            self.raw_insert(" {}");
-        } else {
-            fmt_block!(self, &block.stmts, fmt_stmts);
-        }
+        fmt_block!(self, &block.stmts, fmt_stmts);
     }
 
     fn fmt_stmts(&mut self, stmts: &Vec<Stmt>) {
@@ -1887,7 +1863,7 @@ impl Formatter {
             ExprKind::Box(ref expr) => self.fmt_box_expr(expr),
             ExprKind::Cast(ref expr) => self.fmt_cast_expr(expr),
             ExprKind::Type(ref expr) => self.fmt_type_expr(expr),
-            ExprKind::Block(ref expr) => self.fmt_block(expr),
+            ExprKind::Block(ref expr) => self.fmt_block_expr(expr),
             ExprKind::If(ref expr) => self.fmt_if_expr(expr),
             ExprKind::IfLet(ref expr) => self.fmt_if_let_expr(expr),
             ExprKind::While(ref expr) => self.fmt_while_expr(expr),
@@ -2042,11 +2018,19 @@ impl Formatter {
     }
 
     #[inline]
+    fn fmt_block_expr(&mut self, expr: &Block) {
+        self.block_non_sep = true;
+        self.fmt_block(expr);
+    }
+
+    #[inline]
     fn fmt_if_expr(&mut self, expr: &IfExpr) {
         self.raw_insert("if ");
         self.fmt_expr(&expr.expr);
+        self.raw_insert(" ");
         self.fmt_block(&expr.block);
         if let Some(ref br) = expr.br {
+            self.block_non_sep = true;
             self.raw_insert(" else ");
             self.fmt_expr(br);
         }
@@ -2059,6 +2043,7 @@ impl Formatter {
         maybe_wrap!(self, " = ", "= ", expr.expr, fmt_expr);
         self.fmt_block(&expr.block);
         if let Some(ref br) = expr.br {
+            self.block_non_sep = true;
             self.raw_insert(" else ");
             self.fmt_expr(br);
         }
@@ -2102,7 +2087,7 @@ impl Formatter {
     #[inline]
     fn fmt_loop_expr(&mut self, expr: &LoopExpr) {
         self.fmt_label(&expr.label);
-        self.raw_insert("loop ");
+        self.raw_insert("loop");
         self.fmt_block(&expr.block);
     }
 

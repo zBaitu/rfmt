@@ -9,4 +9,8 @@ mod a {
 
 fn f(a: bool,
 b: i32,
-c: String) {}
+c: String) {
+    let a = true;
+}
+
+fn ffff(){}
