@@ -19,7 +19,9 @@ fn f() {
 
     C;
     B {};
-    A { a: true, ..Default::default() };
+    A { a: true, // aaaaaaaa
+        ..Default::default() // bbbbbbb
+    }; // ccccccccc
 
     a[0];
     b["a"];
@@ -47,7 +49,7 @@ fn f() {
     }
 
 
-    'label:
+    'label: // label
     while true {
         break 'label;
     }
@@ -56,7 +58,7 @@ fn f() {
         false
     }
 
-    'label:
+    'label: // label
     for a in b {
         continue 'label;
     }
@@ -64,8 +66,8 @@ fn f() {
 
 
     match a {
-        aa if y => true,
-        bb | cc => false,
+        aa if y => true, // AAAAAAAAAA
+        bb | cc => false, // BBBBBBBBBBB
     }
 
     A::A(B);

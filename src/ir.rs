@@ -781,7 +781,7 @@ pub type PathExpr = PathType;
 
 #[derive(Debug)]
 pub struct UnaryExpr {
-    pub op: Chunk,
+    pub op: &'static str,
     pub expr: Expr,
 }
 

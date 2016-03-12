@@ -1379,6 +1379,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_decl(&mut self, decl: &rst::Decl) -> Decl {
         let loc = self.loc(&decl.span);
         let decl = match decl.node {
@@ -1393,6 +1394,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_local(&mut self, local: &rst::Local) -> Local {
         let loc = self.loc(&local.span);
         let attrs = self.trans_thin_attrs(&local.attrs);
@@ -1418,6 +1420,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_pattens(&mut self, pats: &Vec<rst::P<rst::Pat>>) -> Vec<Patten> {
         trans_list!(self, pats, trans_patten)
     }
@@ -1460,6 +1463,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_range_patten(&mut self, start: &rst::Expr, end: &rst::Expr) -> RangePatten {
         RangePatten {
             start: self.trans_expr(start),
@@ -1467,6 +1471,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_ident_patten(&mut self, mode: rst::BindingMode, ident: &rst::SpannedIdent,
                           binding: &Option<rst::P<rst::Pat>>)
         -> IdentPatten {
@@ -1479,6 +1484,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_ref_patten(&mut self, is_mut: bool, pat: &rst::P<rst::Pat>) -> RefPatten {
         RefPatten {
             is_mut: is_mut,
@@ -1486,6 +1492,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_path_patten(&mut self, qself: &rst::QSelf, path: &rst::Path) -> PathPatten {
         PathPatten {
             qself: self.trans_qself(&qself),
@@ -1493,6 +1500,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_enum_patten(&mut self, path: &rst::Path, pats: &Option<Vec<rst::P<rst::Pat>>>)
         -> EnumPatten {
         EnumPatten {
@@ -1501,6 +1509,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_struct_patten(&mut self, path: &rst::Path, fields: &Vec<rst::Spanned<rst::FieldPat>>,
                            etc: bool)
         -> StructPatten {
@@ -1511,11 +1520,13 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_struct_field_pattens(&mut self, fields: &Vec<rst::Spanned<rst::FieldPat>>)
         -> Vec<StructFieldPatten> {
         trans_list!(self, fields, trans_struct_field_patten)
     }
 
+    #[inline]
     fn trans_struct_field_patten(&mut self, field: &rst::Spanned<rst::FieldPat>) -> StructFieldPatten {
         let loc = self.loc(&field.span);
         let name = ident_to_string(&field.node.ident);
@@ -1531,6 +1542,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_vec_patten(&mut self, start: &Vec<rst::P<rst::Pat>>, emit: &Option<rst::P<rst::Pat>>,
                         end: &Vec<rst::P<rst::Pat>>)
         -> VecPatten {
@@ -1541,12 +1553,14 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_tuple_patten(&mut self, pats: &Vec<rst::P<rst::Pat>>) -> TuplePatten {
         TuplePatten {
             pats: self.trans_pattens(pats),
         }
     }
 
+    #[inline]
     fn expr_to_stmt(&mut self, expr: Expr) -> Stmt {
         Stmt {
             loc: expr.loc,
@@ -1554,6 +1568,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_exprs(&mut self, exprs: &[rst::P<rst::Expr>]) -> Vec<Expr> {
         trans_list!(self, exprs, trans_expr)
     }
@@ -1611,11 +1626,11 @@ impl Translator {
                 ExprKind::Type(Box::new(self.trans_type_expr(expr, ty)))
             }
             rst::ExprBlock(ref block) => ExprKind::Block(Box::new(self.trans_block(block))),
-            rst::ExprIf(ref expr, ref block, ref left) => {
-                ExprKind::If(Box::new(self.trans_if_expr(expr, block, left)))
+            rst::ExprIf(ref expr, ref block, ref br) => {
+                ExprKind::If(Box::new(self.trans_if_expr(expr, block, br)))
             }
-            rst::ExprIfLet(ref pat, ref expr, ref block, ref left) => {
-                ExprKind::IfLet(Box::new(self.trans_if_let_expr(pat, expr, block, left)))
+            rst::ExprIfLet(ref pat, ref expr, ref block, ref br) => {
+                ExprKind::IfLet(Box::new(self.trans_if_let_expr(pat, expr, block, br)))
             }
             rst::ExprWhile(ref expr, ref block, ref label) => {
                 ExprKind::While(Box::new(self.trans_while_expr(expr, block, label)))
@@ -1685,14 +1700,9 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_uop(&mut self, op: rst::UnOp) -> Chunk {
-        Chunk::new(uop_to_string(op))
-    }
-
-    #[inline]
     fn trans_unary_expr(&mut self, op: rst::UnOp, expr: &rst::Expr) -> UnaryExpr {
         UnaryExpr {
-            op: self.trans_uop(op),
+            op: uop_to_string(op),
             expr: self.trans_expr(expr),
         }
     }
@@ -1705,6 +1715,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_bop(&mut self, op: &rst::BinOp) -> Chunk {
         Chunk {
             loc: self.leaf_loc(&op.span),
@@ -1712,6 +1723,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_bop_assign(&mut self, op: &rst::BinOp) -> Chunk {
         Chunk {
             loc: self.leaf_loc(&op.span),
@@ -1719,6 +1731,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_binary_expr(&mut self, left: &rst::Expr, op: &rst::BinOp, right: &rst::Expr) -> ListExpr {
         ListExpr {
             exprs: vec![self.trans_expr(left), self.trans_expr(right)],
@@ -1726,6 +1739,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_assign_expr(&mut self, left: &rst::Expr, right: &rst::Expr) -> ListExpr {
         ListExpr {
             exprs: vec![self.trans_expr(left), self.trans_expr(right)],
@@ -1733,6 +1747,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_op_assign_expr(&mut self, left: &rst::Expr, op: &rst::BinOp, right: &rst::Expr)
         -> ListExpr {
         ListExpr {
@@ -1741,6 +1756,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_in_place_expr(&mut self, left: &rst::Expr, right: &rst::Expr) -> ListExpr {
         ListExpr {
             exprs: vec![self.trans_expr(left), self.trans_expr(right)],
@@ -1748,6 +1764,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_fixed_size_array_expr(&mut self, init: &rst::Expr, len: &rst::Expr)
         -> FixedSizeArrayExpr {
         FixedSizeArrayExpr {
@@ -1756,6 +1773,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_struct_field_access_expr(&mut self, expr: &rst::Expr, ident: &rst::SpannedIdent)
         -> FieldAccessExpr {
         FieldAccessExpr {
@@ -1764,6 +1782,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_tuple_field_access_expr(&mut self, expr: &rst::Expr, pos: &rst::Spanned<usize>)
         -> FieldAccessExpr {
         FieldAccessExpr {
@@ -1772,6 +1791,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_struct_expr(&mut self, path: &rst::Path, fields: &Vec<rst::Field>,
                          base: &Option<rst::P<rst::Expr>>)
         -> StructExpr {
@@ -1787,6 +1807,7 @@ impl Translator {
         trans_list!(self, fields, trans_struct_field_expr)
     }
 
+    #[inline]
     fn trans_struct_field_expr(&mut self, field: &rst::Field) -> StructFieldExpr {
         let loc = self.loc(&field.span);
         let name = self.trans_ident(&field.ident);
@@ -1800,6 +1821,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_index_expr(&mut self, obj: &rst::Expr, index: &rst::Expr) -> IndexExpr {
         IndexExpr {
             obj: self.trans_expr(obj),
@@ -1807,6 +1829,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_range_expr(&mut self, start: &Option<rst::P<rst::Expr>>,
                         end: &Option<rst::P<rst::Expr>>)
         -> RangeExpr {
@@ -1816,12 +1839,14 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_box_expr(&mut self, expr: &rst::Expr) -> BoxExpr {
         BoxExpr {
             expr: self.trans_expr(expr),
         }
     }
 
+    #[inline]
     fn trans_cast_expr(&mut self, expr: &rst::Expr, ty: &rst::Ty) -> CastExpr {
         CastExpr {
             expr: self.trans_expr(expr),
@@ -1829,6 +1854,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_type_expr(&mut self, expr: &rst::Expr, ty: &rst::Ty) -> TypeExpr {
         TypeExpr {
             expr: self.trans_expr(expr),
@@ -1836,107 +1862,86 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_if_expr(&mut self, expr: &rst::Expr, block: &rst::Block,
-                     left: &Option<rst::P<rst::Expr>>)
+                     br: &Option<rst::P<rst::Expr>>)
         -> IfExpr {
-        let br = match *left {
-            Some(ref expr) => Some(self.trans_expr(expr)),
-            None => None,
-        };
-
         IfExpr {
             expr: self.trans_expr(expr),
             block: self.trans_block(block),
-            br: br,
+            br: zopt::map_ref_mut(br, |expr| self.trans_expr(expr)),
         }
     }
 
+    #[inline]
     fn trans_if_let_expr(&mut self, pat: &rst::P<rst::Pat>, expr: &rst::Expr, block: &rst::Block,
-                         left: &Option<rst::P<rst::Expr>>)
+                         br: &Option<rst::P<rst::Expr>>)
         -> IfLetExpr {
-        let br = match *left {
-            Some(ref expr) => (Some(self.trans_expr(expr))),
-            None => None,
-        };
-
         IfLetExpr {
             pat: self.trans_patten(pat),
             expr: self.trans_expr(expr),
             block: self.trans_block(block),
-            br: br,
+            br: zopt::map_ref_mut(br, |expr| self.trans_expr(expr)),
         }
     }
 
+    #[inline]
     fn trans_while_expr(&mut self, expr: &rst::Expr, block: &rst::Block, label: &Option<rst::Ident>)
         -> WhileExpr {
-        let label = match *label {
-            Some(ref ident) => Some(ident_to_string(ident)),
-            None => None,
-        };
-
         WhileExpr {
-            label: label,
+            label: zopt::map_ref_mut(label, |ident| ident_to_string(ident)),
             expr: self.trans_expr(expr),
             block: self.trans_block(block),
         }
     }
 
+    #[inline]
     fn trans_while_let_expr(&mut self, pat: &rst::P<rst::Pat>, expr: &rst::Expr,
                             block: &rst::Block, label: &Option<rst::Ident>)
         -> WhileLetExpr {
-        let label = match *label {
-            Some(ref ident) => Some(ident_to_string(ident)),
-            None => None,
-        };
-
         WhileLetExpr {
-            label: label,
+            label: zopt::map_ref_mut(label, |ident| ident_to_string(ident)),
             pat: self.trans_patten(pat),
             expr: self.trans_expr(expr),
             block: self.trans_block(block),
         }
     }
 
+    #[inline]
     fn trans_for_expr(&mut self, pat: &rst::P<rst::Pat>, expr: &rst::Expr, block: &rst::Block,
                       label: &Option<rst::Ident>)
         -> ForExpr {
-        let label = match *label {
-            Some(ref ident) => Some(ident_to_string(ident)),
-            None => None,
-        };
-
         ForExpr {
-            label: label,
+            label: zopt::map_ref_mut(label, |ident| ident_to_string(ident)),
             pat: self.trans_patten(pat),
             expr: self.trans_expr(expr),
             block: self.trans_block(block),
         }
     }
 
+    #[inline]
     fn trans_loop_expr(&mut self, block: &rst::Block, label: &Option<rst::Ident>) -> LoopExpr {
-        let label = match *label {
-            Some(ref ident) => Some(ident_to_string(ident)),
-            None => None,
-        };
-
         LoopExpr {
-            label: label,
+            label: zopt::map_ref_mut(label, |ident| ident_to_string(ident)),
             block: self.trans_block(block),
         }
     }
 
+    #[inline]
     fn trans_break_expr(&mut self, ident: &Option<rst::SpannedIdent>) -> BreakExpr {
         BreakExpr {
             label: zopt::map_ref_mut(ident, |ident| self.trans_ident(ident)),
         }
     }
 
+    #[inline]
     fn trans_continue_expr(&mut self, ident: &Option<rst::SpannedIdent>) -> ContinueExpr {
         ContinueExpr {
             label: zopt::map_ref_mut(ident, |ident| self.trans_ident(ident)),
         }
     }
 
+    #[inline]
     fn trans_match_expr(&mut self, expr: &rst::Expr, arms: &Vec<rst::Arm>) -> MatchExpr {
         MatchExpr {
             expr: self.trans_expr(expr),
@@ -1949,6 +1954,7 @@ impl Translator {
         trans_list!(self, arms, trans_arm)
     }
 
+    #[inline]
     fn trans_arm(&mut self, arm: &rst::Arm) -> Arm {
         let pats = self.trans_pattens(&arm.pats);
         let loc = if pats.is_empty() {
@@ -1966,6 +1972,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_fn_call_expr(&mut self, fn_name: &rst::Expr, args: &Vec<rst::P<rst::Expr>>)
         -> FnCallExpr {
         FnCallExpr {
@@ -1974,6 +1981,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_method_call_expr(&mut self, ident: &rst::SpannedIdent, types: &Vec<rst::P<rst::Ty>>,
                               args: &Vec<rst::P<rst::Expr>>)
         -> MethodCallExpr {
@@ -1985,6 +1993,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_closure_expr(&mut self, capture: rst::CaptureClause, fn_decl: &rst::FnDecl,
                           block: &rst::Block)
         -> ClosureExpr {
@@ -1995,12 +2004,14 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_return_expr(&mut self, expr: &Option<rst::P<rst::Expr>>) -> ReturnExpr {
         ReturnExpr {
             ret: zopt::map_ref_mut(expr, |expr| self.trans_expr(expr)),
         }
     }
 
+    #[inline]
     fn trans_macro_item(&mut self, mac: &rst::Mac) -> Chunk {
         Chunk {
             loc: self.leaf_loc(&mac.span),
@@ -2008,6 +2019,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_macro_stmt(&mut self, attrs: &rst::ThinAttributes, mac: &rst::Mac) -> MacroStmt {
         let loc = self.loc(&mac.span);
         let attrs = self.trans_thin_attrs(attrs);
@@ -2021,6 +2033,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_macro(&mut self, mac: &rst::Mac) -> Macro {
         let name = path_to_string(&mac.node.path);
         let style = self.macro_style(&mac);
@@ -2035,6 +2048,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_macro_exprs(&self, mac: &rst::Mac) -> (Vec<rst::P<rst::Expr>>, Vec<&'static str>) {
         let mut exprs = Vec::new();
         let mut seps = Vec::new();

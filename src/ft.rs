@@ -519,6 +519,25 @@ impl Display for Expr {
     }
 }
 
+impl Display for FieldAccessExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}.{}", self.expr, self.field.s)
+    }
+}
+
+impl Display for RangeExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(ref start) = self.start {
+            try!(write!(f, "{}", start));
+        }
+        try!(write!(f, ".."));
+        if let Some(ref end) = self.end {
+            try!(write!(f, "{}", end));
+        }
+        Ok(())
+    }
+}
+
 macro_rules! fmt_item_groups {
     ($sf:expr, $items:expr, $item_kind:path, $item_type:ty, $fmt_item:ident) => ({
         let mut group: Vec<(&Loc, bool, &Vec<AttrKind>, $item_type)> = Vec::new();
@@ -680,6 +699,9 @@ macro_rules! fmt_items {
             $sf.insert_indent();
 
             $sf.$fmt_item(item);
+
+            $sf.try_fmt_trailing_comment(&item.loc);
+            $sf.nl();
         }
     });
 }
@@ -1292,8 +1314,6 @@ impl Formatter {
         }
 
         self.raw_insert(";");
-        self.try_fmt_trailing_comment(&item.loc);
-        self.nl();
     }
 
     fn fmt_foreign_static(&mut self, item: &ForeignStatic) {
@@ -1359,13 +1379,12 @@ impl Formatter {
         if field.is_pub {
             self.raw_insert("pub ");
         }
+
         self.insert(&field.name);
         insert_sep!(self, ":", field.ty);
         self.fmt_type(&field.ty);
 
         self.raw_insert(",");
-        self.try_fmt_trailing_comment(&field.loc);
-        self.nl();
     }
 
     fn fmt_tuple_fields(&mut self, fields: &Vec<TupleField>) {
@@ -1407,10 +1426,7 @@ impl Formatter {
         if let Some(ref expr) = field.expr {
             maybe_wrap!(self, " = ", "= ", expr, fmt_expr);
         }
-
         self.raw_insert(",");
-        self.try_fmt_trailing_comment(&field.loc);
-        self.nl();
     }
 
     fn fmt_fn(&mut self, item: &Fn) {
@@ -1452,10 +1468,7 @@ impl Formatter {
             TraitItemKind::Type(ref item) => self.fmt_type_trait_item(item),
             TraitItemKind::Method(ref item) => self.fmt_method_trait_item(item),
         }
-
         self.raw_insert(";");
-        self.try_fmt_trailing_comment(&item.loc);
-        self.nl();
     }
 
     fn fmt_const_trait_item(&mut self, item: &ConstTraitItem) {
@@ -1542,9 +1555,6 @@ impl Formatter {
                 self.raw_insert(";");
             }
         }
-
-        self.try_fmt_trailing_comment(&item.loc);
-        self.nl();
     }
 
     fn fmt_const_impl_item(&mut self, item: &ConstImplItem) {
@@ -1723,12 +1733,14 @@ impl Formatter {
         }
     }
 
+    #[inline]
     fn fmt_range_patten(&mut self, pat: &RangePatten) {
         self.fmt_expr(&pat.start);
         self.insert("...");
         self.fmt_expr(&pat.end);
     }
 
+    #[inline]
     fn fmt_ident_patten(&mut self, pat: &IdentPatten) {
         let mut head = String::new();
         if pat.is_ref {
@@ -1744,15 +1756,18 @@ impl Formatter {
         }
     }
 
+    #[inline]
     fn fmt_ref_patten(&mut self, pat: &RefPatten) {
         self.insert(&ref_head(&None, pat.is_mut));
         self.fmt_patten(&pat.pat);
     }
 
+    #[inline]
     fn fmt_path_patten(&mut self, pat: &PathPatten) {
         self.fmt_qself_path(&pat.qself, &pat.path);
     }
 
+    #[inline]
     fn fmt_enum_patten(&mut self, pat: &EnumPatten) {
         self.fmt_path(&pat.path);
         match pat.pats {
@@ -1761,6 +1776,7 @@ impl Formatter {
         }
     }
 
+    #[inline]
     fn fmt_struct_patten(&mut self, pat: &StructPatten) {
         self.fmt_path(&pat.path);
 
@@ -1785,18 +1801,18 @@ impl Formatter {
         self.raw_insert("}");
     }
 
+    #[inline]
     fn fmt_struct_field_pattens(&mut self, fields: &Vec<StructFieldPatten>) {
         for field in fields {
             self.try_fmt_leading_comments(&field.loc);
             self.insert_indent();
-
             self.fmt_struct_field_patten(field);
-
             self.try_fmt_trailing_comment(&field.loc);
             self.nl();
         }
     }
 
+    #[inline]
     fn fmt_struct_field_patten(&mut self, field: &StructFieldPatten) {
         if field.shorthand {
             self.fmt_patten(&field.pat);
@@ -1807,6 +1823,7 @@ impl Formatter {
         self.raw_insert(",");
     }
 
+    #[inline]
     fn fmt_vec_patten(&mut self, pat: &VecPatten) {
         let emit = if let Some(_) = pat.emit {
             vec![Chunk::new("..")]
@@ -1824,19 +1841,23 @@ impl Formatter {
                          fmt_patten);
     }
 
+    #[inline]
     fn fmt_vec_emit_patten(&mut self, emit: &Chunk) {
         self.insert(&emit.s);
     }
 
+    #[inline]
     fn fmt_tuple_patten(&mut self, pat: &TuplePatten) {
         fmt_comma_lists!(self, "(", ")", &pat.pats, fmt_patten);
     }
 
+    #[inline]
     fn fmt_box_patten(&mut self, pat: &Patten) {
         self.raw_insert("box ");
         self.fmt_patten(pat);
     }
 
+    #[inline]
     fn fmt_expr_stmt(&mut self, expr: &Expr, is_semi: bool) {
         self.try_fmt_leading_comments(&expr.loc);
         self.fmt_attrs(&expr.attrs);
@@ -1884,29 +1905,35 @@ impl Formatter {
         }
     }
 
+    #[inline]
     fn fmt_literal_expr(&mut self, expr: &Chunk) {
         self.fmt_chunk(expr);
     }
 
+    #[inline]
     fn fmt_path_expr(&mut self, expr: &PathExpr) {
         self.fmt_path_type(expr);
     }
 
+    #[inline]
     fn fmt_unary_expr(&mut self, expr: &UnaryExpr) {
-        maybe_wrap!(self, &expr.op.s, &expr.op.s, expr.expr, fmt_expr);
+        maybe_wrap!(self, &expr.op, &expr.op, expr.expr, fmt_expr);
     }
 
+    #[inline]
     fn fmt_ref_expr(&mut self, expr: &RefExpr) {
         let head = &ref_head(&None, expr.is_mut);
         maybe_wrap!(self, head, head, expr.expr, fmt_expr);
     }
 
+    #[inline]
     fn fmt_list_expr(&mut self, expr: &ListExpr) {
         let sep = format!(" {} ", expr.sep);
         let wrap_sep = format!("{} ", expr.sep);
         fmt_lists!(self, &sep, &wrap_sep, &expr.exprs, fmt_expr);
     }
 
+    #[inline]
     fn fmt_fixed_size_array_expr(&mut self, expr: &FixedSizeArrayExpr) {
         self.insert_mark_align("[");
         self.fmt_expr(&expr.init);
@@ -1915,19 +1942,24 @@ impl Formatter {
         self.insert_unmark_align("]");
     }
 
+    #[inline]
     fn fmt_vec_expr(&mut self, exprs: &Vec<Expr>) {
         fmt_comma_lists!(self, "[", "]", exprs, fmt_expr);
     }
 
+    #[inline]
     fn fmt_tuple_expr(&mut self, exprs: &Vec<Expr>) {
         fmt_comma_lists!(self, "(", ")", exprs, fmt_expr);
     }
 
+    #[inline]
     fn fmt_field_access_expr(&mut self, expr: &FieldAccessExpr) {
+        maybe_wrap!(self, expr);
         self.fmt_expr(&expr.expr);
         self.insert(&format!(".{}", &expr.field.s));
     }
 
+    #[inline]
     fn fmt_struct_expr(&mut self, expr: &StructExpr) {
         self.fmt_path(&expr.path);
 
@@ -1936,7 +1968,7 @@ impl Formatter {
             return;
         }
 
-        self.insert(" {");
+        self.raw_insert(" {");
         self.indent();
         self.nl();
 
@@ -1945,30 +1977,34 @@ impl Formatter {
             self.insert_indent();
             self.insert("..");
             self.fmt_expr(base);
+            self.try_fmt_trailing_comment(&base.loc);
             self.nl();
         }
 
         self.outdent();
         self.insert_indent();
-        self.insert("}");
+        self.raw_insert("}");
     }
 
+    #[inline]
     fn fmt_struct_field_exprs(&mut self, fields: &Vec<StructFieldExpr>) {
         for field in fields {
             self.try_fmt_leading_comments(&field.loc);
             self.insert_indent();
-
             self.fmt_struct_field_expr(field);
+            self.try_fmt_trailing_comment(&field.loc);
+            self.nl();
         }
     }
 
+    #[inline]
     fn fmt_struct_field_expr(&mut self, field: &StructFieldExpr) {
         self.insert(&field.name.s);
         maybe_wrap!(self, ": ", ":", &field.value, fmt_expr);
         self.raw_insert(",");
-        self.nl();
     }
 
+    #[inline]
     fn fmt_index_expr(&mut self, expr: &IndexExpr) {
         self.fmt_expr(&expr.obj);
         self.insert_mark_align("[");
@@ -1976,7 +2012,9 @@ impl Formatter {
         self.insert_unmark_align("]");
     }
 
+    #[inline]
     fn fmt_range_expr(&mut self, expr: &RangeExpr) {
+        maybe_wrap!(self, expr);
         if let Some(ref start) = expr.start {
             self.fmt_expr(start);
         }
@@ -1986,41 +2024,47 @@ impl Formatter {
         }
     }
 
+    #[inline]
     fn fmt_box_expr(&mut self, expr: &BoxExpr) {
         maybe_wrap!(self, "box ", "box ", expr.expr, fmt_expr);
     }
 
+    #[inline]
     fn fmt_cast_expr(&mut self, expr: &CastExpr) {
         self.fmt_expr(&expr.expr);
         maybe_wrap!(self, " as ", "as ", expr.ty, fmt_type);
     }
 
+    #[inline]
     fn fmt_type_expr(&mut self, expr: &TypeExpr) {
         self.fmt_expr(&expr.expr);
         maybe_wrap!(self, ": ", ":", expr.ty, fmt_type);
     }
 
+    #[inline]
     fn fmt_if_expr(&mut self, expr: &IfExpr) {
-        self.insert("if ");
+        self.raw_insert("if ");
         self.fmt_expr(&expr.expr);
         self.fmt_block(&expr.block);
         if let Some(ref br) = expr.br {
-            self.insert(" else ");
+            self.raw_insert(" else ");
             self.fmt_expr(br);
         }
     }
 
+    #[inline]
     fn fmt_if_let_expr(&mut self, expr: &IfLetExpr) {
-        self.insert("if let ");
+        self.raw_insert("if let ");
         self.fmt_patten(&expr.pat);
         maybe_wrap!(self, " = ", "= ", expr.expr, fmt_expr);
         self.fmt_block(&expr.block);
         if let Some(ref br) = expr.br {
-            self.insert(" else ");
+            self.raw_insert(" else ");
             self.fmt_expr(br);
         }
     }
 
+    #[inline]
     fn fmt_label(&mut self, label: &Option<String>) {
         if let Some(ref label) = *label {
             self.insert(&format!("{}:", label));
@@ -2029,35 +2073,40 @@ impl Formatter {
         }
     }
 
+    #[inline]
     fn fmt_while_expr(&mut self, expr: &WhileExpr) {
         self.fmt_label(&expr.label);
-        self.insert("while ");
+        self.raw_insert("while ");
         self.fmt_expr(&expr.expr);
         self.fmt_block(&expr.block);
     }
 
+    #[inline]
     fn fmt_while_let_expr(&mut self, expr: &WhileLetExpr) {
         self.fmt_label(&expr.label);
-        self.insert("while let ");
+        self.raw_insert("while let ");
         self.fmt_patten(&expr.pat);
         maybe_wrap!(self, " = ", "= ", expr.expr, fmt_expr);
         self.fmt_block(&expr.block);
     }
 
+    #[inline]
     fn fmt_for_expr(&mut self, expr: &ForExpr) {
         self.fmt_label(&expr.label);
-        self.insert("for ");
+        self.raw_insert("for ");
         self.fmt_patten(&expr.pat);
         maybe_wrap!(self, " in ", "in ", expr.expr, fmt_expr);
         self.fmt_block(&expr.block);
     }
 
+    #[inline]
     fn fmt_loop_expr(&mut self, expr: &LoopExpr) {
         self.fmt_label(&expr.label);
-        self.insert("loop ");
+        self.raw_insert("loop ");
         self.fmt_block(&expr.block);
     }
 
+    #[inline]
     fn fmt_jump_label(&mut self, keyword: &str, label: &Option<Chunk>) {
         let label = if let Some(ref label) = *label {
             format!(" {}", label.s)
@@ -2067,46 +2116,45 @@ impl Formatter {
         self.insert(&format!("{}{}", keyword, label));
     }
 
+    #[inline]
     fn fmt_break_expr(&mut self, expr: &BreakExpr) {
         self.fmt_jump_label("break", &expr.label);
     }
 
+    #[inline]
     fn fmt_continue_expr(&mut self, expr: &ContinueExpr) {
         self.fmt_jump_label("continue", &expr.label);
     }
 
+    #[inline]
     fn fmt_match_expr(&mut self, expr: &MatchExpr) {
-        self.insert("match ");
+        self.raw_insert("match ");
         self.fmt_expr(&expr.expr);
         fmt_block!(self, &expr.arms, fmt_arms);
     }
 
+    #[inline]
     fn fmt_arms(&mut self, arms: &Vec<Arm>) {
-        for arm in arms {
-            self.fmt_arm(arm);
-        }
+        fmt_items!(self, arms, fmt_arm);
     }
 
+    #[inline]
     fn fmt_arm(&mut self, arm: &Arm) {
-        self.try_fmt_leading_comments(&arm.loc);
-        self.fmt_attrs(&arm.attrs);
-        self.insert_indent();
-
         fmt_lists!(self, " | ", "| ", &arm.pats, fmt_patten);
         if let Some(ref guard) = arm.guard {
             maybe_wrap!(self, " if ", "if ", guard, fmt_expr);
         }
         maybe_wrap!(self, " => ", "=> ", arm.body, fmt_expr);
-
         self.raw_insert(",");
-        self.nl();
     }
 
+    #[inline]
     fn fmt_fn_call_expr(&mut self, expr: &FnCallExpr) {
         self.fmt_expr(&expr.name);
         fmt_comma_lists!(self, "(", ")", &expr.args, fmt_expr);
     }
 
+    #[inline]
     fn fmt_method_call_expr(&mut self, expr: &MethodCallExpr) {
         self.fmt_expr(&expr.obj);
         self.insert(&format!(".{}", &expr.name.s));
@@ -2117,6 +2165,7 @@ impl Formatter {
         fmt_comma_lists!(self, "(", ")", &expr.args, fmt_expr);
     }
 
+    #[inline]
     fn fmt_closure_expr(&mut self, expr: &ClosureExpr) {
         if expr.moved {
             self.insert("move ");
@@ -2127,6 +2176,7 @@ impl Formatter {
         self.fmt_block(&expr.block);
     }
 
+    #[inline]
     fn fmt_closure_fn_arg(&mut self, arg: &FnArg) {
         if arg.va {
             self.insert_mark_align("|");
@@ -2148,6 +2198,7 @@ impl Formatter {
         }
     }
 
+    #[inline]
     fn fmt_closure_arg(&mut self, arg: &Arg) {
         maybe_wrap!(self, arg);
         self.fmt_patten(&arg.pat);
@@ -2158,13 +2209,15 @@ impl Formatter {
         }
     }
 
+    #[inline]
     fn fmt_return_expr(&mut self, expr: &ReturnExpr) {
-        self.insert("return");
+        self.raw_insert("return");
         if let Some(ref expr) = expr.ret {
             maybe_wrap!(self, " ", "", expr, fmt_expr);
         }
     }
 
+    #[inline]
     fn fmt_macro_stmt(&mut self, stmt: &MacroStmt, is_semi: bool) {
         self.try_fmt_leading_comments(&stmt.loc);
         self.fmt_attrs(&stmt.attrs);
@@ -2176,6 +2229,7 @@ impl Formatter {
         }
     }
 
+    #[inline]
     fn fmt_macro(&mut self, mac: &Macro) {
         let (open, close) = match mac.style {
             MacroStyle::Paren => ("(", ")"),
