@@ -559,6 +559,7 @@ impl Display for Expr {
             ExprKind::Type(ref expr) => Display::fmt(expr, f),
             ExprKind::FnCall(ref expr) => Display::fmt(expr, f),
             ExprKind::MethodCall(ref expr) => Display::fmt(expr, f),
+            ExprKind::Closure(ref expr) => Display::fmt(expr, f),
             ExprKind::Macro(ref expr) => Display::fmt(expr, f),
             _ => Debug::fmt(self, f),
         }
@@ -648,6 +649,46 @@ impl Display for MethodCallExpr {
             try!(display_lists!(f, "<", ", ", ">", &self.types));
         }
         display_lists!(f, "(", ", ", ")", &self.args)
+    }
+}
+
+impl Display for ClosureExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.moved {
+            try!(write!(f, "move "));
+        }
+
+        try!(write!(f, "|"));
+        let mut first = true;
+        for arg in &self.fn_sig.arg.args {
+            if !first {
+                try!(write!(f, ", "));
+            }
+
+            try!(write!(f, "{}", arg.pat));
+            match arg.ty.ty {
+                TypeKind::Infer => (),
+                _ => try!(write!(f, ": {}", arg.ty)),
+            }
+            first = false;
+        }
+
+        if self.fn_sig.arg.va {
+            try!(write!(f, ", ..."));
+        }
+        try!(write!(f, "|"));
+        try!(Display::fmt(&self.fn_sig.ret, f));
+
+        if self.block.stmts.len() > 1 {
+            Debug::fmt(&self.block, f)
+        } else {
+            match self.block.stmts[0].stmt {
+                StmtKind::Expr(ref expr, is_semi) if !is_semi => {
+                    write!(f, " {}", expr)
+                }
+                _ => unreachable!(),
+            }
+        }
     }
 }
 
@@ -2318,7 +2359,7 @@ impl Formatter {
                     insert_sep!(self, ",", e);
                 }
 
-                self.fmt_arg(e);
+                self.fmt_closure_arg(e);
                 first = false;
             }
 
