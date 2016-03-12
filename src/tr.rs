@@ -1956,19 +1956,21 @@ impl Translator {
 
     #[inline]
     fn trans_arm(&mut self, arm: &rst::Arm) -> Arm {
+        let attrs = self.trans_attrs(&arm.attrs);
         let pats = self.trans_pattens(&arm.pats);
-        let loc = if pats.is_empty() {
-            Default::default()
-        } else {
-            pats[0].loc
-        };
+        let guard = zopt::map_ref_mut(&arm.guard, |expr| self.trans_expr(expr));
+        let body = self.trans_expr(&arm.body);
 
         Arm {
-            loc: loc,
-            attrs: self.trans_attrs(&arm.attrs),
-            pats: self.trans_pattens(&arm.pats),
-            guard: zopt::map_ref_mut(&arm.guard, |expr| self.trans_expr(expr)),
-            body: self.trans_expr(&arm.body),
+            loc: Loc {
+                start: pats[0].loc.start,
+                end: body.loc.end,
+                nl: false,
+            },
+            attrs: attrs,
+            pats: pats,
+            guard: guard,
+            body: body,
         }
     }
 
