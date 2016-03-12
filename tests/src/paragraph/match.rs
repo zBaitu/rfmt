@@ -1,7 +1,7 @@
 fn f() {
     match a {
-        _ => true,
-        true | false if a > 0 => true,
+        _ => true, // aaa
+        true | false if a > 0 => true, // bbb
         1...3 => true,
         a @ 1...5 => true,
 
@@ -19,7 +19,10 @@ fn f() {
         <T as Trait>::CONST => true,
 
         A {} => false,
-        B { x: bool, y : B { y1, y2 }, ref mut z, .. } => true,
+        B { x: bool, // zzzzzzzzzzzzzzz
+            y : B { y1, // yyyyyyyyyyyyyyyy
+                y2 }, ref mut z, .. // xxxxxxxxx
+        } => true,
 
         [a, b, .., d, e] => true,
         [.., a] => true,

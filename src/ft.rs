@@ -475,6 +475,15 @@ impl Display for FnReturn {
     }
 }
 
+impl Display for Sf {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Sf::String(ref s) => Display::fmt(s, f),
+            Sf::Type(ref ty) => write!(f, "self: {}", ty),
+        }
+    }
+}
+
 impl Display for Patten {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.pat {
@@ -1623,9 +1632,9 @@ impl Formatter {
     fn fmt_method_fn_sig(&mut self, sf: &Sf, sig: &MethodSig) {
         self.insert_mark_align("(");
         self.fmt_sf(sf);
-        for e in &sig.fn_sig.arg.args[1..] {
-            insert_sep!(self, ",", e);
-            self.fmt_arg(e);
+        for arg in &sig.fn_sig.arg.args[1..] {
+            insert_sep!(self, ",", arg);
+            self.fmt_arg(arg);
         }
         self.insert_unmark_align(")");
 
@@ -1633,11 +1642,11 @@ impl Formatter {
     }
 
     fn fmt_sf(&mut self, sf: &Sf) {
+        maybe_wrap!(self, sf);
         match *sf {
             Sf::String(ref s) => self.raw_insert(s),
             Sf::Type(ref ty) => {
-                self.raw_insert("self");
-                insert_sep!(self, ":", ty);
+                self.raw_insert("self: ");
                 self.fmt_type(ty);
             }
         }
@@ -1700,7 +1709,7 @@ impl Formatter {
         maybe_nl!(self, pat);
         match pat.pat {
             PattenKind::Wildcard => self.insert("_"),
-            PattenKind::Literal(ref pat) => self.fmt_expr(pat),
+            PattenKind::Literal(ref expr) => self.fmt_expr(expr),
             PattenKind::Range(ref pat) => self.fmt_range_patten(pat),
             PattenKind::Ident(ref pat) => self.fmt_ident_patten(pat),
             PattenKind::Ref(ref pat) => self.fmt_ref_patten(pat),
@@ -1756,24 +1765,24 @@ impl Formatter {
         self.fmt_path(&pat.path);
 
         if pat.fields.is_empty() {
-            self.insert(" {}");
+            self.raw_insert(" {}");
             return;
         }
 
-        self.insert(" {");
+        self.raw_insert(" {");
         self.indent();
         self.nl();
 
         self.fmt_struct_field_pattens(&pat.fields);
         if pat.etc {
             self.insert_indent();
-            self.insert("...");
+            self.raw_insert("...");
             self.nl();
         }
 
         self.outdent();
         self.insert_indent();
-        self.insert("}");
+        self.raw_insert("}");
     }
 
     fn fmt_struct_field_pattens(&mut self, fields: &Vec<StructFieldPatten>) {
@@ -1782,6 +1791,9 @@ impl Formatter {
             self.insert_indent();
 
             self.fmt_struct_field_patten(field);
+
+            self.try_fmt_trailing_comment(&field.loc);
+            self.nl();
         }
     }
 
@@ -1792,9 +1804,7 @@ impl Formatter {
             self.insert(&field.name);
             maybe_wrap!(self, ": ", ":", field.pat, fmt_patten);
         }
-
         self.raw_insert(",");
-        self.nl();
     }
 
     fn fmt_vec_patten(&mut self, pat: &VecPatten) {
@@ -1823,7 +1833,7 @@ impl Formatter {
     }
 
     fn fmt_box_patten(&mut self, pat: &Patten) {
-        self.insert("box ");
+        self.raw_insert("box ");
         self.fmt_patten(pat);
     }
 

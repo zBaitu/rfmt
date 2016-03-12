@@ -1511,7 +1511,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_struct_field_pattens(&mut self, fields: &Vec<rst::Spanned<rst::FieldPat>>)
         -> Vec<StructFieldPatten> {
         trans_list!(self, fields, trans_struct_field_patten)
@@ -1661,6 +1660,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_ident(&mut self, ident: &rst::SpannedIdent) -> Chunk {
         Chunk {
             loc: self.leaf_loc(&ident.span),
@@ -1668,6 +1668,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_pos(&mut self, pos: &rst::Spanned<usize>) -> Chunk {
         Chunk {
             loc: self.leaf_loc(&pos.span),
@@ -1675,6 +1676,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_literal_expr(&mut self, lit: &rst::Lit) -> Chunk {
         Chunk {
             loc: self.leaf_loc(&lit.span),
@@ -1682,10 +1684,12 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_uop(&mut self, op: rst::UnOp) -> Chunk {
         Chunk::new(uop_to_string(op))
     }
 
+    #[inline]
     fn trans_unary_expr(&mut self, op: rst::UnOp, expr: &rst::Expr) -> UnaryExpr {
         UnaryExpr {
             op: self.trans_uop(op),
@@ -1693,6 +1697,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_ref_expr(&mut self, mutble: rst::Mutability, expr: &rst::Expr) -> RefExpr {
         RefExpr {
             is_mut: is_mut(mutble),
