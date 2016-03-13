@@ -1,3 +1,4 @@
+#![feature(fs_walk)] 
 #![feature(rustc_private)]
 #![feature(custom_derive)]
 #![feature(iter_arith)]
@@ -8,7 +9,6 @@ extern crate zbase;
 extern crate rst;
 
 use std::env;
-use std::path::Path;
 
 use getopts::Options;
 
@@ -21,13 +21,13 @@ mod tr;
 
 mod rfmt;
 
-struct Opt {
+struct CmdArg {
     check: bool,
     debug: bool,
     file: String,
 }
 
-fn opt() -> Opt {
+fn cmd_arg() -> CmdArg {
     let mut opts = Options::new();
     opts.optflag("c", "check", ""); 
     opts.optflag("d", "debug", ""); 
@@ -38,7 +38,7 @@ fn opt() -> Opt {
     let debug = matches.opt_present("d");
     let file = matches.free.pop().unwrap();
 
-    Opt {
+    CmdArg {
         check: check,
         debug: debug,
         file: file,
@@ -46,21 +46,6 @@ fn opt() -> Opt {
 }
 
 fn main() {
-    let opt = opt();
-
-    let path = Path::new(&opt.file);
-    let dir = path.parent();
-    if let Some(dir) = dir {
-        if let Some(dir) = dir.to_str() {
-            if !dir.is_empty() {
-                env::set_current_dir(dir).unwrap();
-            }
-        }
-    }
-
-    let file_name = path.file_name().unwrap();
-    let mut path = env::current_dir().unwrap();
-    path.push(file_name);
-
-    rfmt::fmt(path, opt.check, opt.debug);
+    let cmd_arg = cmd_arg();
+    rfmt::fmt(cmd_arg.file, cmd_arg.check, cmd_arg.debug);
 }
