@@ -21,21 +21,34 @@ mod tr;
 
 mod rfmt;
 
-fn opt() -> (bool, String) {
+struct Opt {
+    check: bool,
+    debug: bool,
+    file: String,
+}
+
+fn opt() -> Opt {
     let mut opts = Options::new();
-    opts.optflag("r", "recursive", ""); 
+    opts.optflag("c", "check", ""); 
+    opts.optflag("d", "debug", ""); 
 
     let args: Vec<String> = env::args().collect();
     let mut matches = opts.parse(&args[1..]).unwrap();
-    let recursive = matches.opt_present("r");
+    let check = matches.opt_present("c");
+    let debug = matches.opt_present("d");
     let file = matches.free.pop().unwrap();
-    (recursive, file)
+
+    Opt {
+        check: check,
+        debug: debug,
+        file: file,
+    }
 }
 
 fn main() {
-    let (recursive, file) = opt();
+    let opt = opt();
 
-    let path = Path::new(&file);
+    let path = Path::new(&opt.file);
     let dir = path.parent();
     if let Some(dir) = dir {
         if let Some(dir) = dir.to_str() {
@@ -49,5 +62,5 @@ fn main() {
     let mut path = env::current_dir().unwrap();
     path.push(file_name);
 
-    rfmt::fmt(path, recursive);
+    rfmt::fmt(path, opt.check, opt.debug);
 }

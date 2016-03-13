@@ -7,8 +7,8 @@ use rfmt;
 
 const NL: char = '\n';
 
-const MAX_WIDTH: usize = 40;
-const MAX_ALIGN_COL: usize = 20;
+const MAX_WIDTH: usize = 100;
+const MAX_ALIGN_COL: usize = 50;
 
 const INDENT: &'static str = "    ";
 const WRAP_INDENT: &'static str = "        ";
@@ -176,11 +176,13 @@ impl Typesetter {
     #[inline]
     fn need_wrap_len(&self, prefix_len: usize, len: usize) -> bool {
         (minus_nf!(self.left(), prefix_len) <= 0) || (len > self.left() && len <= self.nl_left())
+        //(minus_nf!(self.left(), prefix_len) <= 0) || (len > self.left())
     }
 
     #[inline]
     fn need_nl_indent_len(&self, prefix_len: usize, len: usize) -> bool {
         (minus_nf!(self.left(), prefix_len) <= 0) || (len > self.left() && len <= self.nl_indent_left())
+        //(minus_nf!(self.left(), prefix_len) <= 0) || (len > self.left())
     }
 
     #[inline]
@@ -223,7 +225,7 @@ impl Typesetter {
     #[inline]
     fn wrap_insert(&mut self, s: &str) {
         self.wrap();
-        self.insert(s);
+        self.raw_insert(s);
     }
 
     #[inline]

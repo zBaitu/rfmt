@@ -2157,7 +2157,8 @@ impl Formatter {
     #[inline]
     fn fmt_struct_field_expr(&mut self, field: &StructFieldExpr) {
         self.insert(&field.name.s);
-        maybe_wrap!(self, ": ", ":", &field.value, fmt_expr);
+        insert_sep!(self, ":", field.value);
+        self.fmt_expr(&field.value);
         self.raw_insert(",");
     }
 

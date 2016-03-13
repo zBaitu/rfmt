@@ -1662,9 +1662,7 @@ impl Translator {
             }
             rst::ExprRet(ref expr) => ExprKind::Return(Box::new(self.trans_return_expr(expr))),
             rst::ExprMac(ref mac) => ExprKind::Macro(self.trans_macro(mac)),
-
-            // ExprInlineAsm
-            _ => unreachable!(),
+            rst::ExprInlineAsm(_) => unreachable!(),
         };
         self.set_loc(&loc);
 
