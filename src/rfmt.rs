@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 use std::fs::{self, File};
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::Path;
 
 use rst::ast::CrateConfig;
@@ -16,17 +16,17 @@ pub struct Result {
     pub trailing_ws_lines: BTreeSet<u32>,
 }
 
-pub fn fmt(path: String, check: bool, debug: bool) {
+pub fn fmt(path: String, check: bool, debug: bool, overwrite: bool) {
     let path = Path::new(&path);
     if path.is_dir() {
-        fmt_dir(path, check, debug);
+        fmt_dir(path, check, debug, overwrite);
     } else {
-        fmt_file(path, check, debug);
+        fmt_file(path, check, debug, overwrite);
     }
 }
 
 #[allow(deprecated)]
-fn fmt_dir(path: &Path, check: bool, debug: bool) {
+fn fmt_dir(path: &Path, check: bool, debug: bool, overwrite: bool) {
     let walk_dir = fs::walk_dir(path).unwrap();
     for dir in walk_dir {
         let dir = dir.unwrap();
@@ -34,19 +34,19 @@ fn fmt_dir(path: &Path, check: bool, debug: bool) {
         let file_type = dir.file_type().unwrap();
 
         if file_type.is_dir() {
-            fmt_dir(&path, check, debug);
+            fmt_dir(&path, check, debug, overwrite);
         } else if file_type.is_file() {
             let ext = path.extension();
             if let Some(ext) = ext {
                 if ext == "rs" {
-                    fmt_file(&path, check, debug);
+                    fmt_file(&path, check, debug, overwrite);
                 }
             }
         }
     }
 }
 
-fn fmt_file(path: &Path, check: bool, debug: bool) {
+fn fmt_file(path: &Path, check: bool, debug: bool, overwrite: bool) {
     let mut file = File::open(path).unwrap();
     let mut src = String::new();
     file.read_to_string(&mut src).unwrap();
@@ -65,17 +65,20 @@ fn fmt_file(path: &Path, check: bool, debug: bool) {
         p!("{:#?}", result.trailing_cmnts);
     }
     let result = ft::fmt(result.krate, result.leading_cmnts, result.trailing_cmnts);
-    if !check {
+    if overwrite {
+        let mut file = File::create(path).unwrap();
+        file.write_all(result.s.as_bytes()).unwrap();
+    } else if !check {
         p!(result.s);
     }
     if !result.exceed_lines.is_empty() || !result.trailing_ws_lines.is_empty() {
-        p!("{}", file_name);
+        pe!("{}", file_name);
         if !result.exceed_lines.is_empty() {
-            p!("exceed_lines: {:?}", result.exceed_lines);
+            pe!("exceed_lines: {:?}", result.exceed_lines);
         }
         if !result.trailing_ws_lines.is_empty() {
-            p!("trailing_cmnts: {:?}", result.trailing_ws_lines);
+            pe!("trailing_ws_lines: {:?}", result.trailing_ws_lines);
         }
-        p!();
+        pe!();
     }
 }
