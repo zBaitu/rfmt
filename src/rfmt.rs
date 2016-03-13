@@ -56,7 +56,7 @@ fn fmt_file(path: &Path, check: bool, debug: bool) {
     let cfg = CrateConfig::new();
     let sess = ParseSess::new();
     let krate = parse::parse_crate_from_source_str(file_name.clone(), src, cfg, &sess);
-    let (cmnts, _) = comments::gather_comments_and_literals(&sess.span_diagnostic, file_name, &mut input);
+    let (cmnts, _) = comments::gather_comments_and_literals(&sess.span_diagnostic, file_name.clone(), &mut input);
 
     let result = tr::trans(sess, krate, cmnts);
     if debug {
@@ -65,12 +65,17 @@ fn fmt_file(path: &Path, check: bool, debug: bool) {
         p!("{:#?}", result.trailing_cmnts);
     }
     let result = ft::fmt(result.krate, result.leading_cmnts, result.trailing_cmnts);
-    if check {
-        p!("-----------------------------------------------------------------------------------------\
-            ----------");
-        p!("{:?}", result.exceed_lines);
-        p!("{:?}", result.trailing_ws_lines);
-    } else {
+    if !check {
         p!(result.s);
+    }
+    if !result.exceed_lines.is_empty() || !result.trailing_ws_lines.is_empty() {
+        p!("{}", file_name);
+        if !result.exceed_lines.is_empty() {
+            p!("exceed_lines: {:?}", result.exceed_lines);
+        }
+        if !result.trailing_ws_lines.is_empty() {
+            p!("trailing_cmnts: {:?}", result.trailing_ws_lines);
+        }
+        p!();
     }
 }

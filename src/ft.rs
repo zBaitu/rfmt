@@ -96,7 +96,7 @@ fn ident_patten_head(is_ref: bool, is_mut: bool) -> String {
 }
 
 macro_rules! display_lists {
-   ($f:expr, $open:expr, $sep:expr, $close:expr, $($lists:expr),+) => ({
+    ($f:expr, $open:expr, $sep:expr, $close:expr, $($lists:expr),+) => ({
         try!(write!($f, $open));
 
         let mut first = true;
@@ -111,9 +111,9 @@ macro_rules! display_lists {
         write!($f, $close)
     });
 
-   ($f:expr, $sep:expr, $($lists:expr),+) => ({
+    ($f:expr, $sep:expr, $($lists:expr),+) => ({
        display_lists!($f, "", $sep, "", $($lists)+)
-   });
+    });
 }
 
 impl Display for Chunk {
@@ -931,7 +931,7 @@ impl Formatter {
         self.try_fmt_leading_comments(&krate.loc);
         self.fmt_attrs(&krate.attrs);
         self.fmt_mod(&krate.module);
-        self.fmt_left_comments();
+        self.fmt_left_comments(&krate.module.loc);
         self.ts.result()
     }
 
@@ -1031,12 +1031,14 @@ impl Formatter {
     }
 
     #[inline]
-    fn fmt_left_comments(&mut self) {
+    fn fmt_left_comments(&mut self, loc: &Loc) {
         let poses: Vec<_> = self.leading_cmnts.keys().cloned().collect();
         for pos in poses {
             for cmnt in &self.leading_cmnts.remove(&pos).unwrap() {
-                self.raw_insert(cmnt);
-                self.nl();
+                if pos > loc.end {
+                    self.raw_insert(cmnt);
+                    self.nl();
+                }
             }
         }
     }
