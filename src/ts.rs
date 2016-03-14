@@ -51,6 +51,17 @@ macro_rules! need_nl_indent {
     });
 }
 
+#[inline]
+fn list_len_info(list: &[&str]) -> (usize, usize) {
+    let prefix_len = if list.len() > 1 {
+        list.iter().take(list.len() - 1).map(|s| s.len()).sum()
+    } else {
+        0
+    };
+    let len = list.iter().map(|s| s.len()).sum();
+    (prefix_len, len)
+}
+
 macro_rules! raw_insert {
     ($sf:expr, $s:expr) => ({
         $sf.s.push_str($s);
@@ -94,23 +105,13 @@ impl Typesetter {
 
     #[inline]
     pub fn need_wrap(&self, list: &[&str]) -> bool {
-        let prefix_len = if list.len() > 1 {
-            list.iter().take(list.len() - 1).map(|s| s.len()).sum()
-        } else {
-            0
-        };
-        let len = list.iter().map(|s| s.len()).sum();
+        let (prefix_len, len) = list_len_info(list);
         self.need_wrap_len(prefix_len, len)
     }
 
     #[inline]
     pub fn need_nl_indent(&self, list: &[&str]) -> bool {
-        let prefix_len = if list.len() > 1 {
-            list.iter().take(list.len() - 1).map(|s| s.len()).sum()
-        } else {
-            0
-        };
-        let len = list.iter().map(|s| s.len()).sum();
+        let (prefix_len, len) = list_len_info(list);
         self.need_nl_indent_len(prefix_len, len)
     }
 
@@ -176,13 +177,12 @@ impl Typesetter {
     #[inline]
     fn need_wrap_len(&self, prefix_len: usize, len: usize) -> bool {
         (minus_nf!(self.left(), prefix_len) <= 0) || (len > self.left() && len <= self.nl_left())
-        //(minus_nf!(self.left(), prefix_len) <= 0) || (len > self.left())
     }
 
     #[inline]
     fn need_nl_indent_len(&self, prefix_len: usize, len: usize) -> bool {
-        (minus_nf!(self.left(), prefix_len) <= 0) || (len > self.left() && len <= self.nl_indent_left())
-        //(minus_nf!(self.left(), prefix_len) <= 0) || (len > self.left())
+        (minus_nf!(self.left(), prefix_len) <= 0)
+                || (len > self.left() && len <= self.nl_indent_left())
     }
 
     #[inline]
@@ -249,3 +249,4 @@ impl Typesetter {
         self.align_stack.pop();
     }
 }
+

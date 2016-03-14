@@ -32,8 +32,7 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn new<S>(s: S) -> Chunk
-    where S: Into<String> {
+    pub fn new<S>(s: S) -> Chunk where S: Into<String> {
         Chunk {
             loc: Default::default(),
             s: s.into(),
@@ -968,3 +967,4 @@ pub struct Macro {
     pub exprs: Vec<Expr>,
     pub seps: Vec<&'static str>,
 }
+

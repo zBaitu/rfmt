@@ -275,7 +275,7 @@ impl Translator {
 
         let start = linefeed.unwrap() + 1;
         for ch in snippet[start..].chars() {
-            if !ch.is_whitespace() {
+            if ch.is_alphanumeric() {
                 return false;
             }
         }

@@ -517,8 +517,9 @@ impl Display for EnumPatten {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(Display::fmt(&self.path, f));
         match self.pats {
-            Some(ref pats) => display_lists!(f, "(", ", ", ")", pats),
+            Some(ref pats) if !pats.is_empty() => display_lists!(f, "(", ", ", ")", pats),
             None => write!(f, "(..)"),
+            _ => Ok(())
         }
     }
 }
@@ -1704,6 +1705,10 @@ impl Formatter {
     }
 
     fn fmt_impl_item(&mut self, item: &ImplItem) {
+        if item.is_pub {
+            self.raw_insert("pub ");
+        }
+
         match item.item {
             ImplItemKind::Const(ref item) => {
                 self.fmt_const_impl_item(item);
@@ -1782,10 +1787,16 @@ impl Formatter {
         match *ret {
             FnReturn::Unit => (),
             FnReturn::Diverge => {
-                maybe_nl_indent!(self, " -> !", "-> !", ret);
+                maybe_nl_indent!(self, " -> !", "-> !", "");
             }
             FnReturn::Normal(ref ty) => {
-                maybe_nl_indent!(self, " -> ", "-> ", ty);
+                if ty.loc.nl {
+                    self.nl_indent();
+                    self.raw_insert("-> ");
+                    self.after_wrap = true;
+                } else {
+                    maybe_nl_indent!(self, " -> ", "-> ", ty);
+                }
                 self.fmt_type(ty);
             }
         }
@@ -1930,8 +1941,9 @@ impl Formatter {
     fn fmt_enum_patten(&mut self, pat: &EnumPatten) {
         self.fmt_path(&pat.path);
         match pat.pats {
-            Some(ref pats) => fmt_comma_lists!(self, "(", ")", pats, fmt_patten),
+            Some(ref pats) if !pats.is_empty() => fmt_comma_lists!(self, "(", ")", pats, fmt_patten),
             None => self.insert("(..)"),
+            _ => (),
         }
     }
 

@@ -15,6 +15,7 @@ fn f() {
         Some(a, ref b) => true,
         Some(..) => true,
         Some(_) => true,
+        rst::Abcdefg => false,
 
         <T as Trait>::CONST => true,
 

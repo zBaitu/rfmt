@@ -107,7 +107,6 @@ fn fmt_str(src: String, file_name: &str, check: bool, debug: bool, overwrite: bo
         file.write_all(result.s.as_bytes()).unwrap();
     } else if !check {
         p!(result.s);
-        p!(SEP);
     }
 
     if !result.exceed_lines.is_empty() || !result.trailing_ws_lines.is_empty() {
@@ -121,3 +120,4 @@ fn fmt_str(src: String, file_name: &str, check: bool, debug: bool, overwrite: bo
         p!(SEP);
     }
 }
+
