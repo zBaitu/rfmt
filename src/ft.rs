@@ -1967,7 +1967,7 @@ impl Formatter {
         self.fmt_struct_field_pattens(&pat.fields);
         if pat.etc {
             self.insert_indent();
-            self.raw_insert("...");
+            self.raw_insert("..");
             self.nl();
         }
 
