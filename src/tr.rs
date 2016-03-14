@@ -7,7 +7,7 @@ use zbase::zopt;
 
 use ir::*;
 
-const MAX_BLANK_LINE: u8 = 2;
+const MAX_BLANK_LINE: u8 = 1;
 
 pub struct Result {
     pub krate: Crate,
