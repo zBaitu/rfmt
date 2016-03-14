@@ -1324,15 +1324,22 @@ impl Translator {
     fn trans_method_sig(&mut self, method_sig: &rst::MethodSig) -> MethodSig {
         MethodSig {
             generics: self.trans_generics(&method_sig.generics),
-            sf: self.trans_self(&method_sig.explicit_self.node),
+            sf: self.trans_self(is_const(method_sig.constness), &method_sig.explicit_self.node),
             fn_sig: self.trans_fn_sig(&method_sig.decl),
         }
     }
 
-    fn trans_self(&mut self, explicit_self: &rst::ExplicitSelf_) -> Option<Sf> {
+    fn trans_self(&mut self, is_const: bool, explicit_self: &rst::ExplicitSelf_) -> Option<Sf> {
         match *explicit_self {
             rst::SelfStatic => None,
-            rst::SelfValue(_) => Some(Sf::String("self".to_string())),
+            rst::SelfValue(_) => {
+                let sf = if is_const {
+                    "self"
+                } else {
+                    "mut self"
+                }.to_string();
+                Some(Sf::String(sf))
+            }
             rst::SelfRegion(lifetime, mutbl, _) => {
                 let mut s = String::new();
                 s.push_str("&");
