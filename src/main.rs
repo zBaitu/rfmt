@@ -1,7 +1,7 @@
 #![feature(fs_walk)] 
 #![feature(rustc_private)]
-#![feature(custom_derive)]
 #![feature(iter_arith)]
+#![feature(custom_derive)]
 
 extern crate getopts;
 #[macro_use]
@@ -34,8 +34,7 @@ fn cmd_arg() -> CmdArg {
     opts.optflag("d", "debug", ""); 
     opts.optflag("o", "overwrite", ""); 
 
-    let args: Vec<String> = env::args().collect();
-    let mut matches = opts.parse(&args[1..]).unwrap();
+    let mut matches = opts.parse(env::args().skip(1)).unwrap();
     let check = matches.opt_present("c");
     let debug = matches.opt_present("d");
     let overwrite = matches.opt_present("o");
@@ -50,6 +49,10 @@ fn cmd_arg() -> CmdArg {
 }
 
 fn main() {
-    let cmd_arg = cmd_arg();
-    rfmt::fmt(cmd_arg.path, cmd_arg.check, cmd_arg.debug, cmd_arg.overwrite);
+    if env::args().len() == 1 {
+        rfmt::fmt_from_stdin();
+    } else {
+        let cmd_arg = cmd_arg();
+        rfmt::fmt(cmd_arg.path, cmd_arg.check, cmd_arg.debug, cmd_arg.overwrite);
+    }
 }
