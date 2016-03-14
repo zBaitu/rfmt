@@ -587,17 +587,23 @@ pub struct FnArg {
 }
 
 #[derive(Debug)]
-pub enum FnReturn {
-    Unit,
-    Diverge,
-    Normal(Type),
-}
-
-#[derive(Debug)]
 pub struct Arg {
     pub loc: Loc,
     pub pat: Patten,
     pub ty: Type,
+}
+
+#[derive(Debug)]
+pub struct FnReturn {
+    pub nl: bool,
+    pub ret: FnReturnKind,
+}
+
+#[derive(Debug)]
+pub enum FnReturnKind {
+    Unit,
+    Diverge,
+    Normal(Type),
 }
 
 #[derive(Debug)]

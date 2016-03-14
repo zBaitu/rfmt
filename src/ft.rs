@@ -449,10 +449,10 @@ impl Display for Arg {
 
 impl Display for FnReturn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            FnReturn::Unit => Ok(()),
-            FnReturn::Diverge => write!(f, " -> !"),
-            FnReturn::Normal(ref ty) => write!(f, " -> {}", ty),
+        match self.ret {
+            FnReturnKind::Unit => Ok(()),
+            FnReturnKind::Diverge => write!(f, " -> !"),
+            FnReturnKind::Normal(ref ty) => write!(f, " -> {}", ty),
         }
     }
 }
@@ -790,7 +790,7 @@ macro_rules! maybe_wrap {
     });
 }
 
-macro_rules! maybe_nl_indent{
+macro_rules! maybe_nl_indent {
     ($sf:expr, $sep:expr, $wrap_sep:expr, $e:expr) => ({
         if !need_nl_indent!($sf.ts, $sep, &$e.to_string()) {
             $sf.raw_insert($sep);
@@ -1784,16 +1784,20 @@ impl Formatter {
     }
 
     fn fmt_fn_return(&mut self, ret: &FnReturn) {
-        match *ret {
-            FnReturn::Unit => (),
-            FnReturn::Diverge => {
-                maybe_nl_indent!(self, " -> !", "-> !", "");
+        match ret.ret {
+            FnReturnKind::Unit => (),
+            FnReturnKind::Diverge => {
+                if ret.nl {
+                    self.nl_indent();
+                    self.raw_insert("-> !");
+                } else {
+                    maybe_nl_indent!(self, " -> !", "-> !", "");
+                }
             }
-            FnReturn::Normal(ref ty) => {
-                if ty.loc.nl {
+            FnReturnKind::Normal(ref ty) => {
+                if ret.nl {
                     self.nl_indent();
                     self.raw_insert("-> ");
-                    self.after_wrap = true;
                 } else {
                     maybe_nl_indent!(self, " -> ", "-> ", ty);
                 }

@@ -275,7 +275,7 @@ impl Translator {
 
         let start = linefeed.unwrap() + 1;
         for ch in snippet[start..].chars() {
-            if ch.is_alphanumeric() {
+            if !ch.is_whitespace() {
                 return false;
             }
         }
@@ -1303,11 +1303,22 @@ impl Translator {
     }
 
     fn trans_fn_return(&mut self, output: &rst::FunctionRetTy) -> FnReturn {
-        match *output {
-            rst::FunctionRetTy::DefaultReturn(_) => FnReturn::Unit,
-            rst::FunctionRetTy::NoReturn(_) => FnReturn::Diverge,
-            rst::FunctionRetTy::Return(ref ty) => FnReturn::Normal(self.trans_type(ty)),
+        let (nl, ret) = match *output {
+            rst::FunctionRetTy::DefaultReturn(_) => (false, FnReturnKind::Unit),
+            rst::FunctionRetTy::NoReturn(ref span) => (self.is_fn_return_nl(span.lo.0), FnReturnKind::Diverge),
+            rst::FunctionRetTy::Return(ref ty) => (self.is_fn_return_nl(ty.span.lo.0), FnReturnKind::Normal(self.trans_type(ty))),
+        };
+
+        FnReturn {
+            nl: nl,
+            ret: ret,
         }
+    }
+
+    fn is_fn_return_nl(&self, pos: Pos) -> bool {
+        let snippet = self.span_to_snippet(span(self.last_loc.end, pos)).unwrap();
+        let right_arrow_pos = self.last_loc.end + snippet.find("->").unwrap() as Pos;
+        self.is_nl(right_arrow_pos)
     }
 
     fn trans_method_sig(&mut self, method_sig: &rst::MethodSig) -> MethodSig {
