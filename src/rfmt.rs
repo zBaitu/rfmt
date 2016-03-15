@@ -1,11 +1,12 @@
 use std::collections::BTreeSet;
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::{self, Read, Write};
 use std::path::Path;
 
 use rst::ast::CrateConfig;
 use rst::parse::lexer::comments;
 use rst::parse::{self, ParseSess};
+use walkdir::WalkDir;
 
 use ft;
 use tr;
@@ -58,15 +59,10 @@ pub fn fmt(path: &str, check: bool, debug: bool, overwrite: bool) {
 
 #[allow(deprecated)]
 fn fmt_dir(path: &Path, check: bool, debug: bool, overwrite: bool) {
-    let walk_dir = fs::walk_dir(path).unwrap();
-    for dir in walk_dir {
-        let dir = dir.unwrap();
-        let path = dir.path();
-        let file_type = dir.file_type().unwrap();
-
-        if file_type.is_dir() {
-            fmt_dir(&path, check, debug, overwrite);
-        } else if file_type.is_file() {
+    for entry in WalkDir::new(path) {
+        let entry = entry.unwrap();
+        if entry.file_type().is_file() {
+            let path = entry.path();
             let ext = path.extension();
             if let Some(ext) = ext {
                 if ext == "rs" {

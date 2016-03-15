@@ -9,4 +9,5 @@ name = "rfmt"
 [dependencies]
 rsyntax = { path = "/home/baitu/workspace/rust/rsyntax" }
 rdk-base = { path = "/home/baitu/workspace/rust/rdk/rdk-base" }
-getopts = { path = "/home/baitu/mozilla/rust/crates/getopts" }
+getopts = "0.2.4"
+walkdir = "0.1"

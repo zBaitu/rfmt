@@ -1,10 +1,10 @@
 #![feature(custom_derive)]
-#![feature(fs_walk)]
 #![feature(iter_arith)]
 #![feature(rustc_private)]
 
 extern crate getopts;
 extern crate rst;
+extern crate walkdir;
 #[macro_use]
 extern crate zbase;
 
