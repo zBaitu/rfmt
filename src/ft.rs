@@ -2,12 +2,12 @@ use std::collections::{BTreeMap, HashMap};
 use std::fmt::{self, Debug, Display};
 
 use ir::*;
-use ts::*;
 use rfmt;
+use ts::*;
 
 pub fn fmt(krate: Crate, leading_cmnts: HashMap<Pos, Vec<String>>,
            trailing_cmnts: HashMap<Pos, String>)
-    -> rfmt::Result {
+-> rfmt::Result {
     Formatter::new(leading_cmnts, trailing_cmnts).fmt_crate(krate)
 }
 
@@ -220,7 +220,8 @@ impl Display for PolyTraitRef {
 }
 
 #[inline]
-fn display_for_liftime_defs(f: &mut fmt::Formatter, lifetime_defs: &Vec<LifetimeDef>) -> fmt::Result {
+fn display_for_liftime_defs(f: &mut fmt::Formatter, lifetime_defs: &Vec<LifetimeDef>)
+-> fmt::Result {
     if !lifetime_defs.is_empty() {
         try!(display_lists!(f, "for<", ", ", "> ", lifetime_defs));
     }
@@ -519,7 +520,7 @@ impl Display for EnumPatten {
         match self.pats {
             Some(ref pats) if !pats.is_empty() => display_lists!(f, "(", ", ", ")", pats),
             None => write!(f, "(..)"),
-            _ => Ok(())
+            _ => Ok(()),
         }
     }
 }
@@ -686,7 +687,7 @@ impl Display for ClosureExpr {
             match self.block.stmts[0].stmt {
                 StmtKind::Expr(ref expr, is_semi) if !is_semi => {
                     write!(f, " {}", expr)
-                }
+                },
                 _ => unreachable!(),
             }
         }
@@ -915,7 +916,7 @@ struct Formatter {
 
 impl Formatter {
     fn new(leading_cmnts: HashMap<Pos, Vec<String>>, trailing_cmnts: HashMap<Pos, String>)
-        -> Formatter {
+    -> Formatter {
         Formatter {
             ts: Typesetter::new(),
 
@@ -1080,7 +1081,7 @@ impl Formatter {
                     attr_group.clear();
 
                     self.fmt_doc(doc);
-                }
+                },
                 AttrKind::Attr(ref attr) => {
                     if self.has_leading_comments(&attr.loc) {
                         self.fmt_attr_group(&attr_group);
@@ -1089,7 +1090,7 @@ impl Formatter {
                         self.fmt_leading_comments(&attr.loc);
                     }
                     attr_group.push(attr);
-                }
+                },
             }
         }
 
@@ -1107,9 +1108,8 @@ impl Formatter {
 
     #[inline]
     fn fmt_attr_group(&mut self, attr_group: &Vec<&Attr>) {
-        let sorted_attrs: BTreeMap<_, _> = attr_group.into_iter()
-                                                     .map(|e| (e.to_string(), *e))
-                                                     .collect();
+        let sorted_attrs: BTreeMap<_, _>
+                = attr_group.into_iter().map(|e| (e.to_string(), *e)).collect();
         for attr in sorted_attrs.values() {
             self.insert_indent();
             self.fmt_attr(attr);
@@ -1294,7 +1294,7 @@ impl Formatter {
             TypeParamBound::Lifetime(ref lifetime) => self.fmt_lifetime(lifetime),
             TypeParamBound::PolyTraitRef(ref poly_trait_ref) => {
                 self.fmt_poly_trait_ref(poly_trait_ref)
-            }
+            },
         }
     }
 
@@ -1430,7 +1430,7 @@ impl Formatter {
             Some(ref qself) => {
                 maybe_wrap!(self, ty);
                 self.fmt_qself_path(qself, &ty.path);
-            }
+            },
             None => self.fmt_path(&ty.path),
         }
     }
@@ -1713,16 +1713,16 @@ impl Formatter {
             ImplItemKind::Const(ref item) => {
                 self.fmt_const_impl_item(item);
                 self.raw_insert(";");
-            }
+            },
             ImplItemKind::Type(ref item) => {
                 self.fmt_type_impl_item(item);
                 self.raw_insert(";");
-            }
+            },
             ImplItemKind::Method(ref item) => self.fmt_method_impl_item(item),
             ImplItemKind::Macro(ref item) => {
                 self.fmt_macro(item);
                 self.raw_insert(";");
-            }
+            },
         }
     }
 
@@ -1793,7 +1793,7 @@ impl Formatter {
                 } else {
                     maybe_nl_indent!(self, " -> !", "-> !", "");
                 }
-            }
+            },
             FnReturnKind::Normal(ref ty) => {
                 if ret.nl {
                     self.nl_indent();
@@ -1802,7 +1802,7 @@ impl Formatter {
                     maybe_nl_indent!(self, " -> ", "-> ", ty);
                 }
                 self.fmt_type(ty);
-            }
+            },
         }
     }
 
@@ -1837,7 +1837,7 @@ impl Formatter {
             Sf::Type(ref ty) => {
                 self.raw_insert("self: ");
                 self.fmt_type(ty);
-            }
+            },
         }
     }
 
@@ -1945,7 +1945,8 @@ impl Formatter {
     fn fmt_enum_patten(&mut self, pat: &EnumPatten) {
         self.fmt_path(&pat.path);
         match pat.pats {
-            Some(ref pats) if !pats.is_empty() => fmt_comma_lists!(self, "(", ")", pats, fmt_patten),
+            Some(ref pats) if !pats.is_empty() =>
+                    fmt_comma_lists!(self, "(", ")", pats, fmt_patten),
             None => self.insert("(..)"),
             _ => (),
         }
@@ -2408,7 +2409,7 @@ impl Formatter {
         match stmt.stmt {
             StmtKind::Expr(ref expr, is_semi) if !is_semi => {
                 maybe_wrap!(self, " ", "", expr, fmt_expr)
-            }
+            },
             _ => unreachable!(),
         }
         self.try_fmt_trailing_comment(&stmt.loc);
@@ -2423,14 +2424,21 @@ impl Formatter {
     }
 
     #[inline]
-    fn fmt_macro_item(&mut self, item: &Chunk) {
-        let mut first = true;
-        for line in item.s.split('\n') {
-            if !first {
+    fn fmt_macro_item(&mut self, item: &MacroItem) {
+        let lines = item.s.s.split('\n').collect::<Vec<_>>();
+        let len = lines.len();
+        for idx in 0..len {
+            if idx > 0 {
                 self.nl();
             }
-            self.raw_insert(line);
-            first = false;
+
+            self.raw_insert(lines[idx]);
+            if idx == len - 1 {
+                match item.style {
+                    MacroStyle::Paren | MacroStyle::Bracket => self.raw_insert(";"),
+                    _ => (),
+                }
+            }
         }
     }
 
@@ -2467,3 +2475,4 @@ impl Formatter {
         self.insert_unmark_align(close);
     }
 }
+

@@ -105,19 +105,19 @@ fn fmt_str(src: String, file_name: &str, check: bool, debug: bool, overwrite: bo
     if overwrite {
         let mut file = File::create(file_name).unwrap();
         file.write_all(result.s.as_bytes()).unwrap();
-    } else if !check {
+    } else if check {
+        if !result.exceed_lines.is_empty() || !result.trailing_ws_lines.is_empty() {
+            p!("{}", file_name);
+            if !result.exceed_lines.is_empty() {
+                p!("exceed_lines: {:?}", result.exceed_lines);
+            }
+            if !result.trailing_ws_lines.is_empty() {
+                p!("trailing_ws_lines: {:?}", result.trailing_ws_lines);
+            }
+            p!(SEP);
+        }
+    } else {
         p!(result.s);
-    }
-
-    if !result.exceed_lines.is_empty() || !result.trailing_ws_lines.is_empty() {
-        pe!("{}", file_name);
-        if !result.exceed_lines.is_empty() {
-            pe!("exceed_lines: {:?}", result.exceed_lines);
-        }
-        if !result.trailing_ws_lines.is_empty() {
-            pe!("trailing_ws_lines: {:?}", result.trailing_ws_lines);
-        }
-        p!(SEP);
     }
 }
 

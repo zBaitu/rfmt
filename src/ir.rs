@@ -100,7 +100,7 @@ pub enum ItemKind {
     Trait(Trait),
     ImplDefault(ImplDefault),
     Impl(Impl),
-    Macro(Chunk),
+    Macro(MacroItem),
 }
 
 #[derive(Debug)]
@@ -957,6 +957,12 @@ pub enum MacroStyle {
     Paren,
     Bracket,
     Brace,
+}
+
+#[derive(Debug)]
+pub struct MacroItem {
+    pub style: MacroStyle,
+    pub s: Chunk,
 }
 
 #[derive(Debug)]

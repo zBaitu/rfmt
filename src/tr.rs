@@ -2030,10 +2030,13 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_macro_item(&mut self, mac: &rst::Mac) -> Chunk {
-        Chunk {
-            loc: self.leaf_loc(&mac.span),
-            s: self.span_to_snippet(mac.span).unwrap(),
+    fn trans_macro_item(&mut self, mac: &rst::Mac) -> MacroItem {
+        MacroItem {
+            style: self.macro_style(mac),
+            s: Chunk {
+                loc: self.leaf_loc(&mac.span),
+                s: self.span_to_snippet(mac.span).unwrap(),
+            },
         }
     }
 
@@ -2098,7 +2101,7 @@ impl Translator {
         let bracket_pos = s.find('[').unwrap_or(usize::max_value());
         let brace_pos = s.find('{').unwrap_or(usize::max_value());
 
-        if paren_pos < bracket_pos && paren_pos < bracket_pos {
+        if paren_pos < bracket_pos && paren_pos < brace_pos {
             MacroStyle::Paren
         } else if bracket_pos < brace_pos {
             MacroStyle::Bracket
