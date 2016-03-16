@@ -757,7 +757,6 @@ macro_rules! fmt_item_group {
             }
             $sf.$fmt_item(e.3);
 
-            $sf.raw_insert(";");
             $sf.try_fmt_trailing_comment(e.0);
             $sf.nl();
         }
@@ -1161,7 +1160,7 @@ impl Formatter {
     }
 
     fn fmt_extern_crate(&mut self, item: &ExternCrate) {
-        self.insert(&format!("extern crate {}", &item.name));
+        self.insert(&format!("extern crate {};", &item.name));
     }
 
     fn fmt_use_items(&mut self, items: &Vec<Item>) {
@@ -1171,6 +1170,7 @@ impl Formatter {
     fn fmt_use(&mut self, item: &Use) {
         self.insert(&format!("use {}", &item.base));
         self.fmt_use_names(&item.names);
+        self.raw_insert(";");
     }
 
     fn fmt_use_names(&mut self, names: &Vec<Chunk>) {
@@ -1191,7 +1191,7 @@ impl Formatter {
     }
 
     fn fmt_mod_decl(&mut self, item: &ModDecl) {
-        self.insert(&format!("mod {}", &item.name));
+        self.insert(&format!("mod {};", &item.name));
     }
 
     fn fmt_items(&mut self, items: &Vec<Item>) {
@@ -1212,7 +1212,9 @@ impl Formatter {
             self.raw_insert("pub ");
         }
         match item.item {
-            ItemKind::ExternCrate(_) | ItemKind::Use(_) | ItemKind::ModDecl(_) => unreachable!(),
+            ItemKind::ExternCrate(ref item) => self.fmt_extern_crate(item),
+            ItemKind::Use(ref item) => self.fmt_use(item),
+            ItemKind::ModDecl(ref item) => self.fmt_mod_decl(item),
             ItemKind::Mod(ref item) => self.fmt_sub_mod(item),
             ItemKind::TypeAlias(ref item) => self.fmt_type_alias(item),
             ItemKind::ForeignMod(ref item) => self.fmt_foreign_mod(item),
@@ -1863,8 +1865,6 @@ impl Formatter {
             StmtKind::Expr(ref expr, is_semi) => self.fmt_expr_stmt(expr, is_semi),
             StmtKind::Macro(ref mac, is_semi) => self.fmt_macro_stmt(mac, is_semi),
         }
-        self.try_fmt_trailing_comment(&stmt.loc);
-        self.nl();
     }
 
     fn fmt_decl_stmt(&mut self, decl: &Decl) {
@@ -1872,7 +1872,6 @@ impl Formatter {
             DeclKind::Local(ref local) => self.fmt_local(local),
             DeclKind::Item(ref item) => self.fmt_item(item),
         }
-        self.raw_insert(";");
     }
 
     fn fmt_local(&mut self, local: &Local) {
@@ -1888,6 +1887,10 @@ impl Formatter {
         if let Some(ref expr) = local.init {
             maybe_wrap!(self, " = ", "= ", expr, fmt_expr);
         }
+
+        self.raw_insert(";");
+        self.try_fmt_trailing_comment(&local.loc);
+        self.nl();
     }
 
     fn fmt_patten(&mut self, pat: &Patten) {
@@ -2044,6 +2047,9 @@ impl Formatter {
         if is_semi {
             self.raw_insert(";");
         }
+
+        self.try_fmt_trailing_comment(&expr.loc);
+        self.nl();
     }
 
     fn fmt_expr(&mut self, expr: &Expr) {
@@ -2453,6 +2459,9 @@ impl Formatter {
         if is_semi {
             self.raw_insert(";");
         }
+
+        self.try_fmt_trailing_comment(&stmt.loc);
+        self.nl();
     }
 
     #[inline]
