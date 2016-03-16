@@ -1946,7 +1946,8 @@ impl Formatter {
     fn fmt_enum_patten(&mut self, pat: &EnumPatten) {
         self.fmt_path(&pat.path);
         match pat.pats {
-            Some(ref pats) if !pats.is_empty() => fmt_comma_lists!(self, "(", ")", pats, fmt_patten),
+            Some(ref pats) if !pats.is_empty() => fmt_comma_lists!(self, "(", ")", pats,
+                    fmt_patten),
             None => self.insert("(..)"),
             _ => (),
         }
@@ -2475,4 +2476,3 @@ impl Formatter {
         self.insert_unmark_align(close);
     }
 }
-

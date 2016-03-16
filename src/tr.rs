@@ -473,7 +473,8 @@ impl Translator {
             rst::ItemTy(ref ty, ref generics) => {
                 ItemKind::TypeAlias(self.trans_type_alias(ident, generics, ty))
             },
-            rst::ItemForeignMod(ref module) => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
+            rst::ItemForeignMod(ref module)
+                    => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
             rst::ItemConst(ref ty, ref expr) => ItemKind::Const(self.trans_const(ident, ty, expr)),
             rst::ItemStatic(ref ty, mutbl, ref expr) => {
                 ItemKind::Static(self.trans_static(is_mut(mutbl), ident, ty, expr))
@@ -976,7 +977,7 @@ impl Translator {
     }
 
     fn trans_foreign_static(&mut self, is_mut: bool, ident: String, ty: &rst::Ty)
-        -> ForeignStatic {
+    -> ForeignStatic {
         ForeignStatic {
             is_mut: is_mut,
             name: ident,
@@ -1342,7 +1343,8 @@ impl Translator {
         }
     }
 
-    fn trans_self(&mut self, explicit_self: &rst::ExplicitSelf_, fn_sig: &rst::FnDecl) -> Option<Sf> {
+    fn trans_self(&mut self, explicit_self: &rst::ExplicitSelf_, fn_sig: &rst::FnDecl)
+    -> Option<Sf> {
         match *explicit_self {
             rst::SelfStatic => None,
             rst::SelfValue(_) => {
@@ -1618,7 +1620,8 @@ impl Translator {
         let attrs = self.trans_thin_attrs(&expr.attrs);
         let expr = match expr.node {
             rst::ExprLit(ref lit) => ExprKind::Literal(self.trans_literal_expr(lit)),
-            rst::ExprPath(ref qself, ref path) => ExprKind::Path(self.trans_path_type(qself, path)),
+            rst::ExprPath(ref qself, ref path)
+                    => ExprKind::Path(self.trans_path_type(qself, path)),
             rst::ExprUnary(op, ref expr) => {
                 ExprKind::Unary(Box::new(self.trans_unary_expr(op, expr)))
             },
@@ -1937,7 +1940,8 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_while_expr(&mut self, expr: &rst::Expr, block: &rst::Block, label: &Option<rst::Ident>)
+    fn trans_while_expr(&mut self, expr: &rst::Expr, block: &rst::Block,
+                        label: &Option<rst::Ident>)
     -> WhileExpr {
         WhileExpr {
             label: zopt::map_ref_mut(label, |ident| ident_to_string(ident)),
