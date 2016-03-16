@@ -77,17 +77,16 @@ fn fmt_file(path: &Path, check: bool, debug: bool, overwrite: bool) {
     let mut file = File::open(path).unwrap();
     let mut src = String::new();
     file.read_to_string(&mut src).unwrap();
-    let file_name = path.file_name().unwrap().to_str().unwrap();
-    fmt_str(src, file_name, check, debug, overwrite);
+    fmt_str(src, path.to_str().unwrap(), check, debug, overwrite);
 }
 
-fn fmt_str(src: String, file_name: &str, check: bool, debug: bool, overwrite: bool) {
+fn fmt_str(src: String, path: &str, check: bool, debug: bool, overwrite: bool) {
     let cfg = CrateConfig::new();
     let sess = ParseSess::new();
     let mut input = &src.as_bytes().to_vec()[..];
-    let krate = parse::parse_crate_from_source_str(file_name.to_string(), src, cfg, &sess);
+    let krate = parse::parse_crate_from_source_str(path.to_string(), src, cfg, &sess);
     let (cmnts, _) = comments::gather_comments_and_literals(&sess.span_diagnostic,
-            file_name.to_string(), &mut input);
+            path.to_string(), &mut input);
 
     let result = tr::trans(sess, krate, cmnts);
     if debug {
@@ -99,11 +98,11 @@ fn fmt_str(src: String, file_name: &str, check: bool, debug: bool, overwrite: bo
 
     let result = ft::fmt(result.krate, result.leading_cmnts, result.trailing_cmnts);
     if overwrite {
-        let mut file = File::create(file_name).unwrap();
+        let mut file = File::create(path).unwrap();
         file.write_all(result.s.as_bytes()).unwrap();
     } else if check {
         if !result.exceed_lines.is_empty() || !result.trailing_ws_lines.is_empty() {
-            p!("{}", file_name);
+            p!("{}", path);
             if !result.exceed_lines.is_empty() {
                 p!("exceed_lines: {:?}", result.exceed_lines);
             }
