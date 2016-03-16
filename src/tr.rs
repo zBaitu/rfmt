@@ -975,7 +975,8 @@ impl Translator {
         }
     }
 
-    fn trans_foreign_static(&mut self, is_mut: bool, ident: String, ty: &rst::Ty) -> ForeignStatic {
+    fn trans_foreign_static(&mut self, is_mut: bool, ident: String, ty: &rst::Ty)
+        -> ForeignStatic {
         ForeignStatic {
             is_mut: is_mut,
             name: ident,
@@ -1336,19 +1337,27 @@ impl Translator {
     fn trans_method_sig(&mut self, method_sig: &rst::MethodSig) -> MethodSig {
         MethodSig {
             generics: self.trans_generics(&method_sig.generics),
-            sf: self.trans_self(is_const(method_sig.constness), &method_sig.explicit_self.node),
+            sf: self.trans_self(&method_sig.explicit_self.node, &method_sig.decl),
             fn_sig: self.trans_fn_sig(&method_sig.decl),
         }
     }
 
-    fn trans_self(&mut self, is_const: bool, explicit_self: &rst::ExplicitSelf_) -> Option<Sf> {
+    fn trans_self(&mut self, explicit_self: &rst::ExplicitSelf_, fn_sig: &rst::FnDecl) -> Option<Sf> {
         match *explicit_self {
             rst::SelfStatic => None,
             rst::SelfValue(_) => {
-                let sf = if is_const {
-                    "self"
-                } else {
+                let arg = &fn_sig.inputs[0];
+                let is_mut = match arg.pat.node {
+                    rst::PatIdent(mode, _, _) => {
+                        let (_, is_mut) = is_ref_mut(mode);
+                        is_mut
+                    },
+                    _ => unreachable!(),
+                };
+                let sf = if is_mut {
                     "mut self"
+                } else {
+                    "self"
                 }.to_string();
                 Some(Sf::String(sf))
             },

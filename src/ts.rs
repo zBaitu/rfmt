@@ -7,7 +7,8 @@ use rfmt;
 
 const NL: char = '\n';
 
-const MAX_WIDTH: usize = 100;
+const MAX_WIDTH: usize = 98;
+const EXCEED_WIDTH: usize = 100;
 const MAX_ALIGN_COL: usize = 50;
 
 const INDENT: &'static str = "    ";
@@ -67,7 +68,7 @@ macro_rules! raw_insert {
         $sf.s.push_str($s);
 
         $sf.col += $s.len();
-        if $sf.col > MAX_WIDTH {
+        if $sf.col > EXCEED_WIDTH {
             $sf.exceed_lines.insert($sf.line);
         }
     });
@@ -249,4 +250,3 @@ impl Typesetter {
         self.align_stack.pop();
     }
 }
-

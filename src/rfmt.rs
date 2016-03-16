@@ -116,4 +116,3 @@ fn fmt_str(src: String, file_name: &str, check: bool, debug: bool, overwrite: bo
         p!(result.s);
     }
 }
-

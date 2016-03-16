@@ -199,7 +199,8 @@ impl Display for TypeParam {
 }
 
 #[inline]
-fn display_type_param_bounds(f: &mut fmt::Formatter, bounds: &Vec<TypeParamBound>) -> fmt::Result {
+fn display_type_param_bounds(f: &mut fmt::Formatter, bounds: &Vec<TypeParamBound>)
+-> fmt::Result {
     display_lists!(f, " + ", bounds)
 }
 
