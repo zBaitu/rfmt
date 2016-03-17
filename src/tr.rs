@@ -526,7 +526,7 @@ impl Translator {
 
     fn trans_extren_crate(&mut self, ident: String, rename: &Option<rst::Name>) -> ExternCrate {
         let name = match *rename {
-            Some(ref name) => format!("{} as {}", ident, name_to_string(name)),
+            Some(ref name) => format!("{} as {}", name_to_string(name), ident),
             None => ident,
         };
 

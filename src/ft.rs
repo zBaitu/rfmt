@@ -1313,7 +1313,7 @@ impl Formatter {
     }
 
     fn fmt_trait_ref(&mut self, trait_ref: &TraitRef) {
-        self.fmt_path(trait_ref);
+        self.fmt_path(trait_ref, false);
     }
 
     fn fmt_where(&mut self, wh: &Where) {
@@ -1342,41 +1342,44 @@ impl Formatter {
         self.fmt_type_param_bounds(&bound.bounds);
     }
 
-    fn fmt_path(&mut self, path: &Path) {
+    fn fmt_path(&mut self, path: &Path, from_expr: bool) {
         maybe_nl!(self, path);
         if path.global {
             self.insert("::");
         }
-        self.fmt_path_segments(&path.segs);
+        self.fmt_path_segments(&path.segs, from_expr);
     }
 
-    fn fmt_path_segments(&mut self, segs: &[PathSegment]) {
-        fmt_lists!(self, "::", "::", segs, fmt_path_segment)
+    fn fmt_path_segments(&mut self, segs: &[PathSegment], from_expr: bool) {
+        let mut first = true;
+        for seg in segs {
+            if !first {
+                maybe_wrap!(self, "::", "::", seg);
+            } 
+
+            self.fmt_path_segment(seg, from_expr);
+            first = false;
+        };
     }
 
-    fn fmt_path_segment(&mut self, seg: &PathSegment) {
+    fn fmt_path_segment(&mut self, seg: &PathSegment, from_expr: bool) {
         self.insert(&seg.name);
-        self.fmt_path_param(&seg.param);
+        self.fmt_path_param(&seg.param, from_expr);
     }
 
-    fn fmt_path_param(&mut self, param: &PathParam) {
+    fn fmt_path_param(&mut self, param: &PathParam, from_expr: bool) {
         match *param {
-            PathParam::Angle(ref param) => self.fmt_angle_param(param),
+            PathParam::Angle(ref param) => self.fmt_angle_param(param, from_expr),
             PathParam::Paren(ref param) => self.fmt_paren_param(param),
         }
     }
 
-    fn fmt_angle_param(&mut self, param: &AngleParam) {
+    fn fmt_angle_param(&mut self, param: &AngleParam, from_expr: bool) {
         if !param.is_empty() {
-            fmt_comma_lists!(self,
-                             "<",
-                             ">",
-                             &param.lifetimes,
-                             fmt_lifetime,
-                             &param.types,
-                             fmt_type,
-                             &param.bindings,
-                             fmt_type_binding);
+            if from_expr {
+                self.insert("::");
+            }
+            fmt_comma_lists!(self, "<", ">", &param.lifetimes, fmt_lifetime, &param.types, fmt_type, &param.bindings, fmt_type_binding);
         }
     }
 
@@ -1395,7 +1398,7 @@ impl Formatter {
         }
     }
 
-    fn fmt_qself_path(&mut self, qself: &QSelf, path: &Path) {
+    fn fmt_qself_path(&mut self, qself: &QSelf, path: &Path, from_expr: bool) {
         self.insert_mark_align("<");
         self.fmt_type(&qself.ty);
         if qself.pos > 0 {
@@ -1403,18 +1406,18 @@ impl Formatter {
             if path.global {
                 self.insert("::");
             }
-            self.fmt_path_segments(&path.segs[0..qself.pos]);
+            self.fmt_path_segments(&path.segs[0..qself.pos], from_expr);
         }
         self.insert_unmark_align(">");
 
         self.insert("::");
-        self.fmt_path_segments(&path.segs[qself.pos..]);
+        self.fmt_path_segments(&path.segs[qself.pos..], from_expr);
     }
 
     fn fmt_type(&mut self, ty: &Type) {
         maybe_nl!(self, ty);
         match ty.ty {
-            TypeKind::Path(ref ty) => self.fmt_path_type(ty),
+            TypeKind::Path(ref ty) => self.fmt_path_type(ty, false),
             TypeKind::Ptr(ref ty) => self.fmt_ptr_type(ty),
             TypeKind::Ref(ref ty) => self.fmt_ref_type(ty),
             TypeKind::Array(ref ty) => self.fmt_array_type(ty),
@@ -1428,13 +1431,13 @@ impl Formatter {
         }
     }
 
-    fn fmt_path_type(&mut self, ty: &PathType) {
+    fn fmt_path_type(&mut self, ty: &PathType, from_expr: bool) {
         match ty.qself {
             Some(ref qself) => {
                 maybe_wrap!(self, ty);
-                self.fmt_qself_path(qself, &ty.path);
+                self.fmt_qself_path(qself, &ty.path, from_expr);
             },
-            None => self.fmt_path(&ty.path),
+            None => self.fmt_path(&ty.path, from_expr),
         }
     }
 
@@ -1641,13 +1644,13 @@ impl Formatter {
             TraitItemKind::Type(ref item) => self.fmt_type_trait_item(item),
             TraitItemKind::Method(ref item) => self.fmt_method_trait_item(item),
         }
-        self.raw_insert(";");
     }
 
     fn fmt_const_trait_item(&mut self, item: &ConstTraitItem) {
         self.insert(&format!("const {}", item.name));
         insert_sep!(self, ":", item.ty);
         self.fmt_type(&item.ty);
+        self.raw_insert(";");
     }
 
     fn fmt_type_trait_item(&mut self, item: &TypeTraitItem) {
@@ -1659,6 +1662,7 @@ impl Formatter {
         if let Some(ref ty) = item.ty {
             maybe_wrap!(self, " = ", "= ", ty, fmt_type);
         }
+        self.raw_insert(";");
     }
 
     fn fmt_method_trait_item(&mut self, item: &MethodTraitItem) {
@@ -1668,6 +1672,8 @@ impl Formatter {
         self.fmt_method_sig(&item.method_sig);
         if let Some(ref block) = item.block {
             self.fmt_block(block);
+        } else {
+            self.raw_insert(";");
         }
     }
 
@@ -1846,7 +1852,7 @@ impl Formatter {
 
     fn fmt_block(&mut self, block: &Block) {
         if block.is_unsafe {
-            self.raw_insert("unsafe");
+            self.raw_insert("unsafe ");
         }
         fmt_block!(self, &block.stmts, fmt_stmts);
     }
@@ -1942,12 +1948,12 @@ impl Formatter {
 
     #[inline]
     fn fmt_path_patten(&mut self, pat: &PathPatten) {
-        self.fmt_qself_path(&pat.qself, &pat.path);
+        self.fmt_qself_path(&pat.qself, &pat.path, true);
     }
 
     #[inline]
     fn fmt_enum_patten(&mut self, pat: &EnumPatten) {
-        self.fmt_path(&pat.path);
+        self.fmt_path(&pat.path, true);
         match pat.pats {
             Some(ref pats) if !pats.is_empty() => fmt_comma_lists!(self, "(", ")", pats,
                     fmt_patten),
@@ -1958,7 +1964,7 @@ impl Formatter {
 
     #[inline]
     fn fmt_struct_patten(&mut self, pat: &StructPatten) {
-        self.fmt_path(&pat.path);
+        self.fmt_path(&pat.path, true);
 
         if pat.fields.is_empty() {
             self.raw_insert("{}");
@@ -2095,7 +2101,7 @@ impl Formatter {
 
     #[inline]
     fn fmt_path_expr(&mut self, expr: &PathExpr) {
-        self.fmt_path_type(expr);
+        self.fmt_path_type(expr, true);
     }
 
     #[inline]
@@ -2144,7 +2150,7 @@ impl Formatter {
 
     #[inline]
     fn fmt_struct_expr(&mut self, expr: &StructExpr) {
-        self.fmt_path(&expr.path);
+        self.fmt_path(&expr.path, true);
 
         if expr.fields.is_empty() {
             self.insert(" {}");
