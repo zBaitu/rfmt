@@ -1107,7 +1107,7 @@ impl Formatter {
     fn fmt_doc(&mut self, doc: &Doc) {
         self.try_fmt_leading_comments(&doc.loc);
         self.insert_indent();
-        self.raw_insert(&doc.s);
+        self.fmt_str_literal(doc);
         self.try_fmt_trailing_comment(&doc.loc);
         self.nl();
     }
@@ -2111,8 +2111,6 @@ impl Formatter {
 
     #[inline]
     fn fmt_str_literal(&mut self, chunk: &Chunk) {
-        maybe_nl!(self, chunk);
-
         let mut first = true;
         for line in chunk.s.split('\n') {
             if !first {
