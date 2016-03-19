@@ -1382,7 +1382,7 @@ impl Formatter {
         for seg in segs {
             if !first {
                 maybe_wrap!(self, "::", "::", seg);
-            } 
+            }
 
             self.fmt_path_segment(seg, from_expr);
             first = false;
@@ -1406,7 +1406,8 @@ impl Formatter {
             if from_expr {
                 self.insert("::");
             }
-            fmt_comma_lists!(self, "<", ">", &param.lifetimes, fmt_lifetime, &param.types, fmt_type, &param.bindings, fmt_type_binding);
+            fmt_comma_lists!(self, "<", ">", &param.lifetimes, fmt_lifetime, &param.types,
+                             fmt_type, &param.bindings, fmt_type_binding);
         }
     }
 
@@ -1982,8 +1983,8 @@ impl Formatter {
     fn fmt_enum_patten(&mut self, pat: &EnumPatten) {
         self.fmt_path(&pat.path, true);
         match pat.pats {
-            Some(ref pats) if !pats.is_empty() => fmt_comma_lists!(self, "(", ")", pats,
-                    fmt_patten),
+            Some(ref pats) if !pats.is_empty()
+                    => fmt_comma_lists!(self, "(", ")", pats, fmt_patten),
             None => self.insert("(..)"),
             _ => (),
         }
