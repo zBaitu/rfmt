@@ -118,7 +118,16 @@ macro_rules! display_lists {
 
 impl Display for Chunk {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        Display::fmt(&self.s, f)
+        let mut first = true;
+        for line in self.s.split('\n') {
+            if !first {
+                try!(write!(f, "\n"));
+            }
+
+            try!(write!(f, "{}", line));
+            first = false;
+        }
+        Ok(())
     }
 }
 
@@ -566,12 +575,6 @@ impl Display for Expr {
             ExprKind::Macro(ref expr) => Display::fmt(expr, f),
             _ => Debug::fmt(self, f),
         }
-    }
-}
-
-impl Display for Literal {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        Display::fmt(&self.s, f)
     }
 }
 
@@ -1078,7 +1081,20 @@ impl Formatter {
     #[inline]
     fn fmt_chunk(&mut self, chunk: &Chunk) {
         maybe_nl!(self, chunk);
-        self.insert(&chunk.s);
+        self.fmt_long_str(&chunk.s);
+    }
+
+    #[inline]
+    fn fmt_long_str(&mut self, s: &str) {
+        let mut first = true;
+        for line in s.split('\n') {
+            if !first {
+                self.nl();
+            }
+
+            self.insert(line);
+            first = false;
+        }
     }
 
     #[inline]
@@ -1112,7 +1128,7 @@ impl Formatter {
     fn fmt_doc(&mut self, doc: &Doc) {
         self.try_fmt_leading_comments(&doc.loc);
         self.insert_indent();
-        self.fmt_str_literal(doc);
+        self.fmt_chunk(doc);
         self.try_fmt_trailing_comment(&doc.loc);
         self.nl();
     }
@@ -1148,7 +1164,7 @@ impl Formatter {
     #[inline]
     fn fmt_meta_item(&mut self, item: &MetaItem) {
         maybe_nl!(self, item);
-        self.insert(&item.name);
+        self.fmt_long_str(&item.name);
 
         if let Some(ref items) = item.items {
             self.fmt_meta_items(&**items);
@@ -1191,7 +1207,7 @@ impl Formatter {
 
         self.insert("::");
         if names.len() == 1 {
-            self.insert(&names[0].s);
+            self.fmt_chunk(&names[0]);
         } else {
             fmt_comma_lists!(self, "{", "}", names, fmt_chunk);
         }
@@ -2106,25 +2122,8 @@ impl Formatter {
     }
 
     #[inline]
-    fn fmt_literal_expr(&mut self, expr: &Literal) {
-        if expr.is_str {
-            self.fmt_str_literal(&expr.s);
-        } else {
-            self.fmt_chunk(&expr.s);
-        }
-    }
-
-    #[inline]
-    fn fmt_str_literal(&mut self, chunk: &Chunk) {
-        let mut first = true;
-        for line in chunk.s.split('\n') {
-            if !first {
-                self.nl();
-            }
-
-            self.insert(line);
-            first = false;
-        }
+    fn fmt_literal_expr(&mut self, expr: &Chunk) {
+        self.fmt_chunk(expr);
     }
 
     #[inline]

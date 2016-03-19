@@ -750,7 +750,7 @@ pub struct Expr {
 
 #[derive(Debug)]
 pub enum ExprKind {
-    Literal(Literal),
+    Literal(Chunk),
     Path(PathExpr),
     Unary(Box<UnaryExpr>),
     Ref(Box<RefExpr>),
@@ -783,12 +783,6 @@ pub enum ExprKind {
 }
 
 pub type PathExpr = PathType;
-
-#[derive(Debug)]
-pub struct Literal {
-    pub is_str: bool,
-    pub s: Chunk,
-}
 
 #[derive(Debug)]
 pub struct UnaryExpr {
