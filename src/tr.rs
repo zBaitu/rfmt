@@ -80,6 +80,14 @@ fn span(s: u32, e: u32) -> rst::Span {
 }
 
 #[inline]
+fn is_str_literal(lit: &rst::Lit) -> bool {
+    match lit.node {
+        rst::Lit_::LitStr(_, _) | rst::Lit_::LitByteStr(_) => true,
+        _ => false,
+    }
+}
+
+#[inline]
 fn is_inner(style: rst::AttrStyle) -> bool {
     style == rst::AttrStyle::Inner
 }
@@ -1745,10 +1753,13 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_literal_expr(&mut self, lit: &rst::Lit) -> Chunk {
-        Chunk {
-            loc: self.leaf_loc(&lit.span),
-            s: self.literal_to_string(lit),
+    fn trans_literal_expr(&mut self, lit: &rst::Lit) -> Literal {
+        Literal {
+            is_str: is_str_literal(lit),
+            s: Chunk {
+                loc: self.leaf_loc(&lit.span),
+                s: self.literal_to_string(lit),
+            },
         }
     }
 

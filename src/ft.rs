@@ -569,6 +569,12 @@ impl Display for Expr {
     }
 }
 
+impl Display for Literal {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        Display::fmt(&self.s, f)
+    }
+}
+
 impl Display for UnaryExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}{}", self.op, self.expr)
@@ -2095,8 +2101,27 @@ impl Formatter {
     }
 
     #[inline]
-    fn fmt_literal_expr(&mut self, expr: &Chunk) {
-        self.fmt_chunk(expr);
+    fn fmt_literal_expr(&mut self, expr: &Literal) {
+        if expr.is_str {
+            self.fmt_str_literal(&expr.s);
+        } else {
+            self.fmt_chunk(&expr.s);
+        }
+    }
+
+    #[inline]
+    fn fmt_str_literal(&mut self, chunk: &Chunk) {
+        maybe_nl!(self, chunk);
+
+        let mut first = true;
+        for line in chunk.s.split('\n') {
+            if !first {
+                self.nl();
+            }
+
+            self.raw_insert(line);
+            first = false;
+        }
     }
 
     #[inline]
