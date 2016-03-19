@@ -979,9 +979,15 @@ pub struct MacroStmt {
 }
 
 #[derive(Debug)]
+pub struct MacroSep {
+    pub is_sep: bool,
+    pub s: &'static str,
+}
+
+#[derive(Debug)]
 pub struct Macro {
     pub name: String,
     pub style: MacroStyle,
     pub exprs: Vec<Expr>,
-    pub seps: Vec<&'static str>,
+    pub seps: Vec<MacroSep>,
 }

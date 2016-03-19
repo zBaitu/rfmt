@@ -175,19 +175,29 @@ fn uop_to_string(op: rst::UnOp) -> &'static str {
 }
 
 #[inline]
-fn token_to_string(token: &rst::Token) -> &'static str {
-    match *token {
-        rst::Token::Comma => ",",
-        rst::Token::Semi => ";",
-        _ => unreachable!(),
-    }
-}
-
-#[inline]
 fn is_macro_semi(style: &rst::MacStmtStyle) -> bool {
     match *style {
         rst::MacStmtStyle::MacStmtWithSemicolon => true,
         _ => false,
+    }
+}
+
+#[inline]
+fn token_to_macro_sep(token: &rst::Token) -> MacroSep {
+    let (is_sep, s) = match *token {
+        rst::Token::Comma => (true, ","),
+        rst::Token::Semi => (true, ";"),
+        rst::Token::FatArrow => (true, " =>"),
+        rst::Token::DotDotDot => (false, "..."),
+        _ => {
+            p!("{:#?}", token);
+            unreachable!();
+        },
+    };
+
+    MacroSep {
+        is_sep: is_sep,
+        s: s,
     }
 }
 
@@ -2120,7 +2130,7 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_macro_exprs(&self, mac: &rst::Mac) -> (Vec<rst::P<rst::Expr>>, Vec<&'static str>) {
+    fn trans_macro_exprs(&self, mac: &rst::Mac) -> (Vec<rst::P<rst::Expr>>, Vec<MacroSep>) {
         let mut exprs = Vec::new();
         let mut seps = Vec::new();
 
@@ -2133,7 +2143,7 @@ impl Translator {
             exprs.push(parser.parse_expr().unwrap());
             match parser.token {
                 rst::Token::Eof => break,
-                ref other => seps.push(token_to_string(other)),
+                ref other => seps.push(token_to_macro_sep(other)),
             }
 
             parser.bump().unwrap();

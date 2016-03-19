@@ -715,7 +715,12 @@ impl Display for Macro {
         for i in 0..expr_len {
             let expr = &self.exprs[i];
             if i > 0 {
-                try!(write!(f, "{}", self.seps[i - 1]));
+                let sep = &self.seps[i - 1];
+                if sep.is_sep {
+                    try!(write!(f, "{} ", sep.s));
+                } else {
+                    try!(write!(f, "{}", sep.s));
+                }
             }
             try!(Display::fmt(expr, f));
         }
@@ -2117,7 +2122,7 @@ impl Formatter {
                 self.nl();
             }
 
-            self.raw_insert(line);
+            self.insert(line);
             first = false;
         }
     }
@@ -2507,7 +2512,12 @@ impl Formatter {
         for i in 0..expr_len {
             let expr = &mac.exprs[i];
             if i > 0 {
-                insert_sep!(self, mac.seps[i - 1], expr);
+                let sep = &mac.seps[i - 1];
+                if sep.is_sep {
+                    insert_sep!(self, sep.s, expr);
+                } else {
+                    self.insert(sep.s);
+                }
             }
             self.fmt_expr(expr);
         }
