@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 use std::fmt::{self, Debug};
 
-use zbase::zstr;
+use zadt::zstr;
 
 use rfmt;
 

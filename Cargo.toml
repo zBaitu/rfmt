@@ -9,5 +9,6 @@ name = "rfmt"
 [dependencies]
 rsyntax = { path = "/home/baitu/workspace/rust/rsyntax" }
 rdk-base = { path = "/home/baitu/workspace/rust/rdk/rdk-base" }
+rdk-adt = { path = "/home/baitu/workspace/rust/rdk/rdk-adt" }
 getopts = "0.2.4"
 walkdir = "0.1"

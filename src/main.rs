@@ -5,6 +5,7 @@
 extern crate getopts;
 extern crate rst;
 extern crate walkdir;
+extern crate zadt;
 #[macro_use]
 extern crate zbase;
 
