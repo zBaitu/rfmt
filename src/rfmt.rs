@@ -93,7 +93,8 @@ fn fmt_file(path: &Path, check: bool, debug: bool, overwrite: bool) {
 fn fmt_str(src: String, path: &str, check: bool, debug: bool, overwrite: bool) {
     let cfg = CrateConfig::new();
     let codemap = Rc::new(CodeMap::new());
-    let handler = Handler::with_tty_emitter(ColorConfig::Auto, None, true, false, codemap.clone());
+    let handler
+            = Handler::with_tty_emitter(ColorConfig::Auto, None, true, false, codemap.clone());
     let mut sess = ParseSess::with_span_handler(handler, codemap.clone());
 
     let mut input = &src.as_bytes().to_vec()[..];
@@ -107,7 +108,8 @@ fn fmt_str(src: String, path: &str, check: bool, debug: bool, overwrite: bool) {
 
     let (cmnts, _) = comments::gather_comments_and_literals(&sess.span_diagnostic,
             path.to_string(), &mut input);
-    let silent_emitter = Box::new(EmitterWriter::new(Box::new(Vec::new()), None, codemap.clone()));
+    let silent_emitter
+            = Box::new(EmitterWriter::new(Box::new(Vec::new()), None, codemap.clone()));
     sess.span_diagnostic = Handler::with_emitter(true, false, silent_emitter);
 
     let result = tr::trans(sess, krate, cmnts);

@@ -505,7 +505,8 @@ impl Translator {
             rst::ItemKind::Enum(ref enum_def, ref generics) => {
                 ItemKind::Enum(self.trans_enum(ident, generics, enum_def))
             },
-            rst::ItemKind::Fn(ref fn_decl, unsafety, constness, abi, ref generics, ref block) => {
+            rst::ItemKind::Fn(ref fn_decl, unsafety, constness, abi, ref generics, ref block)
+                    => {
                 ItemKind::Fn(self.trans_fn(is_unsafe(unsafety), is_const(constness),
                                            abi_to_string(abi), ident, generics, fn_decl, block))
             },
@@ -516,8 +517,8 @@ impl Translator {
             rst::ItemKind::DefaultImpl(unsafety, ref trait_ref) => {
                 ItemKind::ImplDefault(self.trans_impl_default(is_unsafe(unsafety), trait_ref))
             },
-            rst::ItemKind::Impl(unsafety, polarity, ref generics, ref trait_ref, ref ty, ref items)
-                    => {
+            rst::ItemKind::Impl(unsafety, polarity, ref generics, ref trait_ref, ref ty,
+                                ref items) => {
                 ItemKind::Impl(self.trans_impl(is_unsafe(unsafety), is_neg(polarity), generics,
                                                trait_ref, ty, items))
             },
@@ -634,7 +635,8 @@ impl Translator {
         }
     }
 
-    fn trans_lifetime_defs(&mut self, lifetime_defs: &Vec<rst::LifetimeDef>) -> Vec<LifetimeDef> {
+    fn trans_lifetime_defs(&mut self, lifetime_defs: &Vec<rst::LifetimeDef>)
+    -> Vec<LifetimeDef> {
         trans_list!(self, lifetime_defs, trans_lifetime_def)
     }
 
@@ -721,13 +723,15 @@ impl Translator {
         }
     }
 
-    fn trans_where_clauses(&mut self, predicates: &Vec<rst::WherePredicate>) -> Vec<WhereClause> {
+    fn trans_where_clauses(&mut self, predicates: &Vec<rst::WherePredicate>)
+    -> Vec<WhereClause> {
         trans_list!(self, predicates, trans_where_clause)
     }
 
     fn trans_where_clause(&mut self, predicate: &rst::WherePredicate) -> WhereClause {
         match *predicate {
-            rst::WherePredicate::RegionPredicate(ref region) => self.trans_where_lifetime(region),
+            rst::WherePredicate::RegionPredicate(ref region)
+                    => self.trans_where_lifetime(region),
             rst::WherePredicate::BoundPredicate(ref bound) => self.trans_where_bound(bound),
             _ => unreachable!(),
         }
@@ -861,7 +865,8 @@ impl Translator {
             rst::TyKind::FixedLengthVec(ref ty, ref expr) => {
                 TypeKind::FixedSizeArray(Box::new(self.trans_fixed_size_array_type(ty, expr)))
             },
-            rst::TyKind::Tup(ref types) => TypeKind::Tuple(Box::new(self.trans_tuple_type(types))),
+            rst::TyKind::Tup(ref types)
+                    => TypeKind::Tuple(Box::new(self.trans_tuple_type(types))),
             rst::TyKind::Paren(ref ty) => {
                 TypeKind::Tuple(Box::new(self.trans_tuple_type(&vec![ty.clone()])))
             },
@@ -1004,7 +1009,8 @@ impl Translator {
         }
     }
 
-    fn trans_foreign_fn(&mut self, ident: String, generics: &rst::Generics, fn_decl: &rst::FnDecl)
+    fn trans_foreign_fn(&mut self, ident: String, generics: &rst::Generics,
+                        fn_decl: &rst::FnDecl)
     -> ForeignFn {
         ForeignFn {
             name: ident,
@@ -1031,7 +1037,8 @@ impl Translator {
         }
     }
 
-    fn trans_struct(&mut self, ident: String, generics: &rst::Generics, variant: &rst::VariantData)
+    fn trans_struct(&mut self, ident: String, generics: &rst::Generics,
+                    variant: &rst::VariantData)
     -> Struct {
         Struct {
             name: ident,
@@ -1563,7 +1570,8 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_struct_patten(&mut self, path: &rst::Path, fields: &Vec<rst::Spanned<rst::FieldPat>>,
+    fn trans_struct_patten(&mut self, path: &rst::Path,
+                           fields: &Vec<rst::Spanned<rst::FieldPat>>,
                            etc: bool)
     -> StructPatten {
         StructPatten {
@@ -1597,7 +1605,8 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_vec_patten(&mut self, start: &Vec<rst::P<rst::Pat>>, emit: &Option<rst::P<rst::Pat>>,
+    fn trans_vec_patten(&mut self, start: &Vec<rst::P<rst::Pat>>,
+                        emit: &Option<rst::P<rst::Pat>>,
                         end: &Vec<rst::P<rst::Pat>>)
     -> VecPatten {
         VecPatten {
@@ -1681,7 +1690,8 @@ impl Translator {
             rst::ExprKind::Type(ref expr, ref ty) => {
                 ExprKind::Type(Box::new(self.trans_type_expr(expr, ty)))
             },
-            rst::ExprKind::Block(ref block) => ExprKind::Block(Box::new(self.trans_block(block))),
+            rst::ExprKind::Block(ref block)
+                    => ExprKind::Block(Box::new(self.trans_block(block))),
             rst::ExprKind::If(ref expr, ref block, ref br) => {
                 ExprKind::If(Box::new(self.trans_if_expr(expr, block, br)))
             },
@@ -1945,7 +1955,8 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_if_let_expr(&mut self, pat: &rst::P<rst::Pat>, expr: &rst::Expr, block: &rst::Block,
+    fn trans_if_let_expr(&mut self, pat: &rst::P<rst::Pat>, expr: &rst::Expr,
+                         block: &rst::Block,
                          br: &Option<rst::P<rst::Expr>>)
     -> IfLetExpr {
         IfLetExpr {
@@ -2056,7 +2067,8 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_method_call_expr(&mut self, ident: &rst::SpannedIdent, types: &Vec<rst::P<rst::Ty>>,
+    fn trans_method_call_expr(&mut self, ident: &rst::SpannedIdent,
+                              types: &Vec<rst::P<rst::Ty>>,
                               args: &Vec<rst::P<rst::Expr>>)
     -> MethodCallExpr {
         MethodCallExpr {
@@ -2147,7 +2159,8 @@ impl Translator {
             return Some((exprs, seps));
         }
 
-        let mut parser = rst::parse::tts_to_parser(&self.sess, mac.node.tts.clone(), Vec::new());
+        let mut parser
+                = rst::parse::tts_to_parser(&self.sess, mac.node.tts.clone(), Vec::new());
         loop {
             exprs.push(match parser.parse_expr() {
                 Ok(expr) => expr,

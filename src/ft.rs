@@ -1730,8 +1730,7 @@ impl Formatter {
 
     fn fmt_method_trait_item(&mut self, item: &MethodTraitItem) {
         self.insert(&format!("{} {}",
-                             fn_head(item.is_unsafe, item.is_const, &item.abi),
-                             item.name));
+                             fn_head(item.is_unsafe, item.is_const, &item.abi), item.name));
         self.fmt_method_sig(&item.method_sig);
         if let Some(ref block) = item.block {
             self.fmt_block(block);
@@ -1812,8 +1811,7 @@ impl Formatter {
 
     fn fmt_method_impl_item(&mut self, item: &MethodImplItem) {
         self.insert(&format!("{} {}",
-                             fn_head(item.is_unsafe, item.is_const, &item.abi),
-                             item.name));
+                             fn_head(item.is_unsafe, item.is_const, &item.abi), item.name));
         self.fmt_method_sig(&item.method_sig);
         self.fmt_block(&item.block);
     }
@@ -2088,15 +2086,8 @@ impl Formatter {
         } else {
             Vec::new()
         };
-        fmt_comma_lists!(self,
-                         "[",
-                         "]",
-                         &pat.start,
-                         fmt_patten,
-                         &emit,
-                         fmt_vec_emit_patten,
-                         &pat.end,
-                         fmt_patten);
+        fmt_comma_lists!(self, "[", "]", &pat.start, fmt_patten, &emit, fmt_vec_emit_patten,
+                         &pat.end, fmt_patten);
     }
 
     #[inline]
