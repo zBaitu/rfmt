@@ -5,7 +5,7 @@ use rfmt;
 
 const NL: char = '\n';
 
-const MAX_WIDTH: usize = 98;
+const MAX_WIDTH: usize = 95;
 const EXCEED_WIDTH: usize = 100;
 const MAX_ALIGN_COL: usize = 50;
 

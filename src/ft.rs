@@ -97,14 +97,14 @@ fn ident_patten_head(is_ref: bool, is_mut: bool) -> String {
 
 macro_rules! display_lists {
     ($f:expr, $open:expr, $sep:expr, $close:expr, $($lists:expr),+) => ({
-        try!(write!($f, $open));
+        write!($f, $open)?;
 
         let mut first = true;
         $(for e in $lists {
             if !first {
-                try!(write!($f, "{}", $sep));
+                write!($f, "{}", $sep)?;
             }
-            try!(Display::fmt(e, $f));
+            Display::fmt(e, $f)?;
             first = false;
         })+
 
@@ -121,10 +121,10 @@ impl Display for Chunk {
         let mut first = true;
         for line in self.s.split('\n') {
             if !first {
-                try!(write!(f, "\n"));
+                write!(f, "\n")?;
             }
 
-            try!(write!(f, "{}", line));
+            write!(f, "{}", line)?;
             first = false;
         }
         Ok(())
@@ -133,9 +133,9 @@ impl Display for Chunk {
 
 impl Display for Attr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "#"));
+        write!(f, "#")?;
         if self.is_inner {
-            try!(write!(f, "!"));
+            write!(f, "!")?;
         }
         write!(f, "[{}]", self.item)
     }
@@ -143,9 +143,9 @@ impl Display for Attr {
 
 impl Display for MetaItem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(Display::fmt(&self.name, f));
+        Display::fmt(&self.name, f)?;
         if let Some(ref items) = self.items {
-            try!(display_lists!(f, "(", ", ", ")", &**items));
+            display_lists!(f, "(", ", ", ")", &**items)?;
         }
         Ok(())
     }
@@ -159,14 +159,14 @@ impl Display for ExternCrate {
 
 impl Display for Use {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "use {}", self.base));
+        write!(f, "use {}", self.base)?;
 
         if !self.names.is_empty() {
-            try!(write!(f, "::"));
+            write!(f, "::")?;
             if self.names.len() == 1 {
-                try!(write!(f, "{}", self.names[0]))
+                write!(f, "{}", self.names[0])?
             } else {
-                try!(display_lists!(f, "{{", ", ", "}}", &self.names));
+                display_lists!(f, "{{", ", ", "}}", &self.names)?;
             }
         }
         Ok(())
@@ -181,10 +181,10 @@ impl Display for ModDecl {
 
 impl Display for LifetimeDef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "{}", self.lifetime));
+        write!(f, "{}", self.lifetime)?;
         if !self.bounds.is_empty() {
-            try!(write!(f, ": "));
-            try!(display_lists!(f, " + ", &self.bounds))
+            write!(f, ": ")?;
+            display_lists!(f, " + ", &self.bounds)?
         }
         Ok(())
     }
@@ -192,15 +192,15 @@ impl Display for LifetimeDef {
 
 impl Display for TypeParam {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "{}", self.name));
+        write!(f, "{}", self.name)?;
 
         if !self.bounds.is_empty() {
-            try!(write!(f, ": "));
-            try!(display_type_param_bounds(f, &self.bounds));
+            write!(f, ": ")?;
+            display_type_param_bounds(f, &self.bounds)?;
         }
 
         if let Some(ref ty) = self.default {
-            try!(write!(f, " = {}", ty));
+            write!(f, " = {}", ty)?;
         }
 
         Ok(())
@@ -224,7 +224,7 @@ impl Display for TypeParamBound {
 
 impl Display for PolyTraitRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(display_for_liftime_defs(f, &self.lifetime_defs));
+        display_for_liftime_defs(f, &self.lifetime_defs)?;
         Display::fmt(&self.trait_ref, f)
     }
 }
@@ -233,7 +233,7 @@ impl Display for PolyTraitRef {
 fn display_for_liftime_defs(f: &mut fmt::Formatter, lifetime_defs: &Vec<LifetimeDef>)
 -> fmt::Result {
     if !lifetime_defs.is_empty() {
-        try!(display_lists!(f, "for<", ", ", "> ", lifetime_defs));
+        display_lists!(f, "for<", ", ", "> ", lifetime_defs)?;
     }
     Ok(())
 }
@@ -255,8 +255,8 @@ impl Display for WhereClause {
 
 impl Display for WhereBound {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(display_for_liftime_defs(f, &self.lifetime_defs));
-        try!(write!(f, "{}: ", &self.ty));
+        display_for_liftime_defs(f, &self.lifetime_defs)?;
+        write!(f, "{}: ", &self.ty)?;
         display_type_param_bounds(f, &self.bounds)
     }
 }
@@ -264,7 +264,7 @@ impl Display for WhereBound {
 impl Display for Path {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.global {
-            try!(write!(f, "::"));
+            write!(f, "::")?;
         }
         display_path_segments(f, &self.segs)
     }
@@ -293,7 +293,7 @@ impl Display for PathParam {
 impl Display for AngleParam {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if !self.is_empty() {
-            try!(display_lists!(f, "<", ", ", ">", &self.lifetimes, &self.types, &self.bindings));
+            display_lists!(f, "<", ", ", ">", &self.lifetimes, &self.types, &self.bindings)?;
         }
         Ok(())
     }
@@ -307,9 +307,9 @@ impl Display for TypeBinding {
 
 impl Display for ParenParam {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(display_paren_param_inputs(f, &self.inputs));
+        display_paren_param_inputs(f, &self.inputs)?;
         if let Some(ref output) = self.output {
-            try!(write!(f, " -> {}", output));
+            write!(f, " -> {}", output)?;
         }
         Ok(())
     }
@@ -320,18 +320,19 @@ fn display_paren_param_inputs(f: &mut fmt::Formatter, inputs: &Vec<Type>) -> fmt
     display_lists!(f, "(", ", ", ")", inputs)
 }
 
+#[inline]
 fn display_qself(f: &mut fmt::Formatter, qself: &QSelf, path: &Path) -> fmt::Result {
-    try!(write!(f, "<{}", qself.ty));
+    write!(f, "<{}", qself.ty)?;
     if qself.pos > 0 {
-        try!(write!(f, " as "));
+        write!(f, " as ")?;
         if path.global {
-            try!(write!(f, "::"));
+            write!(f, "::")?;
         }
-        try!(display_path_segments(f, &path.segs[0..qself.pos]));
+        display_path_segments(f, &path.segs[0..qself.pos])?;
     }
-    try!(write!(f, ">"));
+    write!(f, ">")?;
 
-    try!(write!(f, "::"));
+    write!(f, "::")?;
     display_path_segments(f, &path.segs[qself.pos..])
 }
 
@@ -394,17 +395,17 @@ impl Display for TupleType {
 
 impl Display for BareFnType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(display_for_liftime_defs(f, &self.lifetime_defs));
+        display_for_liftime_defs(f, &self.lifetime_defs)?;
         write!(f, "{}{}", fn_head(self.is_unsafe, false, &self.abi), self.fn_sig)
     }
 }
 
 impl Display for SumType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(Display::fmt(&self.ty, f));
+        Display::fmt(&self.ty, f)?;
         if !self.bounds.is_empty() {
-            try!(write!(f, ": "));
-            try!(display_type_param_bounds(f, &self.bounds));
+            write!(f, ": ")?;
+            display_type_param_bounds(f, &self.bounds)?;
         }
         Ok(())
     }
@@ -419,7 +420,7 @@ impl Display for PolyTraitRefType {
 impl Display for TupleField {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.is_pub {
-            try!(write!(f, "pub "));
+            write!(f, "pub ")?;
         }
         Display::fmt(&self.ty, f)
     }
@@ -434,14 +435,14 @@ impl Display for FnSig {
 impl Display for FnArg {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.va {
-            try!(write!(f, "("));
+            write!(f, "(")?;
 
             let mut first = true;
             for e in &self.args {
                 if !first {
-                    try!(write!(f, ", "));
+                    write!(f, ", ")?;
                 }
-                try!(Display::fmt(e, f));
+                Display::fmt(e, f)?;
                 first = false;
             }
 
@@ -504,9 +505,9 @@ impl Display for RangePatten {
 
 impl Display for IdentPatten {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "{}{}", ident_patten_head(self.is_ref, self.is_mut), self.name));
+        write!(f, "{}{}", ident_patten_head(self.is_ref, self.is_mut), self.name)?;
         if let Some(ref pat) = self.binding {
-            try!(write!(f, " @ {}", pat));
+            write!(f, " @ {}", pat)?;
         }
         Ok(())
     }
@@ -529,7 +530,7 @@ impl Display for PathPatten {
 
 impl Display for EnumPatten {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(Display::fmt(&self.path, f));
+        Display::fmt(&self.path, f)?;
         match self.pats {
             Some(ref pats) if !pats.is_empty() => display_lists!(f, "(", ", ", ")", pats),
             None => write!(f, "(..)"),
@@ -567,14 +568,15 @@ impl Display for Expr {
             ExprKind::Vec(ref exprs) => display_lists!(f, "[", ", ", "]", &**exprs),
             ExprKind::Tuple(ref exprs) => display_lists!(f, "(", ", ", ")", &**exprs),
             ExprKind::FieldAccess(ref expr) => Display::fmt(expr, f),
-            ExprKind::Range(ref expr) => Display::fmt(expr, f),
             ExprKind::Index(ref expr) => Display::fmt(expr, f),
+            ExprKind::Range(ref expr) => Display::fmt(expr, f),
             ExprKind::Box(ref expr) => Display::fmt(expr, f),
             ExprKind::Cast(ref expr) => Display::fmt(expr, f),
             ExprKind::Type(ref expr) => Display::fmt(expr, f),
             ExprKind::FnCall(ref expr) => Display::fmt(expr, f),
             ExprKind::MethodCall(ref expr) => Display::fmt(expr, f),
             ExprKind::Closure(ref expr) => Display::fmt(expr, f),
+            ExprKind::Try(ref expr) => write!(f, "{}?", expr),
             ExprKind::Macro(ref expr) => Display::fmt(expr, f),
             _ => Debug::fmt(self, f),
         }
@@ -621,12 +623,19 @@ impl Display for IndexExpr {
 impl Display for RangeExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if let Some(ref start) = self.start {
-            try!(write!(f, "{}", start));
+            write!(f, "{}", start)?;
         }
-        try!(write!(f, ".."));
+
+        if self.is_halfopen {
+            write!(f, "..")?;
+        } else {
+            write!(f, "...")?;
+        }
+
         if let Some(ref end) = self.end {
-            try!(write!(f, "{}", end));
+            write!(f, "{}", end)?;
         }
+
         Ok(())
     }
 }
@@ -651,17 +660,17 @@ impl Display for TypeExpr {
 
 impl Display for FnCallExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "{}", self.name));
+        write!(f, "{}", self.name)?;
         display_lists!(f, "(", ", ", ")", &self.args)
     }
 }
 
 impl Display for MethodCallExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "{}.{}", self.obj, self.name));
+        write!(f, "{}.{}", self.obj, self.name)?;
         if !self.types.is_empty() {
-            try!(write!(f, "::"));
-            try!(display_lists!(f, "<", ", ", ">", &self.types));
+            write!(f, "::")?;
+            display_lists!(f, "<", ", ", ">", &self.types)?;
         }
         display_lists!(f, "(", ", ", ")", &self.args)
     }
@@ -670,29 +679,29 @@ impl Display for MethodCallExpr {
 impl Display for ClosureExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.moved {
-            try!(write!(f, "move "));
+            write!(f, "move ")?;
         }
 
-        try!(write!(f, "|"));
+        write!(f, "|")?;
         let mut first = true;
         for arg in &self.fn_sig.arg.args {
             if !first {
-                try!(write!(f, ", "));
+                write!(f, ", ")?;
             }
 
-            try!(write!(f, "{}", arg.pat));
+            write!(f, "{}", arg.pat)?;
             match arg.ty.ty {
                 TypeKind::Infer => (),
-                _ => try!(write!(f, ": {}", arg.ty)),
+                _ => write!(f, ": {}", arg.ty)?,
             }
             first = false;
         }
 
         if self.fn_sig.arg.va {
-            try!(write!(f, ", ..."));
+            write!(f, ", ...")?;
         }
-        try!(write!(f, "|"));
-        try!(Display::fmt(&self.fn_sig.ret, f));
+        write!(f, "|")?;
+        Display::fmt(&self.fn_sig.ret, f)?;
 
         if self.block.stmts.len() > 1 {
             Debug::fmt(&self.block, f)
@@ -730,20 +739,20 @@ impl Display for MacroExpr {
             MacroStyle::Brace => ("{", "}"),
         };
 
-        try!(write!(f, "{}!", self.name));
-        try!(write!(f, "{}", open));
+        write!(f, "{}!", self.name)?;
+        write!(f, "{}", open)?;
         let expr_len = self.exprs.len();
         for i in 0..expr_len {
             let expr = &self.exprs[i];
             if i > 0 {
                 let sep = &self.seps[i - 1];
                 if sep.is_sep {
-                    try!(write!(f, "{} ", sep.s));
+                    write!(f, "{} ", sep.s)?;
                 } else {
-                    try!(write!(f, "{}", sep.s));
+                    write!(f, "{}", sep.s)?;
                 }
             }
-            try!(Display::fmt(expr, f));
+            Display::fmt(expr, f)?;
         }
         write!(f, "{}", close)
     }
@@ -1299,13 +1308,8 @@ impl Formatter {
 
     fn fmt_generics(&mut self, generics: &Generics) {
         if !generics.is_empty() {
-            fmt_comma_lists!(self,
-                             "<",
-                             ">",
-                             &generics.lifetime_defs,
-                             fmt_lifetime_def,
-                             &generics.type_params,
-                             fmt_type_param);
+            fmt_comma_lists!(self, "<", ">", &generics.lifetime_defs, fmt_lifetime_def,
+                             &generics.type_params, fmt_type_param);
         }
     }
 
@@ -1481,6 +1485,7 @@ impl Formatter {
         }
     }
 
+    #[inline]
     fn fmt_path_type(&mut self, ty: &PathType, from_expr: bool) {
         match ty.qself {
             Some(ref qself) => {
@@ -1491,22 +1496,26 @@ impl Formatter {
         }
     }
 
+    #[inline]
     fn fmt_ptr_type(&mut self, ty: &PtrType) {
         let head = ptr_head(ty.is_mut);
         maybe_wrap!(self, head, head, ty.ty, fmt_type);
     }
 
+    #[inline]
     fn fmt_ref_type(&mut self, ty: &RefType) {
         let head = &ref_head(&ty.lifetime, ty.is_mut);
         maybe_wrap!(self, head, head, ty.ty, fmt_type);
     }
 
+    #[inline]
     fn fmt_array_type(&mut self, ty: &ArrayType) {
         self.insert_mark_align("[");
         self.fmt_type(&ty.ty);
         self.insert_unmark_align("]");
     }
 
+    #[inline]
     fn fmt_fixed_size_array_type(&mut self, ty: &FixedSizeArrayType) {
         self.insert_mark_align("[");
         self.fmt_type(&ty.ty);
@@ -1515,16 +1524,19 @@ impl Formatter {
         self.insert_unmark_align("]");
     }
 
+    #[inline]
     fn fmt_tuple_type(&mut self, ty: &TupleType) {
         fmt_comma_lists!(self, "(", ")", &ty.types, fmt_type);
     }
 
+    #[inline]
     fn fmt_bare_fn_type(&mut self, ty: &BareFnType) {
         self.fmt_for_lifetime_defs(&ty.lifetime_defs);
         self.insert(&fn_head(ty.is_unsafe, false, &ty.abi));
         self.fmt_fn_sig(&ty.fn_sig);
     }
 
+    #[inline]
     fn fmt_sum_type(&mut self, ty: &SumType) {
         self.fmt_type(&ty.ty);
         if !ty.bounds.is_empty() {
@@ -1533,10 +1545,12 @@ impl Formatter {
         }
     }
 
+    #[inline]
     fn fmt_poly_trait_ref_type(&mut self, ty: &PolyTraitRefType) {
         self.fmt_type_param_bounds(&ty.bounds);
     }
 
+    #[inline]
     fn fmt_infer_type(&mut self) {
         self.raw_insert("_");
     }
@@ -1662,8 +1676,7 @@ impl Formatter {
 
     fn fmt_fn(&mut self, item: &Fn) {
         self.insert(&format!("{} {}",
-                             fn_head(item.is_unsafe, item.is_const, &item.abi),
-                             item.name));
+                             fn_head(item.is_unsafe, item.is_const, &item.abi), item.name));
         self.fmt_generics(&item.generics);
         self.fmt_fn_sig(&item.fn_sig);
         self.fmt_where(&item.generics.wh);
@@ -1882,7 +1895,6 @@ impl Formatter {
     fn fmt_method_fn_sig(&mut self, sf: &Sf, sig: &MethodSig) {
         self.insert_mark_align("(");
         self.fmt_sf(sf);
-        
         let mut is_wrap = false;
         for arg in &sig.fn_sig.arg.args[1..] {
             is_wrap |= insert_sep!(self, ",", arg);
