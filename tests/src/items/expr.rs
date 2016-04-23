@@ -38,10 +38,12 @@ fn f() {
 
     //loop {}
 
+    /*
     match a {
         aa if y => true,
         bb | cc => false,
     }
+    */
 
     //move |a| -> bool {a}
 
@@ -56,6 +58,7 @@ fn f() {
     //1..2
     //..2
     //1..
+    1...2
 
     //::a::b
     //<Vec<T> as SomeTrait>::SomeType

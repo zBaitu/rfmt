@@ -84,8 +84,8 @@ fn is_inner(style: rst::AttrStyle) -> bool {
 }
 
 #[inline]
-fn is_pub(vis: rst::Visibility) -> bool {
-    vis == rst::Visibility::Public
+fn is_pub(vis: &rst::Visibility) -> bool {
+    *vis == rst::Visibility::Public
 }
 
 #[inline]
@@ -95,7 +95,7 @@ fn is_sized(modifier: rst::TraitBoundModifier) -> bool {
 
 #[inline]
 fn is_mut(mutbl: rst::Mutability) -> bool {
-    mutbl == rst::Mutability::MutMutable
+    mutbl == rst::Mutability::Mutable
 }
 
 #[inline]
@@ -116,14 +116,14 @@ fn is_neg(polarity: rst::ImplPolarity) -> bool {
 #[inline]
 fn is_block_unsafe(rules: rst::BlockCheckMode) -> bool {
     match rules {
-        rst::BlockCheckMode::UnsafeBlock(source) => source == rst::UnsafeSource::UserProvided,
+        rst::BlockCheckMode::Unsafe(source) => source == rst::UnsafeSource::UserProvided,
         _ => false,
     }
 }
 
 #[inline]
-fn is_move(capture: rst::CaptureClause) -> bool {
-    capture == rst::CaptureClause::CaptureByValue
+fn is_move(capture: rst::CaptureBy) -> bool {
+    capture == rst::CaptureBy::Value
 }
 
 #[inline]
@@ -132,6 +132,11 @@ fn is_ref_mut(mode: rst::BindingMode) -> (bool, bool) {
         rst::BindingMode::ByRef(mutbl) => (true, is_mut(mutbl)),
         rst::BindingMode::ByValue(mutbl) => (false, is_mut(mutbl)),
     }
+}
+
+#[inline]
+fn is_halfopen(range_limit: rst::RangeLimits) -> bool {
+    range_limit == rst::RangeLimits::HalfOpen
 }
 
 #[inline]
@@ -168,7 +173,7 @@ fn uop_to_string(op: rst::UnOp) -> &'static str {
 #[inline]
 fn is_macro_semi(style: &rst::MacStmtStyle) -> bool {
     match *style {
-        rst::MacStmtStyle::MacStmtWithSemicolon => true,
+        rst::MacStmtStyle::Semicolon => true,
         _ => false,
     }
 }
@@ -385,8 +390,8 @@ impl Translator {
 
     #[inline]
     fn trans_doc(&mut self, attr: &rst::Attribute) -> Doc {
-        if let rst::MetaNameValue(_, ref value) = attr.node.value.node {
-            if let rst::LitStr(ref s, _) = value.node {
+        if let rst::MetaItemKind::NameValue(_, ref value) = attr.node.value.node {
+            if let rst::LitKind::Str(ref s, _) = value.node {
                 return Doc {
                     loc: self.leaf_loc(&attr.span),
                     s: s.to_string(),
@@ -419,14 +424,14 @@ impl Translator {
     #[inline]
     fn trans_meta_item(&mut self, meta_item: &rst::MetaItem) -> MetaItem {
         match meta_item.node {
-            rst::MetaWord(ref ident) => {
+            rst::MetaItemKind::Word(ref ident) => {
                 MetaItem {
                     loc: self.leaf_loc(&meta_item.span),
                     name: ident.to_string(),
                     items: None,
                 }
             },
-            rst::MetaNameValue(ref ident, ref lit) => {
+            rst::MetaItemKind::NameValue(ref ident, ref lit) => {
                 let s = format!("{} = {}", ident, self.literal_to_string(lit));
                 MetaItem {
                     loc: self.leaf_loc(&meta_item.span),
@@ -434,7 +439,7 @@ impl Translator {
                     items: None,
                 }
             },
-            rst::MetaList(ref ident, ref meta_items) => {
+            rst::MetaItemKind::List(ref ident, ref meta_items) => {
                 let loc = self.loc(&meta_item.span);
                 let items = self.trans_meta_items(meta_items);
                 self.set_loc(&loc);
@@ -473,36 +478,36 @@ impl Translator {
         let loc = self.loc(&item.span);
         let attrs = self.trans_attrs(&item.attrs);
 
-        let is_pub = is_pub(item.vis);
+        let is_pub = is_pub(&item.vis);
         let ident = ident_to_string(&item.ident);
         let item = match item.node {
-            rst::ItemExternCrate(ref rename) => {
+            rst::ItemKind::ExternCrate(ref rename) => {
                 ItemKind::ExternCrate(self.trans_extren_crate(ident, rename))
             },
-            rst::ItemUse(ref view_path) => ItemKind::Use(self.trans_use(view_path)),
-            rst::ItemMod(ref module) => {
+            rst::ItemKind::Use(ref view_path) => ItemKind::Use(self.trans_use(view_path)),
+            rst::ItemKind::Mod(ref module) => {
                 if self.is_mod_decl(module) {
                     ItemKind::ModDecl(self.trans_mod_decl(ident))
                 } else {
                     ItemKind::Mod(self.trans_mod(ident, module))
                 }
             },
-            rst::ItemTy(ref ty, ref generics) => {
+            rst::ItemKind::Ty(ref ty, ref generics) => {
                 ItemKind::TypeAlias(self.trans_type_alias(ident, generics, ty))
             },
-            rst::ItemForeignMod(ref module)
+            rst::ItemKind::ForeignMod(ref module)
                     => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
-            rst::ItemConst(ref ty, ref expr) => ItemKind::Const(self.trans_const(ident, ty, expr)),
-            rst::ItemStatic(ref ty, mutbl, ref expr) => {
+            rst::ItemKind::Const(ref ty, ref expr) => ItemKind::Const(self.trans_const(ident, ty, expr)),
+            rst::ItemKind::Static(ref ty, mutbl, ref expr) => {
                 ItemKind::Static(self.trans_static(is_mut(mutbl), ident, ty, expr))
             },
-            rst::ItemStruct(ref variant, ref generics) => {
+            rst::ItemKind::Struct(ref variant, ref generics) => {
                 ItemKind::Struct(self.trans_struct(ident, generics, variant))
             },
-            rst::ItemEnum(ref enum_def, ref generics) => {
+            rst::ItemKind::Enum(ref enum_def, ref generics) => {
                 ItemKind::Enum(self.trans_enum(ident, generics, enum_def))
             },
-            rst::ItemFn(ref fn_decl, unsafety, constness, abi, ref generics, ref block) => {
+            rst::ItemKind::Fn(ref fn_decl, unsafety, constness, abi, ref generics, ref block) => {
                 ItemKind::Fn(self.trans_fn(is_unsafe(unsafety),
                                            is_const(constness),
                                            abi_to_string(abi),
@@ -511,17 +516,17 @@ impl Translator {
                                            fn_decl,
                                            block))
             },
-            rst::ItemTrait(unsafety, ref generics, ref bounds, ref items) => {
+            rst::ItemKind::Trait(unsafety, ref generics, ref bounds, ref items) => {
                 ItemKind::Trait(self.trans_trait(is_unsafe(unsafety),
                                                  ident,
                                                  generics,
                                                  bounds,
                                                  items))
             },
-            rst::ItemDefaultImpl(unsafety, ref trait_ref) => {
+            rst::ItemKind::DefaultImpl(unsafety, ref trait_ref) => {
                 ItemKind::ImplDefault(self.trans_impl_default(is_unsafe(unsafety), trait_ref))
             },
-            rst::ItemImpl(unsafety, polarity, ref generics, ref trait_ref, ref ty, ref items) => {
+            rst::ItemKind::Impl(unsafety, polarity, ref generics, ref trait_ref, ref ty, ref items) => {
                 ItemKind::Impl(self.trans_impl(is_unsafe(unsafety),
                                                is_neg(polarity),
                                                generics,
@@ -529,7 +534,7 @@ impl Translator {
                                                ty,
                                                items))
             },
-            rst::ItemMac(ref mac) => ItemKind::Macro(self.trans_macro_item(mac)),
+            rst::ItemKind::Mac(ref mac) => ItemKind::Macro(self.trans_macro_item(mac)),
         };
 
         self.set_loc(&loc);
@@ -599,12 +604,12 @@ impl Translator {
     fn trans_use_name(&mut self, item: &rst::PathListItem) -> Chunk {
         let loc = self.leaf_loc(&item.span);
         let (mut s, rename) = match item.node {
-            rst::PathListIdent {
+            rst::PathListItemKind::Ident {
                 ref name,
                 ref rename,
                 ..
             } => (ident_to_string(name), rename),
-            rst::PathListMod {
+            rst::PathListItemKind::Mod {
                 ref rename,
                 ..
             } => ("self".to_string(), rename),
@@ -812,7 +817,7 @@ impl Translator {
         }
     }
 
-    fn trans_type_bindings(&mut self, bindings: &[rst::P<rst::TypeBinding>]) -> Vec<TypeBinding> {
+    fn trans_type_bindings(&mut self, bindings: &[rst::TypeBinding]) -> Vec<TypeBinding> {
         trans_list!(self, bindings, trans_type_binding)
     }
 
@@ -857,32 +862,32 @@ impl Translator {
         let loc = self.loc(&ty.span);
 
         let ty = match ty.node {
-            rst::TyPath(ref qself, ref path) => {
+            rst::TyKind::Path(ref qself, ref path) => {
                 TypeKind::Path(Box::new(self.trans_path_type(qself, path)))
             },
-            rst::TyPtr(ref mut_type) => TypeKind::Ptr(Box::new(self.trans_ptr_type(mut_type))),
-            rst::TyRptr(ref lifetime, ref mut_type) => {
+            rst::TyKind::Ptr(ref mut_type) => TypeKind::Ptr(Box::new(self.trans_ptr_type(mut_type))),
+            rst::TyKind::Rptr(ref lifetime, ref mut_type) => {
                 TypeKind::Ref(Box::new(self.trans_ref_type(lifetime, mut_type)))
             },
-            rst::TyVec(ref ty) => TypeKind::Array(Box::new(self.trans_array_type(ty))),
-            rst::TyFixedLengthVec(ref ty, ref expr) => {
+            rst::TyKind::Vec(ref ty) => TypeKind::Array(Box::new(self.trans_array_type(ty))),
+            rst::TyKind::FixedLengthVec(ref ty, ref expr) => {
                 TypeKind::FixedSizeArray(Box::new(self.trans_fixed_size_array_type(ty, expr)))
             },
-            rst::TyTup(ref types) => TypeKind::Tuple(Box::new(self.trans_tuple_type(types))),
-            rst::TyParen(ref ty) => {
+            rst::TyKind::Tup(ref types) => TypeKind::Tuple(Box::new(self.trans_tuple_type(types))),
+            rst::TyKind::Paren(ref ty) => {
                 TypeKind::Tuple(Box::new(self.trans_tuple_type(&vec![ty.clone()])))
             },
-            rst::TyBareFn(ref bare_fn) => {
+            rst::TyKind::BareFn(ref bare_fn) => {
                 TypeKind::BareFn(Box::new(self.trans_bare_fn_type(bare_fn)))
             },
-            rst::TyObjectSum(ref ty, ref bounds) => {
+            rst::TyKind::ObjectSum(ref ty, ref bounds) => {
                 TypeKind::Sum(Box::new(self.trans_sum_type(ty, bounds)))
             },
-            rst::TyPolyTraitRef(ref bounds) => {
+            rst::TyKind::PolyTraitRef(ref bounds) => {
                 TypeKind::PolyTraitRef(Box::new(self.trans_poly_trait_ref_type(bounds)))
             },
-            rst::TyMac(ref mac) => TypeKind::Macro(Box::new(self.trans_macro(mac))),
-            rst::TyInfer => TypeKind::Infer,
+            rst::TyKind::Mac(ref mac) => TypeKind::Macro(Box::new(self.trans_macro(mac))),
+            rst::TyKind::Infer => TypeKind::Infer,
             _ => unreachable!(),
         };
 
@@ -965,7 +970,7 @@ impl Translator {
         }
     }
 
-    fn trans_foreign_items(&mut self, items: &Vec<rst::P<rst::ForeignItem>>) -> Vec<ForeignItem> {
+    fn trans_foreign_items(&mut self, items: &Vec<rst::ForeignItem>) -> Vec<ForeignItem> {
         trans_list!(self, items, trans_foreign_item)
     }
 
@@ -973,13 +978,13 @@ impl Translator {
         let loc = self.loc(&item.span);
         let attrs = self.trans_attrs(&item.attrs);
 
-        let is_pub = is_pub(item.vis);
+        let is_pub = is_pub(&item.vis);
         let ident = ident_to_string(&item.ident);
         let item = match item.node {
-            rst::ForeignItemStatic(ref ty, is_mut) => {
+            rst::ForeignItemKind::Static(ref ty, is_mut) => {
                 ForeignKind::Static(self.trans_foreign_static(is_mut, ident, ty))
             },
-            rst::ForeignItemFn(ref fn_decl, ref generics) => {
+            rst::ForeignItemKind::Fn(ref fn_decl, ref generics) => {
                 ForeignKind::Fn(self.trans_foreign_fn(ident, generics, fn_decl))
             },
         };
@@ -1055,16 +1060,11 @@ impl Translator {
     }
 
     fn trans_struct_field(&mut self, field: &rst::StructField) -> StructField {
-        let (is_pub, name) = match field.node.kind {
-            rst::StructFieldKind::NamedField(ref ident, vis) => {
-                (is_pub(vis), ident_to_string(ident))
-            },
-            _ => unreachable!(),
-        };
-
         let loc = self.loc(&field.span);
-        let attrs = self.trans_attrs(&field.node.attrs);
-        let ty = self.trans_type(&field.node.ty);
+        let attrs = self.trans_attrs(&field.attrs);
+        let is_pub = is_pub(&field.vis);
+        let name = ident_to_string(&field.ident.unwrap());
+        let ty = self.trans_type(&field.ty);
         self.set_loc(&loc);
 
         StructField {
@@ -1081,14 +1081,10 @@ impl Translator {
     }
 
     fn trans_tuple_field(&mut self, field: &rst::StructField) -> TupleField {
-        let is_pub = match field.node.kind {
-            rst::StructFieldKind::UnnamedField(vis) => is_pub(vis),
-            _ => unreachable!(),
-        };
-
         let loc = self.loc(&field.span);
-        let attrs = self.trans_attrs(&field.node.attrs);
-        let ty = self.trans_type(&field.node.ty);
+        let attrs = self.trans_attrs(&field.attrs);
+        let is_pub = is_pub(&field.vis);
+        let ty = self.trans_type(&field.ty);
         self.set_loc(&loc);
 
         TupleField {
@@ -1114,7 +1110,7 @@ impl Translator {
         }
     }
 
-    fn trans_enum_fields(&mut self, variants: &Vec<rst::P<rst::Variant>>) -> Vec<EnumField> {
+    fn trans_enum_fields(&mut self, variants: &Vec<rst::Variant>) -> Vec<EnumField> {
         trans_list!(self, variants, trans_enum_field)
     }
 
@@ -1150,7 +1146,7 @@ impl Translator {
     }
 
     fn trans_trait(&mut self, is_unsafe: bool, ident: String, generics: &rst::Generics,
-                   bounds: &rst::TyParamBounds, items: &Vec<rst::P<rst::TraitItem>>)
+                   bounds: &rst::TyParamBounds, items: &Vec<rst::TraitItem>)
     -> Trait {
         Trait {
             is_unsafe: is_unsafe,
@@ -1161,7 +1157,7 @@ impl Translator {
         }
     }
 
-    fn trans_trait_items(&mut self, items: &Vec<rst::P<rst::TraitItem>>) -> Vec<TraitItem> {
+    fn trans_trait_items(&mut self, items: &Vec<rst::TraitItem>) -> Vec<TraitItem> {
         trans_list!(self, items, trans_trait_item)
     }
 
@@ -1170,13 +1166,13 @@ impl Translator {
         let attrs = self.trans_attrs(&item.attrs);
         let ident = ident_to_string(&item.ident);
         let item = match item.node {
-            rst::ConstTraitItem(ref ty, ref expr) => {
+            rst::TraitItemKind::Const(ref ty, ref expr) => {
                 TraitItemKind::Const(self.trans_const_trait_item(ident, ty, expr))
             },
-            rst::TypeTraitItem(ref bounds, ref ty) => {
+            rst::TraitItemKind::Type(ref bounds, ref ty) => {
                 TraitItemKind::Type(self.trans_type_trait_item(ident, bounds, ty))
             },
-            rst::MethodTraitItem(ref method_sig, ref block) => {
+            rst::TraitItemKind::Method(ref method_sig, ref block) => {
                 TraitItemKind::Method(self.trans_method_trait_item(ident, method_sig, block))
             },
         };
@@ -1231,7 +1227,7 @@ impl Translator {
 
     fn trans_impl(&mut self, is_unsafe: bool, is_neg: bool, generics: &rst::Generics,
                   trait_ref: &Option<rst::TraitRef>, ty: &rst::Ty,
-                  items: &Vec<rst::P<rst::ImplItem>>)
+                  items: &Vec<rst::ImplItem>)
     -> Impl {
         Impl {
             is_unsafe: is_unsafe,
@@ -1243,7 +1239,7 @@ impl Translator {
         }
     }
 
-    fn trans_impl_items(&mut self, items: &Vec<rst::P<rst::ImplItem>>) -> Vec<ImplItem> {
+    fn trans_impl_items(&mut self, items: &Vec<rst::ImplItem>) -> Vec<ImplItem> {
         trans_list!(self, items, trans_impl_item)
     }
 
@@ -1251,7 +1247,7 @@ impl Translator {
         let loc = self.loc(&item.span);
         let attrs = self.trans_attrs(&item.attrs);
 
-        let is_pub = is_pub(item.vis);
+        let is_pub = is_pub(&item.vis);
         let ident = ident_to_string(&item.ident);
         let item = match item.node {
             rst::ImplItemKind::Const(ref ty, ref expr) => {
@@ -1333,10 +1329,10 @@ impl Translator {
 
     fn trans_fn_return(&mut self, output: &rst::FunctionRetTy) -> FnReturn {
         let (nl, ret) = match *output {
-            rst::FunctionRetTy::DefaultReturn(_) => (false, FnReturnKind::Unit),
-            rst::FunctionRetTy::NoReturn(ref span)
+            rst::FunctionRetTy::Default(_) => (false, FnReturnKind::Unit),
+            rst::FunctionRetTy::None(ref span)
                     => (self.is_fn_return_nl(span.lo.0), FnReturnKind::Diverge),
-            rst::FunctionRetTy::Return(ref ty) => (self.is_fn_return_nl(ty.span.lo.0),
+            rst::FunctionRetTy::Ty(ref ty) => (self.is_fn_return_nl(ty.span.lo.0),
                     FnReturnKind::Normal(self.trans_type(ty))),
         };
 
@@ -1360,14 +1356,14 @@ impl Translator {
         }
     }
 
-    fn trans_self(&mut self, explicit_self: &rst::ExplicitSelf_, fn_sig: &rst::FnDecl)
+    fn trans_self(&mut self, explicit_self: &rst::SelfKind, fn_sig: &rst::FnDecl)
     -> Option<Sf> {
         match *explicit_self {
-            rst::SelfStatic => None,
-            rst::SelfValue(_) => {
+            rst::SelfKind::Static => None,
+            rst::SelfKind::Value(_) => {
                 let arg = &fn_sig.inputs[0];
                 let is_mut = match arg.pat.node {
-                    rst::PatIdent(mode, _, _) => {
+                    rst::PatKind::Ident(mode, _, _) => {
                         let (_, is_mut) = is_ref_mut(mode);
                         is_mut
                     },
@@ -1380,7 +1376,7 @@ impl Translator {
                 }.to_string();
                 Some(Sf::String(sf))
             },
-            rst::SelfRegion(lifetime, mutbl, _) => {
+            rst::SelfKind::Region(lifetime, mutbl, _) => {
                 let mut s = String::new();
                 s.push_str("&");
                 if let Some(ref lifetime) = lifetime {
@@ -1394,7 +1390,7 @@ impl Translator {
                 s.push_str("self");
                 Some(Sf::String(s))
             },
-            rst::SelfExplicit(ref ty, _) => Some(Sf::Type(self.trans_type(ty))),
+            rst::SelfKind::Explicit(ref ty, _) => Some(Sf::Type(self.trans_type(ty))),
         }
     }
 
@@ -1414,18 +1410,18 @@ impl Translator {
         }
     }
 
-    fn trans_stmts(&mut self, stmts: &Vec<rst::P<rst::Stmt>>) -> Vec<Stmt> {
+    fn trans_stmts(&mut self, stmts: &Vec<rst::Stmt>) -> Vec<Stmt> {
         trans_list!(self, stmts, trans_stmt)
     }
 
     #[inline]
-    fn trans_stmt(&mut self, stmt: &rst::P<rst::Stmt>) -> Stmt {
+    fn trans_stmt(&mut self, stmt: &rst::Stmt) -> Stmt {
         let loc = self.loc(&stmt.span);
         let stmt = match stmt.node {
-            rst::StmtDecl(ref decl, _) => StmtKind::Decl(self.trans_decl(decl)),
-            rst::StmtSemi(ref expr, _) => StmtKind::Expr(self.trans_expr(expr), true),
-            rst::StmtExpr(ref expr, _) => StmtKind::Expr(self.trans_expr(expr), false),
-            rst::StmtMac(ref mac, ref style, ref attrs) => {
+            rst::StmtKind::Decl(ref decl, _) => StmtKind::Decl(self.trans_decl(decl)),
+            rst::StmtKind::Semi(ref expr, _) => StmtKind::Expr(self.trans_expr(expr), true),
+            rst::StmtKind::Expr(ref expr, _) => StmtKind::Expr(self.trans_expr(expr), false),
+            rst::StmtKind::Mac(ref mac, ref style, ref attrs) => {
                 StmtKind::Macro(self.trans_macro_stmt(attrs, mac), is_macro_semi(style))
             },
         };
@@ -1441,8 +1437,8 @@ impl Translator {
     fn trans_decl(&mut self, decl: &rst::Decl) -> Decl {
         let loc = self.loc(&decl.span);
         let decl = match decl.node {
-            rst::DeclLocal(ref local) => DeclKind::Local(self.trans_local(local)),
-            rst::DeclItem(ref item) => DeclKind::Item(self.trans_item(item)),
+            rst::DeclKind::Local(ref local) => DeclKind::Local(self.trans_local(local)),
+            rst::DeclKind::Item(ref item) => DeclKind::Item(self.trans_item(item)),
         };
         self.set_loc(&loc);
 
@@ -1486,32 +1482,33 @@ impl Translator {
     fn trans_patten(&mut self, pat: &rst::P<rst::Pat>) -> Patten {
         let loc = self.loc(&pat.span);
         let pat = match pat.node {
-            rst::PatWild => PattenKind::Wildcard,
-            rst::PatLit(ref expr) => PattenKind::Literal(self.trans_expr(expr)),
-            rst::PatRange(ref start, ref end) => {
+            rst::PatKind::Wild => PattenKind::Wildcard,
+            rst::PatKind::Lit(ref expr) => PattenKind::Literal(self.trans_expr(expr)),
+            rst::PatKind::Range(ref start, ref end) => {
                 PattenKind::Range(self.trans_range_patten(start, end))
             },
-            rst::PatIdent(mode, ref ident, ref binding) => {
+            rst::PatKind::Ident(mode, ref ident, ref binding) => {
                 PattenKind::Ident(Box::new(self.trans_ident_patten(mode, ident, binding)))
             },
-            rst::PatRegion(ref pat, mutbl) => {
+            rst::PatKind::Ref(ref pat, mutbl) => {
                 PattenKind::Ref(Box::new(self.trans_ref_patten(is_mut(mutbl), pat)))
             },
-            rst::PatQPath(ref qself, ref path) => {
+            rst::PatKind::QPath(ref qself, ref path) => {
                 PattenKind::Path(self.trans_path_patten(qself, path))
             },
-            rst::PatEnum(ref path, ref pats) => {
-                PattenKind::Enum(self.trans_enum_patten(path, pats))
-            },
-            rst::PatStruct(ref path, ref fields, etc) => {
+            rst::PatKind::Struct(ref path, ref fields, etc) => {
                 PattenKind::Struct(Box::new(self.trans_struct_patten(path, fields, etc)))
             },
-            rst::PatVec(ref start, ref emit, ref end) => {
+            rst::PatKind::TupleStruct(ref path, ref pats) => {
+                PattenKind::Enum(self.trans_enum_patten(path, pats))
+            },
+            rst::PatKind::Path(ref path) => unreachable!(), // TODO
+            rst::PatKind::Vec(ref start, ref emit, ref end) => {
                 PattenKind::Vec(Box::new(self.trans_vec_patten(start, emit, end)))
             },
-            rst::PatTup(ref pats) => PattenKind::Tuple(Box::new(self.trans_tuple_patten(pats))),
-            rst::PatBox(ref pat) => PattenKind::Box(Box::new(self.trans_patten(pat))),
-            rst::PatMac(ref mac) => PattenKind::Macro(self.trans_macro(mac)),
+            rst::PatKind::Tup(ref pats) => PattenKind::Tuple(Box::new(self.trans_tuple_patten(pats))),
+            rst::PatKind::Box(ref pat) => PattenKind::Box(Box::new(self.trans_patten(pat))),
+            rst::PatKind::Mac(ref mac) => PattenKind::Macro(self.trans_macro(mac)),
         };
         self.set_loc(&loc);
 
@@ -1636,93 +1633,93 @@ impl Translator {
         let loc = self.loc(&expr.span);
         let attrs = self.trans_thin_attrs(&expr.attrs);
         let expr = match expr.node {
-            rst::ExprLit(ref lit) => ExprKind::Literal(self.trans_literal_expr(lit)),
-            rst::ExprPath(ref qself, ref path)
+            rst::ExprKind::Lit(ref lit) => ExprKind::Literal(self.trans_literal_expr(lit)),
+            rst::ExprKind::Path(ref qself, ref path)
                     => ExprKind::Path(self.trans_path_type(qself, path)),
-            rst::ExprUnary(op, ref expr) => {
+            rst::ExprKind::Unary(op, ref expr) => {
                 ExprKind::Unary(Box::new(self.trans_unary_expr(op, expr)))
             },
-            rst::ExprAddrOf(mutble, ref expr) => {
+            rst::ExprKind::AddrOf(mutble, ref expr) => {
                 ExprKind::Ref(Box::new(self.trans_ref_expr(mutble, expr)))
             },
-            rst::ExprBinary(ref op, ref left, ref right) => {
+            rst::ExprKind::Binary(ref op, ref left, ref right) => {
                 ExprKind::List(Box::new(self.trans_binary_expr(left, op, right)))
             },
-            rst::ExprAssign(ref left, ref right) => {
+            rst::ExprKind::Assign(ref left, ref right) => {
                 ExprKind::List(Box::new(self.trans_assign_expr(left, right)))
             },
-            rst::ExprAssignOp(ref op, ref left, ref right) => {
+            rst::ExprKind::AssignOp(ref op, ref left, ref right) => {
                 ExprKind::List(Box::new(self.trans_op_assign_expr(left, op, right)))
             },
-            rst::ExprInPlace(ref left, ref right) => {
+            rst::ExprKind::InPlace(ref left, ref right) => {
                 ExprKind::List(Box::new(self.trans_in_place_expr(left, right)))
             },
-            rst::ExprRepeat(ref init, ref len) => {
+            rst::ExprKind::Repeat(ref init, ref len) => {
                 ExprKind::FixedSizeArray(Box::new(self.trans_fixed_size_array_expr(init, len)))
             },
-            rst::ExprVec(ref exprs) => ExprKind::Vec(Box::new(self.trans_exprs(exprs))),
-            rst::ExprTup(ref exprs) => ExprKind::Tuple(Box::new(self.trans_exprs(exprs))),
-            rst::ExprParen(ref expr) => ExprKind::Tuple(Box::new(vec![self.trans_expr(expr)])),
-            rst::ExprField(ref expr, ref ident) => {
+            rst::ExprKind::Vec(ref exprs) => ExprKind::Vec(Box::new(self.trans_exprs(exprs))),
+            rst::ExprKind::Tup(ref exprs) => ExprKind::Tuple(Box::new(self.trans_exprs(exprs))),
+            rst::ExprKind::Paren(ref expr) => ExprKind::Tuple(Box::new(vec![self.trans_expr(expr)])),
+            rst::ExprKind::Field(ref expr, ref ident) => {
                 ExprKind::FieldAccess(Box::new(self.trans_struct_field_access_expr(expr, ident)))
             },
-            rst::ExprTupField(ref expr, ref pos) => {
+            rst::ExprKind::TupField(ref expr, ref pos) => {
                 ExprKind::FieldAccess(Box::new(self.trans_tuple_field_access_expr(expr, pos)))
             },
-            rst::ExprStruct(ref path, ref fields, ref base) => {
+            rst::ExprKind::Struct(ref path, ref fields, ref base) => {
                 ExprKind::Struct(Box::new(self.trans_struct_expr(path, fields, base)))
             },
-            rst::ExprIndex(ref obj, ref index) => {
+            rst::ExprKind::Index(ref obj, ref index) => {
                 ExprKind::Index(Box::new(self.trans_index_expr(obj, index)))
             },
-            rst::ExprRange(ref start, ref end) => {
-                ExprKind::Range(Box::new(self.trans_range_expr(start, end)))
+            rst::ExprKind::Range(ref start, ref end, limit) => {
+                ExprKind::Range(Box::new(self.trans_range_expr(start, end, limit)))
             },
-            rst::ExprBox(ref expr) => ExprKind::Box(Box::new(self.trans_box_expr(expr))),
-            rst::ExprCast(ref expr, ref ty) => {
+            rst::ExprKind::Box(ref expr) => ExprKind::Box(Box::new(self.trans_box_expr(expr))),
+            rst::ExprKind::Cast(ref expr, ref ty) => {
                 ExprKind::Cast(Box::new(self.trans_cast_expr(expr, ty)))
             },
-            rst::ExprType(ref expr, ref ty) => {
+            rst::ExprKind::Type(ref expr, ref ty) => {
                 ExprKind::Type(Box::new(self.trans_type_expr(expr, ty)))
             },
-            rst::ExprBlock(ref block) => ExprKind::Block(Box::new(self.trans_block(block))),
-            rst::ExprIf(ref expr, ref block, ref br) => {
+            rst::ExprKind::Block(ref block) => ExprKind::Block(Box::new(self.trans_block(block))),
+            rst::ExprKind::If(ref expr, ref block, ref br) => {
                 ExprKind::If(Box::new(self.trans_if_expr(expr, block, br)))
             },
-            rst::ExprIfLet(ref pat, ref expr, ref block, ref br) => {
+            rst::ExprKind::IfLet(ref pat, ref expr, ref block, ref br) => {
                 ExprKind::IfLet(Box::new(self.trans_if_let_expr(pat, expr, block, br)))
             },
-            rst::ExprWhile(ref expr, ref block, ref label) => {
+            rst::ExprKind::While(ref expr, ref block, ref label) => {
                 ExprKind::While(Box::new(self.trans_while_expr(expr, block, label)))
             },
-            rst::ExprWhileLet(ref pat, ref expr, ref block, ref label) => {
+            rst::ExprKind::WhileLet(ref pat, ref expr, ref block, ref label) => {
                 ExprKind::WhileLet(Box::new(self.trans_while_let_expr(pat, expr, block, label)))
             },
-            rst::ExprForLoop(ref pat, ref expr, ref block, ref label) => {
+            rst::ExprKind::ForLoop(ref pat, ref expr, ref block, ref label) => {
                 ExprKind::For(Box::new(self.trans_for_expr(pat, expr, block, label)))
             },
-            rst::ExprLoop(ref block, ref label) => {
+            rst::ExprKind::Loop(ref block, ref label) => {
                 ExprKind::Loop(Box::new(self.trans_loop_expr(block, label)))
             },
-            rst::ExprBreak(ref ident) => ExprKind::Break(Box::new(self.trans_break_expr(ident))),
-            rst::ExprAgain(ref ident) => {
+            rst::ExprKind::Break(ref ident) => ExprKind::Break(Box::new(self.trans_break_expr(ident))),
+            rst::ExprKind::Again(ref ident) => {
                 ExprKind::Continue(Box::new(self.trans_continue_expr(ident)))
             },
-            rst::ExprMatch(ref expr, ref arms) => {
+            rst::ExprKind::Match(ref expr, ref arms) => {
                 ExprKind::Match(Box::new(self.trans_match_expr(expr, arms)))
             },
-            rst::ExprCall(ref fn_name, ref args) => {
+            rst::ExprKind::Call(ref fn_name, ref args) => {
                 ExprKind::FnCall(Box::new(self.trans_fn_call_expr(fn_name, args)))
             },
-            rst::ExprMethodCall(ref ident, ref types, ref args) => {
+            rst::ExprKind::MethodCall(ref ident, ref types, ref args) => {
                 ExprKind::MethodCall(Box::new(self.trans_method_call_expr(ident, types, args)))
             },
-            rst::ExprClosure(capture, ref fn_decl, ref block) => {
+            rst::ExprKind::Closure(capture, ref fn_decl, ref block) => {
                 ExprKind::Closure(Box::new(self.trans_closure_expr(capture, fn_decl, block)))
             },
-            rst::ExprRet(ref expr) => ExprKind::Return(Box::new(self.trans_return_expr(expr))),
-            rst::ExprMac(ref mac) => ExprKind::Macro(self.trans_macro(mac)),
-            rst::ExprInlineAsm(_) => unreachable!(),
+            rst::ExprKind::Ret(ref expr) => ExprKind::Return(Box::new(self.trans_return_expr(expr))),
+            rst::ExprKind::Mac(ref mac) => ExprKind::Macro(self.trans_macro(mac)),
+            rst::ExprKind::InlineAsm(_) | rst::ExprKind::Try(_) => unreachable!(),
         };
         self.set_loc(&loc);
 
@@ -1902,11 +1899,12 @@ impl Translator {
 
     #[inline]
     fn trans_range_expr(&mut self, start: &Option<rst::P<rst::Expr>>,
-                        end: &Option<rst::P<rst::Expr>>)
+                        end: &Option<rst::P<rst::Expr>>, limit: rst::RangeLimits)
     -> RangeExpr {
         RangeExpr {
             start: map_ref_mut(start, |expr| self.trans_expr(expr)),
             end: map_ref_mut(end, |expr| self.trans_expr(expr)),
+            is_halfopen: is_halfopen(limit),
         }
     }
 
@@ -2068,7 +2066,7 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_closure_expr(&mut self, capture: rst::CaptureClause, fn_decl: &rst::FnDecl,
+    fn trans_closure_expr(&mut self, capture: rst::CaptureBy, fn_decl: &rst::FnDecl,
                           block: &rst::Block)
     -> ClosureExpr {
         ClosureExpr {
@@ -2142,7 +2140,7 @@ impl Translator {
                 ref other => seps.push(token_to_macro_sep(other)),
             }
 
-            parser.bump().unwrap();
+            parser.bump();
             if parser.token == rst::parse::token::Token::Eof {
                 break;
             }

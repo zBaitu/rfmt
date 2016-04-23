@@ -91,7 +91,7 @@ fn fmt_str(src: String, path: &str, check: bool, debug: bool, overwrite: bool) {
     let cfg = CrateConfig::new();
     let sess = ParseSess::new();
     let mut input = &src.as_bytes().to_vec()[..];
-    let krate = parse::parse_crate_from_source_str(path.to_string(), src, cfg, &sess);
+    let krate = parse::parse_crate_from_source_str(path.to_string(), src, cfg, &sess).unwrap();
     let (cmnts, _) = comments::gather_comments_and_literals(&sess.span_diagnostic,
             path.to_string(), &mut input);
 

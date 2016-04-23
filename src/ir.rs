@@ -838,6 +838,7 @@ pub struct IndexExpr {
 pub struct RangeExpr {
     pub start: Option<Expr>,
     pub end: Option<Expr>,
+    pub is_halfopen: bool,
 }
 
 #[derive(Debug)]

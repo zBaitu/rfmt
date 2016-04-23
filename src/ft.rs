@@ -2236,7 +2236,13 @@ impl Formatter {
         if let Some(ref start) = expr.start {
             self.fmt_expr(start);
         }
-        self.insert("..");
+
+        if expr.is_halfopen {
+            self.insert("..");
+        } else {
+            self.insert("...");
+        }
+
         if let Some(ref end) = expr.end {
             self.fmt_expr(end);
         }
