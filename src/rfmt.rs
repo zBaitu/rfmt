@@ -11,6 +11,13 @@ use walkdir::WalkDir;
 use ft;
 use tr;
 
+macro_rules! p {
+    () => ({print!("\n")});
+    ($arg:expr) => ({print!("{}\n", $arg)});
+    ($fmt:expr, $($arg:tt)*) => ({print!(concat!($fmt, "\n"), $($arg)*)});
+    ($($arg:tt)+) => ({print!("{}\n", $($arg)+)});
+}
+
 const SEP: &'static str = "----------------------------------------";
 
 pub fn dump_ast(path: &str) {

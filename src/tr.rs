@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::result;
 
 use rst;
-use zbase::zopt;
 
 use ir::*;
 
@@ -182,7 +181,7 @@ fn token_to_macro_sep(token: &rst::Token) -> MacroSep {
         rst::Token::FatArrow => (true, " =>"),
         rst::Token::DotDotDot => (false, "..."),
         _ => {
-            p!("{:#?}", token);
+            println!("{:#?}", token);
             unreachable!();
         },
     };
@@ -190,6 +189,14 @@ fn token_to_macro_sep(token: &rst::Token) -> MacroSep {
     MacroSep {
         is_sep: is_sep,
         s: s,
+    }
+}
+
+#[inline]
+fn map_ref_mut<T, F, R>(opt: &Option<T>, mut f: F) -> Option<R> where F: FnMut(&T) -> R {
+    match *opt {
+        Some(ref v) => Some(f(v)),
+        None => None,
     }
 }
 
@@ -667,7 +674,7 @@ impl Translator {
         let loc = self.loc(&type_param.span);
         let name = ident_to_string(&type_param.ident);
         let bounds = self.trans_type_param_bounds(&type_param.bounds);
-        let default = zopt::map_ref_mut(&type_param.default, |ty| self.trans_type(ty));
+        let default = map_ref_mut(&type_param.default, |ty| self.trans_type(ty));
         self.set_loc(&loc);
 
         TypeParam {
@@ -825,7 +832,7 @@ impl Translator {
     fn trans_paren_param(&mut self, param: &rst::ParenthesizedParameterData) -> ParenParam {
         let loc = self.loc(&param.span);
         let inputs = self.trans_types(&param.inputs);
-        let output = zopt::map_ref_mut(&param.output, |ty| self.trans_type(ty));
+        let output = map_ref_mut(&param.output, |ty| self.trans_type(ty));
         self.set_loc(&loc);
 
         ParenParam {
@@ -888,7 +895,7 @@ impl Translator {
 
     fn trans_path_type(&mut self, qself: &Option<rst::QSelf>, path: &rst::Path) -> PathType {
         PathType {
-            qself: zopt::map_ref_mut(qself, |qself| self.trans_qself(qself)),
+            qself: map_ref_mut(qself, |qself| self.trans_qself(qself)),
             path: self.trans_path(path),
         }
     }
@@ -903,7 +910,7 @@ impl Translator {
     fn trans_ref_type(&mut self, lifetime: &Option<rst::Lifetime>, mut_type: &rst::MutTy)
     -> RefType {
         RefType {
-            lifetime: zopt::map_ref_mut(lifetime, |lifetime| self.trans_lifetime(lifetime)),
+            lifetime: map_ref_mut(lifetime, |lifetime| self.trans_lifetime(lifetime)),
             is_mut: is_mut(mut_type.mutbl),
             ty: self.trans_type(&mut_type.ty),
         }
@@ -1116,7 +1123,7 @@ impl Translator {
         let attrs = self.trans_attrs(&variant.node.attrs);
         let name = ident_to_string(&variant.node.name);
         let body = self.trans_struct_body(&variant.node.data);
-        let expr = zopt::map_ref_mut(&variant.node.disr_expr, |expr| self.trans_expr(expr));
+        let expr = map_ref_mut(&variant.node.disr_expr, |expr| self.trans_expr(expr));
         self.set_loc(&loc);
 
         EnumField {
@@ -1188,7 +1195,7 @@ impl Translator {
         ConstTraitItem {
             name: ident,
             ty: self.trans_type(ty),
-            expr: zopt::map_ref_mut(expr, |expr| self.trans_expr(expr)),
+            expr: map_ref_mut(expr, |expr| self.trans_expr(expr)),
         }
     }
 
@@ -1198,7 +1205,7 @@ impl Translator {
         TypeTraitItem {
             name: ident,
             bounds: self.trans_type_param_bounds(bounds),
-            ty: zopt::map_ref_mut(ty, |ty| self.trans_type(ty)),
+            ty: map_ref_mut(ty, |ty| self.trans_type(ty)),
         }
     }
 
@@ -1211,7 +1218,7 @@ impl Translator {
             abi: abi_to_string(method_sig.abi),
             name: ident,
             method_sig: self.trans_method_sig(method_sig),
-            block: zopt::map_ref_mut(block, |block| self.trans_block(block)),
+            block: map_ref_mut(block, |block| self.trans_block(block)),
         }
     }
 
@@ -1230,7 +1237,7 @@ impl Translator {
             is_unsafe: is_unsafe,
             is_neg: is_neg,
             generics: self.trans_generics(generics),
-            trait_ref: zopt::map_ref_mut(trait_ref, |trait_ref| self.trans_trait_ref(trait_ref)),
+            trait_ref: map_ref_mut(trait_ref, |trait_ref| self.trans_trait_ref(trait_ref)),
             ty: self.trans_type(ty),
             items: self.trans_impl_items(items),
         }
@@ -1450,8 +1457,8 @@ impl Translator {
         let loc = self.loc(&local.span);
         let attrs = self.trans_thin_attrs(&local.attrs);
         let pat = self.trans_patten(&local.pat);
-        let ty = zopt::map_ref_mut(&local.ty, |ty| self.trans_type(ty));
-        let init = zopt::map_ref_mut(&local.init, |expr| self.trans_expr(expr));
+        let ty = map_ref_mut(&local.ty, |ty| self.trans_type(ty));
+        let init = map_ref_mut(&local.init, |expr| self.trans_expr(expr));
         self.set_loc(&loc);
 
         Local {
@@ -1531,7 +1538,7 @@ impl Translator {
             is_ref: is_ref,
             is_mut: is_mut,
             name: self.trans_ident(ident),
-            binding: zopt::map_ref_mut(binding, |pat| self.trans_patten(pat)),
+            binding: map_ref_mut(binding, |pat| self.trans_patten(pat)),
         }
     }
 
@@ -1556,7 +1563,7 @@ impl Translator {
     -> EnumPatten {
         EnumPatten {
             path: self.trans_path(path),
-            pats: zopt::map_ref_mut(pats, |pats| self.trans_pattens(pats)),
+            pats: map_ref_mut(pats, |pats| self.trans_pattens(pats)),
         }
     }
 
@@ -1600,7 +1607,7 @@ impl Translator {
     -> VecPatten {
         VecPatten {
             start: self.trans_pattens(start),
-            emit: zopt::map_ref_mut(emit, |pat| self.trans_patten(pat)),
+            emit: map_ref_mut(emit, |pat| self.trans_patten(pat)),
             end: self.trans_pattens(end),
         }
     }
@@ -1862,7 +1869,7 @@ impl Translator {
         StructExpr {
             path: self.trans_path(path),
             fields: self.trans_struct_field_exprs(fields),
-            base: zopt::map_ref_mut(base, |expr| self.trans_expr(expr)),
+            base: map_ref_mut(base, |expr| self.trans_expr(expr)),
         }
     }
 
@@ -1898,8 +1905,8 @@ impl Translator {
                         end: &Option<rst::P<rst::Expr>>)
     -> RangeExpr {
         RangeExpr {
-            start: zopt::map_ref_mut(start, |expr| self.trans_expr(expr)),
-            end: zopt::map_ref_mut(end, |expr| self.trans_expr(expr)),
+            start: map_ref_mut(start, |expr| self.trans_expr(expr)),
+            end: map_ref_mut(end, |expr| self.trans_expr(expr)),
         }
     }
 
@@ -1933,7 +1940,7 @@ impl Translator {
         IfExpr {
             expr: self.trans_expr(expr),
             block: self.trans_block(block),
-            br: zopt::map_ref_mut(br, |expr| self.trans_expr(expr)),
+            br: map_ref_mut(br, |expr| self.trans_expr(expr)),
         }
     }
 
@@ -1945,7 +1952,7 @@ impl Translator {
             pat: self.trans_patten(pat),
             expr: self.trans_expr(expr),
             block: self.trans_block(block),
-            br: zopt::map_ref_mut(br, |expr| self.trans_expr(expr)),
+            br: map_ref_mut(br, |expr| self.trans_expr(expr)),
         }
     }
 
@@ -1954,7 +1961,7 @@ impl Translator {
                         label: &Option<rst::Ident>)
     -> WhileExpr {
         WhileExpr {
-            label: zopt::map_ref_mut(label, |ident| ident_to_string(ident)),
+            label: map_ref_mut(label, |ident| ident_to_string(ident)),
             expr: self.trans_expr(expr),
             block: self.trans_block(block),
         }
@@ -1965,7 +1972,7 @@ impl Translator {
                             block: &rst::Block, label: &Option<rst::Ident>)
     -> WhileLetExpr {
         WhileLetExpr {
-            label: zopt::map_ref_mut(label, |ident| ident_to_string(ident)),
+            label: map_ref_mut(label, |ident| ident_to_string(ident)),
             pat: self.trans_patten(pat),
             expr: self.trans_expr(expr),
             block: self.trans_block(block),
@@ -1977,7 +1984,7 @@ impl Translator {
                       label: &Option<rst::Ident>)
     -> ForExpr {
         ForExpr {
-            label: zopt::map_ref_mut(label, |ident| ident_to_string(ident)),
+            label: map_ref_mut(label, |ident| ident_to_string(ident)),
             pat: self.trans_patten(pat),
             expr: self.trans_expr(expr),
             block: self.trans_block(block),
@@ -1987,7 +1994,7 @@ impl Translator {
     #[inline]
     fn trans_loop_expr(&mut self, block: &rst::Block, label: &Option<rst::Ident>) -> LoopExpr {
         LoopExpr {
-            label: zopt::map_ref_mut(label, |ident| ident_to_string(ident)),
+            label: map_ref_mut(label, |ident| ident_to_string(ident)),
             block: self.trans_block(block),
         }
     }
@@ -1995,14 +2002,14 @@ impl Translator {
     #[inline]
     fn trans_break_expr(&mut self, ident: &Option<rst::SpannedIdent>) -> BreakExpr {
         BreakExpr {
-            label: zopt::map_ref_mut(ident, |ident| self.trans_ident(ident)),
+            label: map_ref_mut(ident, |ident| self.trans_ident(ident)),
         }
     }
 
     #[inline]
     fn trans_continue_expr(&mut self, ident: &Option<rst::SpannedIdent>) -> ContinueExpr {
         ContinueExpr {
-            label: zopt::map_ref_mut(ident, |ident| self.trans_ident(ident)),
+            label: map_ref_mut(ident, |ident| self.trans_ident(ident)),
         }
     }
 
@@ -2023,7 +2030,7 @@ impl Translator {
     fn trans_arm(&mut self, arm: &rst::Arm) -> Arm {
         let attrs = self.trans_attrs(&arm.attrs);
         let pats = self.trans_pattens(&arm.pats);
-        let guard = zopt::map_ref_mut(&arm.guard, |expr| self.trans_expr(expr));
+        let guard = map_ref_mut(&arm.guard, |expr| self.trans_expr(expr));
         let body = self.trans_expr(&arm.body);
 
         Arm {
@@ -2074,7 +2081,7 @@ impl Translator {
     #[inline]
     fn trans_return_expr(&mut self, expr: &Option<rst::P<rst::Expr>>) -> ReturnExpr {
         ReturnExpr {
-            ret: zopt::map_ref_mut(expr, |expr| self.trans_expr(expr)),
+            ret: map_ref_mut(expr, |expr| self.trans_expr(expr)),
         }
     }
 

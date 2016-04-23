@@ -1,8 +1,6 @@
 use std::collections::BTreeSet;
 use std::fmt::{self, Debug};
 
-use zadt::zstr;
-
 use rfmt;
 
 const NL: char = '\n';
@@ -61,6 +59,25 @@ fn list_len_info(list: &[&str]) -> (usize, usize) {
     };
     let len = list.iter().map(|s| s.len()).sum();
     (prefix_len, len)
+}
+
+#[inline]
+fn fill_str(ch: char, count: usize) -> String {
+    let mut s = String::with_capacity(count);
+    for _ in 0..count {
+        s.push(ch);
+    }
+    s
+}
+
+macro_rules! minus_nf {
+    ($a: expr, $b: expr) => ({
+        if $a <= $b {
+            0
+        } else {
+            $a - $b
+        }
+    })
 }
 
 macro_rules! raw_insert {
@@ -236,7 +253,7 @@ impl Typesetter {
 
     #[inline]
     fn insert_align(&mut self) {
-        let blank = zstr::new_fill(' ', *self.align_stack.last().unwrap());
+        let blank = fill_str(' ', *self.align_stack.last().unwrap());
         self.raw_insert(&blank);
     }
 

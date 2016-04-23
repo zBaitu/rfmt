@@ -5,22 +5,18 @@
 extern crate getopts;
 extern crate rst;
 extern crate walkdir;
-extern crate zadt;
-#[macro_use]
-extern crate zbase;
-
-use std::env;
 
 use getopts::Options;
+
+use std::env;
 
 #[macro_use]
 mod ts;
 
 mod ft;
 mod ir;
-mod tr;
-
 mod rfmt;
+mod tr;
 
 struct CmdArg {
     ast: bool,
