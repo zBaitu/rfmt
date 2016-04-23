@@ -2155,7 +2155,10 @@ impl Translator {
         loop {
             exprs.push(match parser.parse_expr() {
                 Ok(expr) => expr,
-                Err(_) => return None,
+                Err(mut e) => {
+                    e.cancel();
+                    return None;
+                }
             });
 
             match parser.token {
