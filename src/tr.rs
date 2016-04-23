@@ -506,19 +506,11 @@ impl Translator {
                 ItemKind::Enum(self.trans_enum(ident, generics, enum_def))
             },
             rst::ItemKind::Fn(ref fn_decl, unsafety, constness, abi, ref generics, ref block) => {
-                ItemKind::Fn(self.trans_fn(is_unsafe(unsafety),
-                                           is_const(constness),
-                                           abi_to_string(abi),
-                                           ident,
-                                           generics,
-                                           fn_decl,
-                                           block))
+                ItemKind::Fn(self.trans_fn(is_unsafe(unsafety), is_const(constness),
+                                           abi_to_string(abi), ident, generics, fn_decl, block))
             },
             rst::ItemKind::Trait(unsafety, ref generics, ref bounds, ref items) => {
-                ItemKind::Trait(self.trans_trait(is_unsafe(unsafety),
-                                                 ident,
-                                                 generics,
-                                                 bounds,
+                ItemKind::Trait(self.trans_trait(is_unsafe(unsafety), ident, generics, bounds,
                                                  items))
             },
             rst::ItemKind::DefaultImpl(unsafety, ref trait_ref) => {
@@ -526,12 +518,8 @@ impl Translator {
             },
             rst::ItemKind::Impl(unsafety, polarity, ref generics, ref trait_ref, ref ty, ref items)
                     => {
-                ItemKind::Impl(self.trans_impl(is_unsafe(unsafety),
-                                               is_neg(polarity),
-                                               generics,
-                                               trait_ref,
-                                               ty,
-                                               items))
+                ItemKind::Impl(self.trans_impl(is_unsafe(unsafety), is_neg(polarity), generics,
+                                               trait_ref, ty, items))
             },
             rst::ItemKind::Mac(ref mac) => ItemKind::Macro(self.trans_macro_raw(mac)),
         };
@@ -898,6 +886,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_path_type(&mut self, qself: &Option<rst::QSelf>, path: &rst::Path) -> PathType {
         PathType {
             qself: map_ref_mut(qself, |qself| self.trans_qself(qself)),
@@ -905,6 +894,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_ptr_type(&mut self, mut_type: &rst::MutTy) -> PtrType {
         PtrType {
             is_mut: is_mut(mut_type.mutbl),
@@ -912,6 +902,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_ref_type(&mut self, lifetime: &Option<rst::Lifetime>, mut_type: &rst::MutTy)
     -> RefType {
         RefType {
@@ -921,12 +912,14 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_array_type(&mut self, ty: &rst::Ty) -> ArrayType {
         ArrayType {
             ty: self.trans_type(ty),
         }
     }
 
+    #[inline]
     fn trans_fixed_size_array_type(&mut self, ty: &rst::Ty, expr: &rst::Expr)
     -> FixedSizeArrayType {
         FixedSizeArrayType {
@@ -935,12 +928,14 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_tuple_type(&mut self, types: &Vec<rst::P<rst::Ty>>) -> TupleType {
         TupleType {
             types: self.trans_types(types),
         }
     }
 
+    #[inline]
     fn trans_bare_fn_type(&mut self, bare_fn: &rst::BareFnTy) -> BareFnType {
         BareFnType {
             lifetime_defs: self.trans_lifetime_defs(&bare_fn.lifetimes),
@@ -950,6 +945,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_sum_type(&mut self, ty: &rst::Ty, bounds: &rst::TyParamBounds) -> SumType {
         SumType {
             ty: self.trans_type(ty),
@@ -957,6 +953,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_poly_trait_ref_type(&mut self, bounds: &rst::TyParamBounds) -> PolyTraitRefType {
         PolyTraitRefType {
             bounds: self.trans_type_param_bounds(bounds),
@@ -1226,8 +1223,7 @@ impl Translator {
     }
 
     fn trans_impl(&mut self, is_unsafe: bool, is_neg: bool, generics: &rst::Generics,
-                  trait_ref: &Option<rst::TraitRef>, ty: &rst::Ty,
-                  items: &Vec<rst::ImplItem>)
+                  trait_ref: &Option<rst::TraitRef>, ty: &rst::Ty, items: &Vec<rst::ImplItem>)
     -> Impl {
         Impl {
             is_unsafe: is_unsafe,
@@ -1356,9 +1352,8 @@ impl Translator {
         }
     }
 
-    fn trans_self(&mut self, explicit_self: &rst::SelfKind, fn_sig: &rst::FnDecl)
-    -> Option<Sf> {
-        match *explicit_self {
+    fn trans_self(&mut self, self_kind: &rst::SelfKind, fn_sig: &rst::FnDecl) -> Option<Sf> {
+        match *self_kind {
             rst::SelfKind::Static => None,
             rst::SelfKind::Value(_) => {
                 let arg = &fn_sig.inputs[0];
@@ -2129,6 +2124,7 @@ impl Translator {
         if macro_exprs.is_none() {
             return None;
         }
+
         let (exprs, seps) = macro_exprs.unwrap();
         let name = path_to_string(&mac.node.path);
         let style = self.macro_style(&mac);
@@ -2158,7 +2154,7 @@ impl Translator {
                 Err(mut e) => {
                     e.cancel();
                     return None;
-                }
+                },
             });
 
             match parser.token {

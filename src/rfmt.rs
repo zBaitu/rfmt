@@ -68,7 +68,6 @@ pub fn fmt(path: &str, check: bool, debug: bool, overwrite: bool) {
     }
 }
 
-#[allow(deprecated)]
 fn fmt_dir(path: &Path, check: bool, debug: bool, overwrite: bool) {
     for entry in WalkDir::new(path) {
         let entry = entry.unwrap();
@@ -94,14 +93,8 @@ fn fmt_file(path: &Path, check: bool, debug: bool, overwrite: bool) {
 fn fmt_str(src: String, path: &str, check: bool, debug: bool, overwrite: bool) {
     let cfg = CrateConfig::new();
     let codemap = Rc::new(CodeMap::new());
-    let tty_handler
-            = Handler::with_tty_emitter(ColorConfig::Auto,
-                                        None,
-                                        true,
-                                        false,
-                                        codemap.clone());
-    //let mut sess = ParseSess::new();
-    let mut sess = ParseSess::with_span_handler(tty_handler, codemap.clone());
+    let handler = Handler::with_tty_emitter(ColorConfig::Auto, None, true, false, codemap.clone());
+    let mut sess = ParseSess::with_span_handler(handler, codemap.clone());
 
     let mut input = &src.as_bytes().to_vec()[..];
     let krate = match parse::parse_crate_from_source_str(path.to_string(), src, cfg, &sess) {
