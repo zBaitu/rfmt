@@ -140,6 +140,11 @@ fn is_halfopen(range_limit: rst::RangeLimits) -> bool {
 }
 
 #[inline]
+fn is_default(defaultness: rst::Defaultness) -> bool {
+    defaultness == rst::Defaultness::Default
+}
+
+#[inline]
 fn name_to_string(name: &rst::Name) -> String {
     name.as_str().to_string()
 }
@@ -1251,6 +1256,7 @@ impl Translator {
         let attrs = self.trans_attrs(&item.attrs);
 
         let is_pub = is_pub(&item.vis);
+        let is_default = is_default(item.defaultness);
         let ident = ident_to_string(&item.ident);
         let item = match item.node {
             rst::ImplItemKind::Const(ref ty, ref expr) => {
@@ -1270,6 +1276,7 @@ impl Translator {
             loc: loc,
             attrs: attrs,
             is_pub: is_pub,
+            is_default: is_default,
             item: item,
         }
     }

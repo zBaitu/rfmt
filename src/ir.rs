@@ -540,6 +540,7 @@ pub struct ImplItem {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
     pub is_pub: bool,
+    pub is_default: bool,
     pub item: ImplItemKind,
 }
 

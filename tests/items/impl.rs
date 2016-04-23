@@ -5,5 +5,7 @@ impl<T> A for B<T> {
     //const a: bool = true;
     //type E = T;
     //fn f(&self) {}
-    a!();
+    //a!();
+    default const a: bool = true;
+    pub default fn f(&self) {}
 }

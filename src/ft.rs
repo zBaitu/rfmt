@@ -1779,6 +1779,9 @@ impl Formatter {
         if item.is_pub {
             self.raw_insert("pub ");
         }
+        if item.is_default {
+            self.raw_insert("default ");
+        }
 
         match item.item {
             ImplItemKind::Const(ref item) => {
