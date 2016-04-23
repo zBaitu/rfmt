@@ -45,5 +45,10 @@ fn f() {
                                                ThreadRngReseeder);                               
         Rc::new(RefCell::new(rng))
     });
-    let a = true;
+    
+    let a = Ok();
+    match a {
+        Ok() => unreachable!(),
+        Err(_) => (),
+    }
 }

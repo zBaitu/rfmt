@@ -494,7 +494,8 @@ impl Translator {
             },
             rst::ItemKind::ForeignMod(ref module)
                     => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
-            rst::ItemKind::Const(ref ty, ref expr) => ItemKind::Const(self.trans_const(ident, ty, expr)),
+            rst::ItemKind::Const(ref ty, ref expr)
+                    => ItemKind::Const(self.trans_const(ident, ty, expr)),
             rst::ItemKind::Static(ref ty, mutbl, ref expr) => {
                 ItemKind::Static(self.trans_static(is_mut(mutbl), ident, ty, expr))
             },
@@ -523,7 +524,8 @@ impl Translator {
             rst::ItemKind::DefaultImpl(unsafety, ref trait_ref) => {
                 ItemKind::ImplDefault(self.trans_impl_default(is_unsafe(unsafety), trait_ref))
             },
-            rst::ItemKind::Impl(unsafety, polarity, ref generics, ref trait_ref, ref ty, ref items) => {
+            rst::ItemKind::Impl(unsafety, polarity, ref generics, ref trait_ref, ref ty, ref items)
+                    => {
                 ItemKind::Impl(self.trans_impl(is_unsafe(unsafety),
                                                is_neg(polarity),
                                                generics,
@@ -862,7 +864,8 @@ impl Translator {
             rst::TyKind::Path(ref qself, ref path) => {
                 TypeKind::Path(Box::new(self.trans_path_type(qself, path)))
             },
-            rst::TyKind::Ptr(ref mut_type) => TypeKind::Ptr(Box::new(self.trans_ptr_type(mut_type))),
+            rst::TyKind::Ptr(ref mut_type)
+                    => TypeKind::Ptr(Box::new(self.trans_ptr_type(mut_type))),
             rst::TyKind::Rptr(ref lifetime, ref mut_type) => {
                 TypeKind::Ref(Box::new(self.trans_ref_type(lifetime, mut_type)))
             },
@@ -1330,7 +1333,7 @@ impl Translator {
             rst::FunctionRetTy::None(ref span)
                     => (self.is_fn_return_nl(span.lo.0), FnReturnKind::Diverge),
             rst::FunctionRetTy::Ty(ref ty) => (self.is_fn_return_nl(ty.span.lo.0),
-                    FnReturnKind::Normal(self.trans_type(ty))),
+                                               FnReturnKind::Normal(self.trans_type(ty))),
         };
 
         FnReturn {
@@ -1495,7 +1498,7 @@ impl Translator {
             },
             rst::PatKind::Path(ref path) => {
                 PattenKind::Path(self.trans_path_patten(None, path))
-            }
+            },
             rst::PatKind::TupleStruct(ref path, ref pats) => {
                 PattenKind::Enum(self.trans_enum_patten(path, pats))
             },
@@ -1505,7 +1508,8 @@ impl Translator {
             rst::PatKind::Vec(ref start, ref emit, ref end) => {
                 PattenKind::Vec(Box::new(self.trans_vec_patten(start, emit, end)))
             },
-            rst::PatKind::Tup(ref pats) => PattenKind::Tuple(Box::new(self.trans_tuple_patten(pats))),
+            rst::PatKind::Tup(ref pats)
+                    => PattenKind::Tuple(Box::new(self.trans_tuple_patten(pats))),
             rst::PatKind::Box(ref pat) => PattenKind::Box(Box::new(self.trans_patten(pat))),
             rst::PatKind::Mac(ref mac) => PattenKind::Macro(self.trans_macro(mac)),
         };
@@ -1658,7 +1662,8 @@ impl Translator {
             },
             rst::ExprKind::Vec(ref exprs) => ExprKind::Vec(Box::new(self.trans_exprs(exprs))),
             rst::ExprKind::Tup(ref exprs) => ExprKind::Tuple(Box::new(self.trans_exprs(exprs))),
-            rst::ExprKind::Paren(ref expr) => ExprKind::Tuple(Box::new(vec![self.trans_expr(expr)])),
+            rst::ExprKind::Paren(ref expr)
+                    => ExprKind::Tuple(Box::new(vec![self.trans_expr(expr)])),
             rst::ExprKind::Field(ref expr, ref ident) => {
                 ExprKind::FieldAccess(Box::new(self.trans_struct_field_access_expr(expr, ident)))
             },
@@ -1700,7 +1705,8 @@ impl Translator {
             rst::ExprKind::Loop(ref block, ref label) => {
                 ExprKind::Loop(Box::new(self.trans_loop_expr(block, label)))
             },
-            rst::ExprKind::Break(ref ident) => ExprKind::Break(Box::new(self.trans_break_expr(ident))),
+            rst::ExprKind::Break(ref ident)
+                    => ExprKind::Break(Box::new(self.trans_break_expr(ident))),
             rst::ExprKind::Again(ref ident) => {
                 ExprKind::Continue(Box::new(self.trans_continue_expr(ident)))
             },
@@ -1716,7 +1722,8 @@ impl Translator {
             rst::ExprKind::Closure(capture, ref fn_decl, ref block) => {
                 ExprKind::Closure(Box::new(self.trans_closure_expr(capture, fn_decl, block)))
             },
-            rst::ExprKind::Ret(ref expr) => ExprKind::Return(Box::new(self.trans_return_expr(expr))),
+            rst::ExprKind::Ret(ref expr)
+                    => ExprKind::Return(Box::new(self.trans_return_expr(expr))),
             rst::ExprKind::Mac(ref mac) => ExprKind::Macro(self.trans_macro(mac)),
             rst::ExprKind::Try(ref expr) => ExprKind::Try(Box::new(self.trans_expr(expr))),
             rst::ExprKind::InlineAsm(_) => unreachable!(),
@@ -2122,7 +2129,6 @@ impl Translator {
         if macro_exprs.is_none() {
             return None;
         }
-            
         let (exprs, seps) = macro_exprs.unwrap();
         let name = path_to_string(&mac.node.path);
         let style = self.macro_style(&mac);
@@ -2136,12 +2142,13 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_macro_exprs(&self, mac: &rst::Mac) -> Option<(Vec<rst::P<rst::Expr>>, Vec<MacroExprSep>)> {
+    fn trans_macro_exprs(&self, mac: &rst::Mac)
+    -> Option<(Vec<rst::P<rst::Expr>>, Vec<MacroExprSep>)> {
         let mut exprs = Vec::new();
         let mut seps = Vec::new();
 
         if mac.node.tts.is_empty() {
-            return None;
+            return Some((exprs, seps));
         }
 
         let mut parser = rst::parse::tts_to_parser(&self.sess, mac.node.tts.clone(), Vec::new());
