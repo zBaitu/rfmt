@@ -100,7 +100,7 @@ pub enum ItemKind {
     Trait(Trait),
     ImplDefault(ImplDefault),
     Impl(Impl),
-    Macro(MacroItem),
+    Macro(MacroRaw),
 }
 
 #[derive(Debug)]
@@ -962,7 +962,7 @@ pub enum MacroStyle {
 }
 
 #[derive(Debug)]
-pub struct MacroItem {
+pub struct MacroRaw {
     pub style: MacroStyle,
     pub s: Chunk,
 }
@@ -975,15 +975,21 @@ pub struct MacroStmt {
 }
 
 #[derive(Debug)]
-pub struct MacroSep {
-    pub is_sep: bool,
-    pub s: String,
+pub enum Macro {
+    Raw(MacroRaw),
+    Expr(MacroExpr),
 }
 
 #[derive(Debug)]
-pub struct Macro {
+pub struct MacroExprSep {
+    pub is_sep: bool,
+    pub s: &'static str,
+}
+
+#[derive(Debug)]
+pub struct MacroExpr {
     pub name: String,
     pub style: MacroStyle,
     pub exprs: Vec<Expr>,
-    pub seps: Vec<MacroSep>,
+    pub seps: Vec<MacroExprSep>,
 }

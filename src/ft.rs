@@ -709,6 +709,21 @@ impl Display for ClosureExpr {
 
 impl Display for Macro {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Macro::Raw(ref mac_raw) => Display::fmt(mac_raw, f),
+            Macro::Expr(ref mac_expr) => Display::fmt(mac_expr, f),
+        }
+    }
+}
+
+impl Display for MacroRaw {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        Display::fmt(&self.s, f)
+    }
+}
+
+impl Display for MacroExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let (open, close) = match self.style {
             MacroStyle::Paren => ("(", ")"),
             MacroStyle::Bracket => ("[", "]"),
@@ -1256,7 +1271,7 @@ impl Formatter {
             ItemKind::Trait(ref item) => self.fmt_trait(item),
             ItemKind::ImplDefault(ref item) => self.fmt_impl_default(item),
             ItemKind::Impl(ref item) => self.fmt_impl(item),
-            ItemKind::Macro(ref item) => self.fmt_macro_item(item),
+            ItemKind::Macro(ref item) => self.fmt_macro_raw(item),
         }
 
         self.try_fmt_trailing_comment(&item.loc);
@@ -2486,8 +2501,8 @@ impl Formatter {
     }
 
     #[inline]
-    fn fmt_macro_item(&mut self, item: &MacroItem) {
-        let lines = item.s.s.split('\n').collect::<Vec<_>>();
+    fn fmt_macro_raw(&mut self, mac_raw: &MacroRaw) {
+        let lines = mac_raw.s.s.split('\n').collect::<Vec<_>>();
         let len = lines.len();
         for idx in 0..len {
             if idx > 0 {
@@ -2496,7 +2511,7 @@ impl Formatter {
 
             self.raw_insert(lines[idx]);
             if idx == len - 1 {
-                match item.style {
+                match mac_raw.style {
                     MacroStyle::Paren | MacroStyle::Bracket => self.raw_insert(";"),
                     _ => (),
                 }
@@ -2511,8 +2526,10 @@ impl Formatter {
         self.insert_indent();
 
         self.fmt_macro(&stmt.mac);
-        if is_semi {
-            self.raw_insert(";");
+        if let Macro::Expr(_) = stmt.mac {
+            if is_semi {
+                self.raw_insert(";");
+            }
         }
 
         self.try_fmt_trailing_comment(&stmt.loc);
@@ -2521,23 +2538,31 @@ impl Formatter {
 
     #[inline]
     fn fmt_macro(&mut self, mac: &Macro) {
-        let (open, close) = match mac.style {
+        match *mac {
+            Macro::Raw(ref mac_raw) => self.fmt_macro_raw(mac_raw),
+            Macro::Expr(ref mac_expr) => self.fmt_macro_expr(mac_expr),
+        }
+    }
+
+    #[inline]
+    fn fmt_macro_expr(&mut self, mac_expr: &MacroExpr) {
+        let (open, close) = match mac_expr.style {
             MacroStyle::Paren => ("(", ")"),
             MacroStyle::Bracket => ("[", "]"),
             MacroStyle::Brace => ("{", "}"),
         };
 
-        self.insert(&format!("{}!", mac.name));
+        self.insert(&format!("{}!", mac_expr.name));
         self.insert_mark_align(open);
-        let expr_len = mac.exprs.len();
+        let expr_len = mac_expr.exprs.len();
         for i in 0..expr_len {
-            let expr = &mac.exprs[i];
+            let expr = &mac_expr.exprs[i];
             if i > 0 {
-                let sep = &mac.seps[i - 1];
+                let sep = &mac_expr.seps[i - 1];
                 if sep.is_sep {
-                    insert_sep!(self, &sep.s, expr);
+                    insert_sep!(self, sep.s, expr);
                 } else {
-                    self.insert(&sep.s);
+                    self.insert(sep.s);
                 }
             }
             self.fmt_expr(expr);

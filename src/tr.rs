@@ -179,23 +179,19 @@ fn is_macro_semi(style: &rst::MacStmtStyle) -> bool {
 }
 
 #[inline]
-fn token_to_macro_sep(token: &rst::Token) -> MacroSep {
+fn token_to_macro_expr_sep(token: &rst::Token) -> Option<MacroExprSep> {
     let (is_sep, s) = match *token {
-        rst::Token::Comma => (true, ",".to_string()),
-        rst::Token::Semi => (true, ";".to_string()),
-        rst::Token::FatArrow => (true, " =>".to_string()),
-        rst::Token::DotDotDot => (false, "...".to_string()),
-        rst::Token::Ident(ref ident, _) => (false, ident_to_string(ident)),
-        _ => {
-            println!("{:#?}", token);
-            unreachable!();
-        },
+        rst::Token::Comma => (true, ","),
+        rst::Token::Semi => (true, ";"),
+        rst::Token::FatArrow => (true, " =>"),
+        rst::Token::DotDotDot => (false, "..."),
+        _ => return None,
     };
 
-    MacroSep {
+    Some(MacroExprSep {
         is_sep: is_sep,
         s: s,
-    }
+    })
 }
 
 #[inline]
@@ -535,7 +531,7 @@ impl Translator {
                                                ty,
                                                items))
             },
-            rst::ItemKind::Mac(ref mac) => ItemKind::Macro(self.trans_macro_item(mac)),
+            rst::ItemKind::Mac(ref mac) => ItemKind::Macro(self.trans_macro_raw(mac)),
         };
 
         self.set_loc(&loc);
@@ -2088,8 +2084,8 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_macro_item(&mut self, mac: &rst::Mac) -> MacroItem {
-        MacroItem {
+    fn trans_macro_raw(&mut self, mac: &rst::Mac) -> MacroRaw {
+        MacroRaw {
             style: self.macro_style(mac),
             s: Chunk {
                 loc: self.leaf_loc(&mac.span),
@@ -2114,42 +2110,61 @@ impl Translator {
 
     #[inline]
     fn trans_macro(&mut self, mac: &rst::Mac) -> Macro {
-        let name = path_to_string(&mac.node.path);
-        let style = self.macro_style(&mac);
-        let (exprs, seps) = self.trans_macro_exprs(&mac);
-        let exprs = self.trans_exprs(&exprs);
-
-        Macro {
-            name: name,
-            style: style,
-            exprs: exprs,
-            seps: seps,
+        match self.trans_macro_expr(mac) {
+            Some(macro_expr) => Macro::Expr(macro_expr),
+            None => Macro::Raw(self.trans_macro_raw(mac)),
         }
     }
 
     #[inline]
-    fn trans_macro_exprs(&self, mac: &rst::Mac) -> (Vec<rst::P<rst::Expr>>, Vec<MacroSep>) {
+    fn trans_macro_expr(&mut self, mac: &rst::Mac) -> Option<MacroExpr> {
+        let macro_exprs = self.trans_macro_exprs(&mac);
+        if macro_exprs.is_none() {
+            return None;
+        }
+            
+        let (exprs, seps) = macro_exprs.unwrap();
+        let name = path_to_string(&mac.node.path);
+        let style = self.macro_style(&mac);
+        let exprs = self.trans_exprs(&exprs);
+        Some(MacroExpr {
+            name: name,
+            style: style,
+            exprs: exprs,
+            seps: seps,
+        })
+    }
+
+    #[inline]
+    fn trans_macro_exprs(&self, mac: &rst::Mac) -> Option<(Vec<rst::P<rst::Expr>>, Vec<MacroExprSep>)> {
         let mut exprs = Vec::new();
         let mut seps = Vec::new();
 
         if mac.node.tts.is_empty() {
-            return (exprs, seps);
+            return None;
         }
 
         let mut parser = rst::parse::tts_to_parser(&self.sess, mac.node.tts.clone(), Vec::new());
         loop {
-            exprs.push(parser.parse_expr().unwrap());
+            exprs.push(match parser.parse_expr() {
+                Ok(expr) => expr,
+                Err(_) => return None,
+            });
+
             match parser.token {
                 rst::Token::Eof => break,
-                ref other => seps.push(token_to_macro_sep(other)),
+                ref other => seps.push(match token_to_macro_expr_sep(other) {
+                    Some(sep) => sep,
+                    None => return None,
+                }),
             }
 
             parser.bump();
             if parser.token == rst::parse::token::Token::Eof {
-                break;
+                return None;
             }
         }
-        (exprs, seps)
+        Some((exprs, seps))
     }
 
     #[inline]
