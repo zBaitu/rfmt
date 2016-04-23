@@ -1,5 +1,7 @@
+#![deny(warnings)]
 #![feature(custom_derive)]
 #![feature(iter_arith)]
+#![feature(question_mark)]
 #![feature(rustc_private)]
 
 extern crate getopts;

@@ -844,20 +844,23 @@ macro_rules! insert_sep {
         $sf.raw_insert($sep);
         if !$e.loc.nl && !need_wrap!($sf.ts, " ", &$e.to_string()) {
             $sf.raw_insert(" ");
+            false
         } else {
             $sf.wrap();
+            true
         }
     });
 }
 
 macro_rules! fmt_comma_lists {
     ($sf:expr, $open:expr, $close:expr, $($list:expr, $fmt:ident),+) => ({
+        let mut is_wrap = false;
         $sf.insert_mark_align($open);
 
         let mut first = true;
         $(for e in $list {
             if !first {
-                insert_sep!($sf, ",", e);
+                is_wrap |= insert_sep!($sf, ",", e);
             }
 
             $sf.$fmt(e);
@@ -865,6 +868,7 @@ macro_rules! fmt_comma_lists {
         })+
 
         $sf.insert_unmark_align($close);
+        is_wrap
     });
 
     ($sf:expr, $($list:expr, $fmt:ident),+) => ({
@@ -1802,18 +1806,19 @@ impl Formatter {
     }
 
     fn fmt_fn_sig(&mut self, fn_sig: &FnSig) {
-        self.fmt_fn_arg(&fn_sig.arg);
-        self.fmt_fn_return(&fn_sig.ret);
+        let is_wrap = self.fmt_fn_arg(&fn_sig.arg);
+        self.fmt_fn_return(&fn_sig.ret, is_wrap);
     }
 
-    fn fmt_fn_arg(&mut self, arg: &FnArg) {
+    fn fmt_fn_arg(&mut self, arg: &FnArg) -> bool {
         if arg.va {
+            let mut is_wrap = false;
             self.insert_mark_align("(");
 
             let mut first = true;
             for e in &arg.args {
                 if !first {
-                    insert_sep!(self, ",", e);
+                    is_wrap |= insert_sep!(self, ",", e);
                 }
 
                 self.fmt_arg(e);
@@ -1822,8 +1827,9 @@ impl Formatter {
 
             self.insert(", ...");
             self.insert_unmark_align(")");
+            is_wrap
         } else {
-            fmt_comma_lists!(self, "(", ")", &arg.args, fmt_arg);
+            fmt_comma_lists!(self, "(", ")", &arg.args, fmt_arg)
         }
     }
 
@@ -1838,11 +1844,11 @@ impl Formatter {
         self.fmt_type(&arg.ty);
     }
 
-    fn fmt_fn_return(&mut self, ret: &FnReturn) {
+    fn fmt_fn_return(&mut self, ret: &FnReturn, is_wrap: bool) {
         match ret.ret {
             FnReturnKind::Unit => (),
             FnReturnKind::Diverge => {
-                if ret.nl {
+                if ret.nl || is_wrap {
                     self.nl_indent();
                     self.raw_insert("-> !");
                 } else {
@@ -1850,7 +1856,7 @@ impl Formatter {
                 }
             },
             FnReturnKind::Normal(ref ty) => {
-                if ret.nl {
+                if ret.nl || is_wrap {
                     self.nl_indent();
                     self.raw_insert("-> ");
                 } else {
@@ -1876,13 +1882,15 @@ impl Formatter {
     fn fmt_method_fn_sig(&mut self, sf: &Sf, sig: &MethodSig) {
         self.insert_mark_align("(");
         self.fmt_sf(sf);
+        
+        let mut is_wrap = false;
         for arg in &sig.fn_sig.arg.args[1..] {
-            insert_sep!(self, ",", arg);
+            is_wrap |= insert_sep!(self, ",", arg);
             self.fmt_arg(arg);
         }
         self.insert_unmark_align(")");
 
-        self.fmt_fn_return(&sig.fn_sig.ret);
+        self.fmt_fn_return(&sig.fn_sig.ret, is_wrap);
     }
 
     fn fmt_sf(&mut self, sf: &Sf) {
@@ -2006,8 +2014,9 @@ impl Formatter {
     fn fmt_enum_patten(&mut self, pat: &EnumPatten) {
         self.fmt_path(&pat.path, true);
         match pat.pats {
-            Some(ref pats) if !pats.is_empty()
-                    => fmt_comma_lists!(self, "(", ")", pats, fmt_patten),
+            Some(ref pats) if !pats.is_empty() => {
+                fmt_comma_lists!(self, "(", ")", pats, fmt_patten);
+            },
             None => self.insert("(..)"),
             _ => (),
         }
@@ -2430,7 +2439,7 @@ impl Formatter {
         }
 
         self.fmt_closure_fn_arg(&expr.fn_sig.arg);
-        self.fmt_fn_return(&expr.fn_sig.ret);
+        self.fmt_fn_return(&expr.fn_sig.ret, false);
 
         if expr.block.stmts.len() > 1 {
             self.fmt_block(&expr.block);

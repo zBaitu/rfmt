@@ -26,13 +26,12 @@ pub struct Typesetter {
 
 impl Debug for Typesetter {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "pos: ({}, {})\n", self.line, self.col));
-        try!(write!(f, "indent: \"{}\"\n", self.indent));
-        try!(write!(f, "align stack: "));
-        try!(Debug::fmt(&self.align_stack, f));
-        try!(write!(f, "\nexceed lines: "));
-        try!(Debug::fmt(&self.exceed_lines, f));
-        Ok(())
+        write!(f, "pos: ({}, {})\n", self.line, self.col)?;
+        write!(f, "indent: \"{}\"\n", self.indent)?;
+        write!(f, "align stack: ")?;
+        Debug::fmt(&self.align_stack, f)?;
+        write!(f, "\nexceed lines: ")?;
+        Debug::fmt(&self.exceed_lines, f)
     }
 }
 
