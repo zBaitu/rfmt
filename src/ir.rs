@@ -704,7 +704,7 @@ pub struct RefPatten {
 
 #[derive(Debug)]
 pub struct PathPatten {
-    pub qself: QSelf,
+    pub qself: Option<QSelf>,
     pub path: Path,
 }
 
@@ -779,6 +779,7 @@ pub enum ExprKind {
     MethodCall(Box<MethodCallExpr>),
     Closure(Box<ClosureExpr>),
     Return(Box<ReturnExpr>),
+    Try(Box<Expr>),
     Macro(Macro),
 }
 
@@ -976,7 +977,7 @@ pub struct MacroStmt {
 #[derive(Debug)]
 pub struct MacroSep {
     pub is_sep: bool,
-    pub s: &'static str,
+    pub s: String,
 }
 
 #[derive(Debug)]

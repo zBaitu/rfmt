@@ -520,7 +520,10 @@ impl Display for RefPatten {
 
 impl Display for PathPatten {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        display_qself(f, &self.qself, &self.path)
+        match self.qself {
+            Some(ref qself) => display_qself(f, qself, &self.path),
+            None => Display::fmt(&self.path, f),
+        }
     }
 }
 
@@ -1976,7 +1979,12 @@ impl Formatter {
 
     #[inline]
     fn fmt_path_patten(&mut self, pat: &PathPatten) {
-        self.fmt_qself_path(&pat.qself, &pat.path, true);
+        match pat.qself {
+            Some(ref qself) => {
+                self.fmt_qself_path(qself, &pat.path, true);
+            },
+            None => self.fmt_path(&pat.path, true),
+        }
     }
 
     #[inline]
@@ -2118,6 +2126,7 @@ impl Formatter {
             ExprKind::MethodCall(ref expr) => self.fmt_method_call_expr(expr),
             ExprKind::Closure(ref expr) => self.fmt_closure_expr(expr),
             ExprKind::Return(ref expr) => self.fmt_return_expr(expr),
+            ExprKind::Try(ref expr) => self.fmt_try_expr(expr),
             ExprKind::Macro(ref expr) => self.fmt_macro(expr),
         }
     }
@@ -2471,6 +2480,12 @@ impl Formatter {
     }
 
     #[inline]
+    fn fmt_try_expr(&mut self, expr: &Expr) {
+        self.fmt_expr(expr);
+        self.raw_insert("?");
+    }
+
+    #[inline]
     fn fmt_macro_item(&mut self, item: &MacroItem) {
         let lines = item.s.s.split('\n').collect::<Vec<_>>();
         let len = lines.len();
@@ -2520,9 +2535,9 @@ impl Formatter {
             if i > 0 {
                 let sep = &mac.seps[i - 1];
                 if sep.is_sep {
-                    insert_sep!(self, sep.s, expr);
+                    insert_sep!(self, &sep.s, expr);
                 } else {
-                    self.insert(sep.s);
+                    self.insert(&sep.s);
                 }
             }
             self.fmt_expr(expr);

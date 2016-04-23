@@ -1,8 +1,7 @@
-//
-// macro_rules! a {
-// () => ()
-// }
-//
+ macro_rules! a {
+ () => ()
+ }
+
 
 //
 // macro_rules! fmt_src {

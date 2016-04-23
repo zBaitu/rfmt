@@ -11,7 +11,8 @@ fn f() {
         //Some(b) => true
         //Some(..) => true
 
-        //<T as Trait>::CONST => true
+        <T as Trait>::CONST => true
+        //a::CONST => true
 
         //A { x: bool, y : B { y1, y2 }, ref mut z, .. } => true
 
@@ -28,6 +29,6 @@ fn f() {
         //[a, b, .., d, e] => true
         //[..] => true
 
-        a!() => true
+        //a!() => true
     }
 }

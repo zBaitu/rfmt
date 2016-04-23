@@ -181,10 +181,11 @@ fn is_macro_semi(style: &rst::MacStmtStyle) -> bool {
 #[inline]
 fn token_to_macro_sep(token: &rst::Token) -> MacroSep {
     let (is_sep, s) = match *token {
-        rst::Token::Comma => (true, ","),
-        rst::Token::Semi => (true, ";"),
-        rst::Token::FatArrow => (true, " =>"),
-        rst::Token::DotDotDot => (false, "..."),
+        rst::Token::Comma => (true, ",".to_string()),
+        rst::Token::Semi => (true, ";".to_string()),
+        rst::Token::FatArrow => (true, " =>".to_string()),
+        rst::Token::DotDotDot => (false, "...".to_string()),
+        rst::Token::Ident(ref ident, _) => (false, ident_to_string(ident)),
         _ => {
             println!("{:#?}", token);
             unreachable!();
@@ -888,7 +889,7 @@ impl Translator {
             },
             rst::TyKind::Mac(ref mac) => TypeKind::Macro(Box::new(self.trans_macro(mac))),
             rst::TyKind::Infer => TypeKind::Infer,
-            _ => unreachable!(),
+            rst::TyKind::Typeof(_) => unreachable!(),
         };
 
         self.set_loc(&loc);
@@ -1494,15 +1495,17 @@ impl Translator {
                 PattenKind::Ref(Box::new(self.trans_ref_patten(is_mut(mutbl), pat)))
             },
             rst::PatKind::QPath(ref qself, ref path) => {
-                PattenKind::Path(self.trans_path_patten(qself, path))
+                PattenKind::Path(self.trans_path_patten(Some(qself), path))
+            },
+            rst::PatKind::Path(ref path) => {
+                PattenKind::Path(self.trans_path_patten(None, path))
+            }
+            rst::PatKind::TupleStruct(ref path, ref pats) => {
+                PattenKind::Enum(self.trans_enum_patten(path, pats))
             },
             rst::PatKind::Struct(ref path, ref fields, etc) => {
                 PattenKind::Struct(Box::new(self.trans_struct_patten(path, fields, etc)))
             },
-            rst::PatKind::TupleStruct(ref path, ref pats) => {
-                PattenKind::Enum(self.trans_enum_patten(path, pats))
-            },
-            rst::PatKind::Path(ref path) => unreachable!(), // TODO
             rst::PatKind::Vec(ref start, ref emit, ref end) => {
                 PattenKind::Vec(Box::new(self.trans_vec_patten(start, emit, end)))
             },
@@ -1548,9 +1551,9 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_path_patten(&mut self, qself: &rst::QSelf, path: &rst::Path) -> PathPatten {
+    fn trans_path_patten(&mut self, qself: Option<&rst::QSelf>, path: &rst::Path) -> PathPatten {
         PathPatten {
-            qself: self.trans_qself(&qself),
+            qself: map_ref_mut(&qself, |qself| self.trans_qself(qself)),
             path: self.trans_path(path),
         }
     }
@@ -1719,7 +1722,8 @@ impl Translator {
             },
             rst::ExprKind::Ret(ref expr) => ExprKind::Return(Box::new(self.trans_return_expr(expr))),
             rst::ExprKind::Mac(ref mac) => ExprKind::Macro(self.trans_macro(mac)),
-            rst::ExprKind::InlineAsm(_) | rst::ExprKind::Try(_) => unreachable!(),
+            rst::ExprKind::Try(ref expr) => ExprKind::Try(Box::new(self.trans_expr(expr))),
+            rst::ExprKind::InlineAsm(_) => unreachable!(),
         };
         self.set_loc(&loc);
 
