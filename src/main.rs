@@ -70,8 +70,9 @@ fn print_version() {
 
 fn print_help(opts: &Options) {
     let brief = r#"
-Usage: rfmt [options] [path]
-    If path is not specified, use the current path by default."#;
+Usage: rfmt [options] [file|dir]
+    If dir is specified, rfmt will do action for all files in this dir recursively.
+    If nothing was specified, use the current dir by default."#;
     println!("{}", opts.usage(brief));
 }
 
