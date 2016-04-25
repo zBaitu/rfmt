@@ -32,7 +32,7 @@ pub fn dump_ast(path: &str) {
 
     let cfg = CrateConfig::new();
     let session = ParseSess::new();
-    let krate = parse::parse_crate_from_source_str(path.to_string(), src, cfg, &session);
+    let krate = parse::parse_crate_from_source_str(path.to_string(), src, cfg, &session).unwrap();
     p!("{:#?}", krate);
     p!(SEP);
 

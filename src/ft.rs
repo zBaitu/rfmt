@@ -1934,20 +1934,20 @@ impl Formatter {
     fn fmt_stmt(&mut self, stmt: &Stmt) {
         self.try_fmt_leading_comments(&stmt.loc);
         match stmt.stmt {
-            StmtKind::Decl(ref decl) => self.fmt_decl_stmt(decl),
-            StmtKind::Expr(ref expr, is_semi) => self.fmt_expr_stmt(expr, is_semi),
-            StmtKind::Macro(ref mac, is_semi) => self.fmt_macro_stmt(mac, is_semi),
+            StmtKind::Decl(ref decl) => self.fmt_decl_stmt(decl, stmt),
+            StmtKind::Expr(ref expr, is_semi) => self.fmt_expr_stmt(expr, is_semi, stmt),
+            StmtKind::Macro(ref mac, is_semi) => self.fmt_macro_stmt(mac, is_semi, stmt),
         }
     }
 
-    fn fmt_decl_stmt(&mut self, decl: &Decl) {
+    fn fmt_decl_stmt(&mut self, decl: &Decl, stmt: &Stmt) {
         match decl.decl {
-            DeclKind::Local(ref local) => self.fmt_local(local),
+            DeclKind::Local(ref local) => self.fmt_local(local, stmt),
             DeclKind::Item(ref item) => self.fmt_item(item),
         }
     }
 
-    fn fmt_local(&mut self, local: &Local) {
+    fn fmt_local(&mut self, local: &Local, stmt: &Stmt) {
         self.try_fmt_leading_comments(&local.loc);
         self.fmt_attrs(&local.attrs);
         self.insert_indent();
@@ -1963,6 +1963,7 @@ impl Formatter {
 
         self.raw_insert(";");
         self.try_fmt_trailing_comment(&local.loc);
+        self.try_fmt_trailing_comment(&stmt.loc);
         self.nl();
     }
 
@@ -2110,7 +2111,7 @@ impl Formatter {
     }
 
     #[inline]
-    fn fmt_expr_stmt(&mut self, expr: &Expr, is_semi: bool) {
+    fn fmt_expr_stmt(&mut self, expr: &Expr, is_semi: bool, stmt: &Stmt) {
         self.try_fmt_leading_comments(&expr.loc);
         self.fmt_attrs(&expr.attrs);
         self.insert_indent();
@@ -2121,6 +2122,7 @@ impl Formatter {
         }
 
         self.try_fmt_trailing_comment(&expr.loc);
+        self.try_fmt_trailing_comment(&stmt.loc);
         self.nl();
     }
 
@@ -2535,18 +2537,19 @@ impl Formatter {
     }
 
     #[inline]
-    fn fmt_macro_stmt(&mut self, stmt: &MacroStmt, is_semi: bool) {
-        self.try_fmt_leading_comments(&stmt.loc);
-        self.fmt_attrs(&stmt.attrs);
+    fn fmt_macro_stmt(&mut self, mac: &MacroStmt, is_semi: bool, stmt: &Stmt) {
+        self.try_fmt_leading_comments(&mac.loc);
+        self.fmt_attrs(&mac.attrs);
         self.insert_indent();
 
-        self.fmt_macro(&stmt.mac);
-        if let Macro::Expr(_) = stmt.mac {
+        self.fmt_macro(&mac.mac);
+        if let Macro::Expr(_) = mac.mac {
             if is_semi {
                 self.raw_insert(";");
             }
         }
 
+        self.try_fmt_trailing_comment(&mac.loc);
         self.try_fmt_trailing_comment(&stmt.loc);
         self.nl();
     }
