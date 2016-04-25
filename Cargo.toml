@@ -2,11 +2,19 @@
 name = "rfmt"
 version = "0.1.0"
 authors = ["baitu <zbaitu@gmail.com>"]
+homepage = "https://github.com/zBaitu/rfmt"
+repository = "https://github.com/zBaitu/rfmt"
+keywords = ["formatter"]
+readme = "README.md"
+license = "Apache-2.0/MIT"
+description = """
+Another Rust source code formatter.
+"""
 
 [[bin]]
 name = "rfmt"
 
 [dependencies]
-rsyntax = { path = "/home/baitu/workspace/rust/rsyntax" }
+rsyntax = "1.10.0"
 getopts = "0.2.4"
 walkdir = "0.1"
