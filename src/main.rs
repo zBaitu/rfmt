@@ -1,3 +1,4 @@
+/*
 #![deny(warnings)]
 #![feature(custom_derive)]
 #![feature(iter_arith)]
@@ -8,9 +9,9 @@ extern crate getopts;
 extern crate rst;
 extern crate walkdir;
 
-use getopts::Options;
-
 use std::env;
+
+use getopts::Options;
 
 #[macro_use]
 mod ts;
@@ -93,5 +94,29 @@ fn main() {
         rfmt::dump_ast(&cmd_arg.path);
     } else {
         rfmt::fmt(&cmd_arg.path, cmd_arg.check, cmd_arg.debug, cmd_arg.overwrite);
+    }
+}
+*/
+use std::path::PathBuf;
+
+use structopt::StructOpt;
+
+mod rfmt;
+
+#[derive(Debug, StructOpt)]
+struct Opt {
+    #[structopt(short, long)]
+    /// Print the rust original syntax ast debug info
+    ast: bool,
+    /// Input file or dir
+    #[structopt(parse(from_os_str))]
+    input: PathBuf,
+}
+
+
+fn main() {
+    let opt = Opt::from_args();
+    if opt.ast {
+        rfmt::dump_ast(&opt.input);
     }
 }

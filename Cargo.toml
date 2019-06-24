@@ -16,6 +16,6 @@ edition = "2018"
 name = "rfmt"
 
 [dependencies]
-rsyntax = "1.10.0"
-getopts = "0.2.4"
-walkdir = "0.1"
+structopt = "0.2"
+rustc-ap-syntax = "506.0.0"
+rustc-ap-syntax_pos = "506.0.0"

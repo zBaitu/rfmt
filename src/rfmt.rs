@@ -1,19 +1,55 @@
 use std::collections::BTreeSet;
-use std::fs::File;
+use std::fs;
 use std::io::{self, Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+use syntax::parse;
+use syntax::parse::lexer::comments;
+use syntax::parse::ParseSess;
+use syntax::source_map::FilePathMapping;
+use syntax_pos::FileName;
+
+const SEP: &str = "--------------------------------------------------------------------------------";
+
+macro_rules! p {
+    () => ({println!()});
+    ($arg:expr) => ({println!("{}", $arg)});
+    ($fmt:expr, $($arg:tt)*) => ({println!($fmt, $($arg)*)});
+    ($($arg:tt)+) => ({println!("{}", $($arg)+)});
+}
+
+macro_rules! d {
+    ($arg:expr) => ({println!("{:#?}", $arg)});
+}
+
+pub fn dump_ast(path: &PathBuf) {
+    let src = fs::read_to_string(path).unwrap();
+    let mut input = &src.as_bytes().to_vec()[..];
+
+    syntax::with_default_globals(|| {
+        let session = ParseSess::new(FilePathMapping::empty());
+        let krate = parse::parse_crate_from_source_str(FileName::from(path.clone()), src, &session).unwrap();
+        d!(krate);
+
+        p!("\n{}\n", SEP);
+
+        let cmnts = comments::gather_comments(&session, FileName::from(path.clone()), &mut input);
+        for cmnt in cmnts {
+            p!("{}: {:#?} {:#?}", cmnt.pos.0, cmnt.style, cmnt.lines);
+        }
+    });
+}
+/*
+use ft;
 use rst::ast::CrateConfig;
 use rst::codemap::CodeMap;
-use rst::errors::Handler;
 use rst::errors::emitter::{ColorConfig, EmitterWriter};
-use rst::parse::lexer::comments;
+use rst::errors::Handler;
 use rst::parse::{self, ParseSess};
-use walkdir::WalkDir;
-
-use ft;
+use rst::parse::lexer::comments;
 use tr;
+use walkdir::WalkDir;
 
 macro_rules! p {
     () => ({print!("\n")});
@@ -37,7 +73,7 @@ pub fn dump_ast(path: &str) {
     p!(SEP);
 
     let (cmnts, lits) = comments::gather_comments_and_literals(&session.span_diagnostic,
-            path.to_string(), &mut input);
+                                                               path.to_string(), &mut input);
     for cmnt in cmnts {
         p!("{}: {:#?} {:#?}", cmnt.pos.0, cmnt.style, cmnt.lines);
     }
@@ -139,3 +175,4 @@ fn fmt_str(src: String, path: &str, check: bool, debug: bool, overwrite: bool) {
         p!(result.s);
     }
 }
+*/
