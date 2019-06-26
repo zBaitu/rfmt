@@ -1,5 +1,20 @@
 use std::fmt::{self, Debug, Display};
 
+use syntax_pos::BytePos;
+
+#[derive(Debug)]
+pub enum CommentKind {
+    Leading,
+    Trailing,
+}
+
+#[derive(Debug)]
+pub struct Comment {
+    pub pos: BytePos,
+    pub kind: CommentKind,
+    pub lines: Vec<String>,
+}
+/*
 pub type Pos = u32;
 
 #[derive(Clone, Copy, Default)]
@@ -38,6 +53,27 @@ impl Chunk {
             s: s.into(),
         }
     }
+}
+
+#[derive(Debug)]
+pub enum AttrKind {
+    Doc(Doc),
+    Attr(Attr),
+}
+
+
+#[derive(Debug)]
+pub struct Attr {
+    pub loc: Loc,
+    pub is_inner: bool,
+    pub item: MetaItem,
+}
+
+#[derive(Debug)]
+pub struct MetaItem {
+    pub loc: Loc,
+    pub name: String,
+    pub items: Option<Box<Vec<MetaItem>>>,
 }
 
 #[derive(Debug)]
@@ -994,3 +1030,4 @@ pub struct MacroExpr {
     pub exprs: Vec<Expr>,
     pub seps: Vec<MacroExprSep>,
 }
+*/

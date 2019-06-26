@@ -1,0 +1,698 @@
+{
+  "module": {
+    "inner": {
+      "lo": 0,
+      "hi": 365
+    },
+    "items": [
+      {
+        "ident": "a",
+        "attrs": [
+          {
+            "id": {
+              "_field0": 1
+            },
+            "style": "Outer",
+            "path": {
+              "span": {
+                "lo": 0,
+                "hi": 47
+              },
+              "segments": [
+                {
+                  "ident": "doc",
+                  "id": 4294967040,
+                  "args": null
+                }
+              ]
+            },
+            "tokens": [
+              {
+                "variant": "Token",
+                "fields": [
+                  {
+                    "kind": "Eq",
+                    "span": {
+                      "lo": 0,
+                      "hi": 47
+                    }
+                  }
+                ]
+              },
+              {
+                "variant": "Token",
+                "fields": [
+                  {
+                    "kind": {
+                      "variant": "Literal",
+                      "fields": [
+                        {
+                          "kind": "Str",
+                          "symbol": "/// aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa    ",
+                          "suffix": null
+                        }
+                      ]
+                    },
+                    "span": {
+                      "lo": 0,
+                      "hi": 47
+                    }
+                  }
+                ]
+              }
+            ],
+            "is_sugared_doc": true,
+            "span": {
+              "lo": 0,
+              "hi": 47
+            }
+          },
+          {
+            "id": {
+              "_field0": 2
+            },
+            "style": "Outer",
+            "path": {
+              "span": {
+                "lo": 48,
+                "hi": 91
+              },
+              "segments": [
+                {
+                  "ident": "doc",
+                  "id": 4294967040,
+                  "args": null
+                }
+              ]
+            },
+            "tokens": [
+              {
+                "variant": "Token",
+                "fields": [
+                  {
+                    "kind": "Eq",
+                    "span": {
+                      "lo": 48,
+                      "hi": 91
+                    }
+                  }
+                ]
+              },
+              {
+                "variant": "Token",
+                "fields": [
+                  {
+                    "kind": {
+                      "variant": "Literal",
+                      "fields": [
+                        {
+                          "kind": "Str",
+                          "symbol": "/// bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                          "suffix": null
+                        }
+                      ]
+                    },
+                    "span": {
+                      "lo": 48,
+                      "hi": 91
+                    }
+                  }
+                ]
+              }
+            ],
+            "is_sugared_doc": true,
+            "span": {
+              "lo": 48,
+              "hi": 91
+            }
+          }
+        ],
+        "id": 4294967040,
+        "node": {
+          "variant": "Mod",
+          "fields": [
+            {
+              "inner": {
+                "lo": 258,
+                "hi": 365
+              },
+              "items": [
+                {
+                  "ident": "a",
+                  "attrs": [],
+                  "id": 4294967040,
+                  "node": {
+                    "variant": "Struct",
+                    "fields": [
+                      {
+                        "variant": "Struct",
+                        "fields": [
+                          [
+                            {
+                              "span": {
+                                "lo": 277,
+                                "hi": 283
+                              },
+                              "ident": "a",
+                              "vis": {
+                                "node": "Inherited",
+                                "span": {
+                                  "lo": 277,
+                                  "hi": 277
+                                }
+                              },
+                              "id": 4294967040,
+                              "ty": {
+                                "id": 4294967040,
+                                "node": {
+                                  "variant": "Path",
+                                  "fields": [
+                                    null,
+                                    {
+                                      "span": {
+                                        "lo": 280,
+                                        "hi": 283
+                                      },
+                                      "segments": [
+                                        {
+                                          "ident": "i32",
+                                          "id": 4294967040,
+                                          "args": null
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "span": {
+                                  "lo": 280,
+                                  "hi": 283
+                                }
+                              },
+                              "attrs": []
+                            },
+                            {
+                              "span": {
+                                "lo": 313,
+                                "hi": 320
+                              },
+                              "ident": "b",
+                              "vis": {
+                                "node": "Inherited",
+                                "span": {
+                                  "lo": 313,
+                                  "hi": 313
+                                }
+                              },
+                              "id": 4294967040,
+                              "ty": {
+                                "id": 4294967040,
+                                "node": {
+                                  "variant": "Path",
+                                  "fields": [
+                                    null,
+                                    {
+                                      "span": {
+                                        "lo": 316,
+                                        "hi": 320
+                                      },
+                                      "segments": [
+                                        {
+                                          "ident": "bool",
+                                          "id": 4294967040,
+                                          "args": null
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "span": {
+                                  "lo": 316,
+                                  "hi": 320
+                                }
+                              },
+                              "attrs": []
+                            }
+                          ],
+                          false
+                        ]
+                      },
+                      {
+                        "params": [],
+                        "where_clause": {
+                          "predicates": [],
+                          "span": {
+                            "lo": 0,
+                            "hi": 0
+                          }
+                        },
+                        "span": {
+                          "lo": 266,
+                          "hi": 267
+                        }
+                      }
+                    ]
+                  },
+                  "vis": {
+                    "node": "Inherited",
+                    "span": {
+                      "lo": 258,
+                      "hi": 258
+                    }
+                  },
+                  "span": {
+                    "lo": 258,
+                    "hi": 363
+                  },
+                  "tokens": [
+                    {
+                      "variant": "Token",
+                      "fields": [
+                        {
+                          "kind": {
+                            "variant": "Ident",
+                            "fields": [
+                              "struct",
+                              false
+                            ]
+                          },
+                          "span": {
+                            "lo": 258,
+                            "hi": 264
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "variant": "Token",
+                      "fields": [
+                        {
+                          "kind": {
+                            "variant": "Ident",
+                            "fields": [
+                              "a",
+                              false
+                            ]
+                          },
+                          "span": {
+                            "lo": 265,
+                            "hi": 266
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "variant": "Delimited",
+                      "fields": [
+                        {
+                          "open": {
+                            "lo": 267,
+                            "hi": 268
+                          },
+                          "close": {
+                            "lo": 362,
+                            "hi": 363
+                          }
+                        },
+                        "Brace",
+                        [
+                          {
+                            "variant": "Token",
+                            "fields": [
+                              {
+                                "kind": {
+                                  "variant": "Ident",
+                                  "fields": [
+                                    "a",
+                                    false
+                                  ]
+                                },
+                                "span": {
+                                  "lo": 277,
+                                  "hi": 278
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "variant": "Token",
+                            "fields": [
+                              {
+                                "kind": "Colon",
+                                "span": {
+                                  "lo": 278,
+                                  "hi": 279
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "variant": "Token",
+                            "fields": [
+                              {
+                                "kind": {
+                                  "variant": "Ident",
+                                  "fields": [
+                                    "i32",
+                                    false
+                                  ]
+                                },
+                                "span": {
+                                  "lo": 280,
+                                  "hi": 283
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "variant": "Token",
+                            "fields": [
+                              {
+                                "kind": "Comma",
+                                "span": {
+                                  "lo": 283,
+                                  "hi": 284
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "variant": "Token",
+                            "fields": [
+                              {
+                                "kind": {
+                                  "variant": "Ident",
+                                  "fields": [
+                                    "b",
+                                    false
+                                  ]
+                                },
+                                "span": {
+                                  "lo": 313,
+                                  "hi": 314
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "variant": "Token",
+                            "fields": [
+                              {
+                                "kind": "Colon",
+                                "span": {
+                                  "lo": 314,
+                                  "hi": 315
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "variant": "Token",
+                            "fields": [
+                              {
+                                "kind": {
+                                  "variant": "Ident",
+                                  "fields": [
+                                    "bool",
+                                    false
+                                  ]
+                                },
+                                "span": {
+                                  "lo": 316,
+                                  "hi": 320
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "variant": "Token",
+                            "fields": [
+                              {
+                                "kind": "Comma",
+                                "span": {
+                                  "lo": 320,
+                                  "hi": 321
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "inline": true
+            }
+          ]
+        },
+        "vis": {
+          "node": "Inherited",
+          "span": {
+            "lo": 92,
+            "hi": 92
+          }
+        },
+        "span": {
+          "lo": 92,
+          "hi": 365
+        },
+        "tokens": [
+          {
+            "variant": "Token",
+            "fields": [
+              {
+                "kind": {
+                  "variant": "Ident",
+                  "fields": [
+                    "mod",
+                    false
+                  ]
+                },
+                "span": {
+                  "lo": 92,
+                  "hi": 95
+                }
+              }
+            ]
+          },
+          {
+            "variant": "Token",
+            "fields": [
+              {
+                "kind": {
+                  "variant": "Ident",
+                  "fields": [
+                    "a",
+                    false
+                  ]
+                },
+                "span": {
+                  "lo": 96,
+                  "hi": 97
+                }
+              }
+            ]
+          },
+          {
+            "variant": "Delimited",
+            "fields": [
+              {
+                "open": {
+                  "lo": 98,
+                  "hi": 99
+                },
+                "close": {
+                  "lo": 364,
+                  "hi": 365
+                }
+              },
+              "Brace",
+              [
+                {
+                  "variant": "Token",
+                  "fields": [
+                    {
+                      "kind": {
+                        "variant": "Ident",
+                        "fields": [
+                          "struct",
+                          false
+                        ]
+                      },
+                      "span": {
+                        "lo": 258,
+                        "hi": 264
+                      }
+                    }
+                  ]
+                },
+                {
+                  "variant": "Token",
+                  "fields": [
+                    {
+                      "kind": {
+                        "variant": "Ident",
+                        "fields": [
+                          "a",
+                          false
+                        ]
+                      },
+                      "span": {
+                        "lo": 265,
+                        "hi": 266
+                      }
+                    }
+                  ]
+                },
+                {
+                  "variant": "Delimited",
+                  "fields": [
+                    {
+                      "open": {
+                        "lo": 267,
+                        "hi": 268
+                      },
+                      "close": {
+                        "lo": 362,
+                        "hi": 363
+                      }
+                    },
+                    "Brace",
+                    [
+                      {
+                        "variant": "Token",
+                        "fields": [
+                          {
+                            "kind": {
+                              "variant": "Ident",
+                              "fields": [
+                                "a",
+                                false
+                              ]
+                            },
+                            "span": {
+                              "lo": 277,
+                              "hi": 278
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "variant": "Token",
+                        "fields": [
+                          {
+                            "kind": "Colon",
+                            "span": {
+                              "lo": 278,
+                              "hi": 279
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "variant": "Token",
+                        "fields": [
+                          {
+                            "kind": {
+                              "variant": "Ident",
+                              "fields": [
+                                "i32",
+                                false
+                              ]
+                            },
+                            "span": {
+                              "lo": 280,
+                              "hi": 283
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "variant": "Token",
+                        "fields": [
+                          {
+                            "kind": "Comma",
+                            "span": {
+                              "lo": 283,
+                              "hi": 284
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "variant": "Token",
+                        "fields": [
+                          {
+                            "kind": {
+                              "variant": "Ident",
+                              "fields": [
+                                "b",
+                                false
+                              ]
+                            },
+                            "span": {
+                              "lo": 313,
+                              "hi": 314
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "variant": "Token",
+                        "fields": [
+                          {
+                            "kind": "Colon",
+                            "span": {
+                              "lo": 314,
+                              "hi": 315
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "variant": "Token",
+                        "fields": [
+                          {
+                            "kind": {
+                              "variant": "Ident",
+                              "fields": [
+                                "bool",
+                                false
+                              ]
+                            },
+                            "span": {
+                              "lo": 316,
+                              "hi": 320
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "variant": "Token",
+                        "fields": [
+                          {
+                            "kind": "Comma",
+                            "span": {
+                              "lo": 320,
+                              "hi": 321
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  ]
+                }
+              ]
+            ]
+          }
+        ]
+      }
+    ],
+    "inline": true
+  },
+  "attrs": [],
+  "span": {
+    "lo": 0,
+    "hi": 365
+  }
+}

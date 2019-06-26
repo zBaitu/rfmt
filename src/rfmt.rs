@@ -1,14 +1,18 @@
 use std::collections::BTreeSet;
 use std::fs;
+use std::fs::File;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use syntax::parse;
-use syntax::parse::lexer::comments;
-use syntax::parse::ParseSess;
+use syntax::parse::{self, lexer::comments, ParseSess};
 use syntax::source_map::FilePathMapping;
 use syntax_pos::FileName;
+use walkdir::WalkDir;
+
+use crate::ast;
+use crate::Opt;
+use crate::tr;
 
 const SEP: &str = "--------------------------------------------------------------------------------";
 
@@ -23,65 +27,6 @@ macro_rules! d {
     ($arg:expr) => ({println!("{:#?}", $arg)});
 }
 
-pub fn dump_ast(path: &PathBuf) {
-    let src = fs::read_to_string(path).unwrap();
-    let mut input = &src.as_bytes().to_vec()[..];
-
-    syntax::with_default_globals(|| {
-        let session = ParseSess::new(FilePathMapping::empty());
-        let krate = parse::parse_crate_from_source_str(FileName::from(path.clone()), src, &session).unwrap();
-        d!(krate);
-
-        p!("\n{}\n", SEP);
-
-        let cmnts = comments::gather_comments(&session, FileName::from(path.clone()), &mut input);
-        for cmnt in cmnts {
-            p!("{}: {:#?} {:#?}", cmnt.pos.0, cmnt.style, cmnt.lines);
-        }
-    });
-}
-/*
-use ft;
-use rst::ast::CrateConfig;
-use rst::codemap::CodeMap;
-use rst::errors::emitter::{ColorConfig, EmitterWriter};
-use rst::errors::Handler;
-use rst::parse::{self, ParseSess};
-use rst::parse::lexer::comments;
-use tr;
-use walkdir::WalkDir;
-
-macro_rules! p {
-    () => ({print!("\n")});
-    ($arg:expr) => ({print!("{}\n", $arg)});
-    ($fmt:expr, $($arg:tt)*) => ({print!(concat!($fmt, "\n"), $($arg)*)});
-    ($($arg:tt)+) => ({print!("{}\n", $($arg)+)});
-}
-
-const SEP: &'static str = "----------------------------------------";
-
-pub fn dump_ast(path: &str) {
-    let mut file = File::open(path).unwrap();
-    let mut src = String::new();
-    file.read_to_string(&mut src).unwrap();
-    let mut input = &src.as_bytes().to_vec()[..];
-
-    let cfg = CrateConfig::new();
-    let session = ParseSess::new();
-    let krate = parse::parse_crate_from_source_str(path.to_string(), src, cfg, &session).unwrap();
-    p!("{:#?}", krate);
-    p!(SEP);
-
-    let (cmnts, lits) = comments::gather_comments_and_literals(&session.span_diagnostic,
-                                                               path.to_string(), &mut input);
-    for cmnt in cmnts {
-        p!("{}: {:#?} {:#?}", cmnt.pos.0, cmnt.style, cmnt.lines);
-    }
-    p!(SEP);
-    for lit in lits {
-        p!("{}: {}", lit.pos.0, lit.lit);
-    }
-}
 
 pub struct Result {
     pub s: String,
@@ -89,18 +34,42 @@ pub struct Result {
     pub trailing_ws_lines: BTreeSet<u32>,
 }
 
+pub fn dump_ast(path: &PathBuf) {
+    let src = fs::read_to_string(path).unwrap();
+    let mut input = &src.as_bytes().to_vec()[..];
+
+    syntax::with_default_globals(|| {
+        let sess = ParseSess::new(FilePathMapping::empty());
+        let krate = match parse::parse_crate_from_source_str(FileName::from(path.clone()), src, &sess) {
+            Ok(krate) => krate,
+            Err(mut e) => {
+                e.emit();
+                return;
+            }
+        };
+        d!(krate);
+
+        p!("\n{}\n", SEP);
+
+        let cmnts = comments::gather_comments(&sess, FileName::from(path.clone()), &mut input);
+        for cmnt in cmnts {
+            p!("{}: {:#?} {:#?}", cmnt.pos.0, cmnt.style, cmnt.lines);
+        }
+    });
+}
+
 pub fn fmt_from_stdin() {
     let mut src = String::new();
     io::stdin().read_to_string(&mut src).unwrap();
-    fmt_str(src, "stdin", false, false, false);
+    fmt_str(src, &PathBuf::from("stdin"), false, false, false);
 }
 
-pub fn fmt(path: &str, check: bool, debug: bool, overwrite: bool) {
-    let path = Path::new(path);
+pub fn fmt(opt: Opt) {
+    let path = opt.input.unwrap();
     if path.is_dir() {
-        fmt_dir(path, check, debug, overwrite);
+        fmt_dir(&path, opt.check, opt.debug, opt.overwrite);
     } else {
-        fmt_file(path, check, debug, overwrite);
+        fmt_file(&path, opt.check, opt.debug, opt.overwrite);
     }
 }
 
@@ -108,7 +77,7 @@ fn fmt_dir(path: &Path, check: bool, debug: bool, overwrite: bool) {
     for entry in WalkDir::new(path) {
         let entry = entry.unwrap();
         if entry.file_type().is_file() {
-            let path = entry.path();
+            let path = entry.into_path();
             let ext = path.extension();
             if let Some(ext) = ext {
                 if ext == "rs" {
@@ -119,41 +88,26 @@ fn fmt_dir(path: &Path, check: bool, debug: bool, overwrite: bool) {
     }
 }
 
-fn fmt_file(path: &Path, check: bool, debug: bool, overwrite: bool) {
-    let mut file = File::open(path).unwrap();
-    let mut src = String::new();
-    file.read_to_string(&mut src).unwrap();
-    fmt_str(src, path.to_str().unwrap(), check, debug, overwrite);
+fn fmt_file(path: &PathBuf, check: bool, debug: bool, overwrite: bool) {
+    let src = fs::read_to_string(path).unwrap();
+    fmt_str(src, path, check, debug, overwrite);
 }
 
-fn fmt_str(src: String, path: &str, check: bool, debug: bool, overwrite: bool) {
-    let cfg = CrateConfig::new();
-    let codemap = Rc::new(CodeMap::new());
-    let handler
-            = Handler::with_tty_emitter(ColorConfig::Auto, None, true, false, codemap.clone());
-    let mut sess = ParseSess::with_span_handler(handler, codemap.clone());
+fn fmt_str(src: String, path: &PathBuf, check: bool, debug: bool, overwrite: bool) {
+    let result = syntax::with_default_globals(|| {
+        let mut input = &src.as_bytes().to_vec()[..];
+        let sess = ParseSess::new(FilePathMapping::empty());
+        let krate = parse::parse_crate_from_source_str(FileName::from(path.to_path_buf()), src, &sess).unwrap();
+        let cmnts = comments::gather_comments(&sess, FileName::from(path.to_path_buf()), &mut input);
+        tr::trans(sess, krate, cmnts)
+    });
 
-    let mut input = &src.as_bytes().to_vec()[..];
-    let krate = match parse::parse_crate_from_source_str(path.to_string(), src, cfg, &sess) {
-        Ok(krate) => krate,
-        Err(mut e) => {
-            e.emit();
-            return;
-        },
-    };
-
-    let (cmnts, _) = comments::gather_comments_and_literals(&sess.span_diagnostic,
-            path.to_string(), &mut input);
-    let silent_emitter
-            = Box::new(EmitterWriter::new(Box::new(Vec::new()), None, codemap.clone()));
-    sess.span_diagnostic = Handler::with_emitter(true, false, silent_emitter);
-
-    let result = tr::trans(sess, krate, cmnts);
+    /*
     if debug {
-        p!("{:#?}", result.krate);
-        p!("{:#?}", result.leading_cmnts);
-        p!("{:#?}", result.trailing_cmnts);
-        p!(SEP);
+        d!("{:#?}", result.krate);
+        d!("{:#?}", result.leading_cmnts);
+        d!("{:#?}", result.trailing_cmnts);
+        p!("\n{}\n", SEP);
     }
 
     let result = ft::fmt(result.krate, result.leading_cmnts, result.trailing_cmnts);
@@ -174,5 +128,6 @@ fn fmt_str(src: String, path: &str, check: bool, debug: bool, overwrite: bool) {
     } else {
         p!(result.s);
     }
+    */
 }
-*/
+

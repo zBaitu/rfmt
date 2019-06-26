@@ -1,6 +1,6 @@
 [package]
 name = "rfmt"
-version = "0.1.0"
+version = "1.35.0"
 authors = ["baitu <zbaitu@gmail.com>"]
 homepage = "https://github.com/zBaitu/rfmt"
 repository = "https://github.com/zBaitu/rfmt"
@@ -19,3 +19,4 @@ name = "rfmt"
 structopt = "0.2"
 rustc-ap-syntax = "506.0.0"
 rustc-ap-syntax_pos = "506.0.0"
+walkdir = "2"
