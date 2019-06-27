@@ -1,24 +1,11 @@
-use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::result;
 
 use syntax::parse::ParseSess;
-use syntax_pos::{BytePos, Loc, Pos};
 
 use crate::ast;
 use crate::ir::*;
 
 const MAX_BLANK_LINE: u8 = 1;
-
-pub struct Result {
-    //pub krate: Crate,
-    pub leading_cmnts: HashMap<BytePos, Vec<String>>,
-    pub trailing_cmnts: HashMap<BytePos, String>,
-}
-
-pub fn trans(sess: ParseSess, krate: ast::Crate, cmnts: Vec<ast::Comment>) -> Result {
-    Translator::new(sess, trans_comments(cmnts)).trans_crate(krate)
-}
 
 fn trans_comments(cmnts: Vec<ast::Comment>) -> Vec<Comment> {
     let mut pre_blank_line_pos = 0;
@@ -56,18 +43,18 @@ fn trans_comment(cmnt: ast::Comment) -> Comment {
     };
 
     Comment {
-        pos: cmnt.pos,
+        pos: cmnt.pos.0,
         kind,
         lines: cmnt.lines,
     }
 }
 
-/*
 #[inline]
-fn span(s: u32, e: u32) -> rst::Span {
-    rst::codemap::mk_sp(rst::BytePos(s), rst::BytePos(e))
+fn span(s: u32, e: u32) -> ast::Span {
+    ast::Span::new(ast::BytePos(s), ast::BytePos(e), ast::NO_EXPANSION)
 }
 
+/*
 #[inline]
 fn is_inner(style: rst::AttrStyle) -> bool {
     style == rst::AttrStyle::Inner
@@ -198,14 +185,25 @@ fn map_ref_mut<T, F, R>(opt: &Option<T>, mut f: F) -> Option<R> where F: FnMut(&
 }
 */
 
+
+pub struct TrResult {
+    //pub krate: Crate,
+    pub leading_cmnts: HashMap<Pos, Vec<String>>,
+    pub trailing_cmnts: HashMap<Pos, String>,
+}
+
+pub fn trans(sess: ParseSess, krate: ast::Crate, cmnts: Vec<ast::Comment>) -> TrResult {
+    Translator::new(sess, trans_comments(cmnts)).trans_crate(krate)
+}
+
 struct Translator {
     sess: ParseSess,
     cmnts: Vec<Comment>,
     cmnt_idx: usize,
-    //last_loc: Loc,
+    last_loc: Loc,
 
-    leading_cmnts: HashMap<BytePos, Vec<String>>,
-    trailing_cmnts: HashMap<BytePos, String>,
+    leading_cmnts: HashMap<Pos, Vec<String>>,
+    trailing_cmnts: HashMap<Pos, String>,
 }
 
 macro_rules! trans_list {
@@ -220,19 +218,104 @@ impl Translator {
             sess,
             cmnts,
             cmnt_idx: 0,
-            //last_loc: Loc {},
+            last_loc: Default::default(),
 
             leading_cmnts: HashMap::new(),
             trailing_cmnts: HashMap::new(),
         }
     }
 
-    fn trans_crate(mut self, krate: ast::Crate) -> Result {
-        //let attrs = self.trans_attrs(&krate.attrs);
+    #[inline]
+    fn span_to_snippet(&self, sp: ast::Span) -> Result<String, ast::SpanSnippetError> {
+        self.sess.source_map().span_to_snippet(sp)
+    }
 
-        /*
-        self.last_loc.start = krate.span.lo.0;
+    #[inline]
+    fn is_nl(&self, pos: Pos) -> bool {
+        let snippet = self.span_to_snippet(span(self.last_loc.end, pos));
+        if snippet.is_err() {
+            return false;
+        }
+
+        let snippet = snippet.unwrap();
+        let linefeed = snippet.find('\n');
+        if linefeed.is_none() {
+            return false;
+        }
+
+        let start = linefeed.unwrap() + 1;
+        for ch in snippet[start..].chars() {
+            if !ch.is_whitespace() {
+                return false;
+            }
+        }
+        true
+    }
+
+    #[inline]
+    fn loc(&mut self, sp: &ast::Span) -> Loc {
+        self.trans_comments(sp.lo().0);
+
+        Loc {
+            start: sp.lo().0,
+            end: sp.hi().0,
+            nl: self.is_nl(sp.lo().0),
+        }
+    }
+
+    #[inline]
+    fn trans_comments(&mut self, pos: Pos) {
+        let cmnts = self.trans_trailing_comments(pos);
+        self.trans_leading_comments(pos, cmnts);
+    }
+
+    #[inline]
+    fn trans_trailing_comments(&mut self, pos: Pos) -> Vec<String> {
+        let mut cmnts = Vec::new();
+
+        if self.cmnt_idx >= self.cmnts.len() {
+            return cmnts;
+        }
+        let cmnt = &self.cmnts[self.cmnt_idx];
+        if cmnt.pos > pos || cmnt.kind != CommentKind::Trailing {
+            return cmnts;
+        }
+        self.cmnt_idx += 1;
+
+        self.trailing_cmnts.insert(self.last_loc.end, cmnt.lines[0].clone());
+        cmnts.extend_from_slice(&cmnt.lines[1..]);
+        cmnts
+    }
+
+    #[inline]
+    fn trans_leading_comments(&mut self, pos: Pos, mut cmnts: Vec<String>) {
+        while self.cmnt_idx < self.cmnts.len() {
+            let cmnt = &self.cmnts[self.cmnt_idx];
+            if cmnt.pos >= pos {
+                break;
+            }
+
+            if cmnt.lines.is_empty() {
+                cmnts.push(String::new());
+            } else {
+                cmnts.extend_from_slice(&cmnt.lines);
+            }
+
+            self.cmnt_idx += 1;
+        }
+
+        if !cmnts.is_empty() {
+            self.leading_cmnts.insert(pos, cmnts);
+        }
+    }
+
+
+    fn trans_crate(mut self, krate: ast::Crate) -> TrResult {
+        self.last_loc.start = krate.span.lo().0;
+
         let loc = self.loc(&krate.span);
+        /*
+        let attrs = self.trans_attrs(&krate.attrs);
         let crate_mod_name = self.crate_mod_name();
         let module = self.trans_mod(crate_mod_name, &krate.module);
 
@@ -240,7 +323,7 @@ impl Translator {
         self.trans_comments(crate_file_end);
         */
 
-        Result {
+        TrResult {
             /*
             krate: Crate {
                 loc: loc,
@@ -315,47 +398,10 @@ impl Translator {
     }
 
     #[inline]
-    fn span_to_snippet(&self, sp: rst::Span) -> result::Result<String, rst::SpanSnippetError> {
-        self.sess.codemap().span_to_snippet(sp)
-    }
-
-    #[inline]
     fn literal_to_string(&self, lit: &rst::Lit) -> String {
         self.span_to_snippet(lit.span).unwrap()
     }
 
-    #[inline]
-    fn is_nl(&self, pos: Pos) -> bool {
-        let snippet = self.span_to_snippet(span(self.last_loc.end, pos));
-        if snippet.is_err() {
-            return false;
-        }
-
-        let snippet = snippet.unwrap();
-        let linefeed = snippet.find('\n');
-        if linefeed.is_none() {
-            return false;
-        }
-
-        let start = linefeed.unwrap() + 1;
-        for ch in snippet[start..].chars() {
-            if !ch.is_whitespace() {
-                return false;
-            }
-        }
-        true
-    }
-
-    #[inline]
-    fn loc(&mut self, sp: &rst::Span) -> Loc {
-        self.trans_comments(sp.lo.0);
-
-        Loc {
-            start: sp.lo.0,
-            end: sp.hi.0,
-            nl: self.is_nl(sp.lo.0),
-        }
-    }
 
     #[inline]
     fn leaf_loc(&mut self, sp: &rst::Span) -> Loc {
@@ -369,53 +415,6 @@ impl Translator {
         self.trans_comments(loc.end);
         self.last_loc = *loc;
     }
-
-    #[inline]
-    fn trans_comments(&mut self, pos: Pos) {
-        let cmnts = self.trans_trailing_comments(pos);
-        self.trans_leading_comments(pos, cmnts);
-    }
-
-    #[inline]
-    fn trans_trailing_comments(&mut self, pos: Pos) -> Vec<String> {
-        let mut cmnts = Vec::new();
-
-        if self.cmnt_idx >= self.cmnts.len() {
-            return cmnts;
-        }
-        let cmnt = &self.cmnts[self.cmnt_idx];
-        if cmnt.pos > pos || cmnt.kind != CommentKind::Trailing {
-            return cmnts;
-        }
-        self.cmnt_idx += 1;
-
-        self.trailing_cmnts.insert(self.last_loc.end, cmnt.lines[0].clone());
-        cmnts.extend_from_slice(&cmnt.lines[1..]);
-        cmnts
-    }
-
-    #[inline]
-    fn trans_leading_comments(&mut self, pos: Pos, mut cmnts: Vec<String>) {
-        while self.cmnt_idx < self.cmnts.len() {
-            let cmnt = &self.cmnts[self.cmnt_idx];
-            if cmnt.pos >= pos {
-                break;
-            }
-
-            if cmnt.lines.is_empty() {
-                cmnts.push(String::new());
-            } else {
-                cmnts.extend_from_slice(&cmnt.lines);
-            }
-
-            self.cmnt_idx += 1;
-        }
-
-        if !cmnts.is_empty() {
-            self.leading_cmnts.insert(pos, cmnts);
-        }
-    }
-
     #[inline]
     fn trans_doc(&mut self, attr: &rst::Attribute) -> Doc {
         if let rst::MetaItemKind::NameValue(_, ref value) = attr.node.value.node {

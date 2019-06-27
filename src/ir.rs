@@ -1,20 +1,5 @@
 use std::fmt::{self, Debug, Display};
 
-use syntax_pos::BytePos;
-
-#[derive(Debug)]
-pub enum CommentKind {
-    Leading,
-    Trailing,
-}
-
-#[derive(Debug)]
-pub struct Comment {
-    pub pos: BytePos,
-    pub kind: CommentKind,
-    pub lines: Vec<String>,
-}
-/*
 pub type Pos = u32;
 
 #[derive(Clone, Copy, Default)]
@@ -40,6 +25,21 @@ impl Debug for Loc {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub enum CommentKind {
+    Leading,
+    Trailing,
+}
+
+#[derive(Debug)]
+pub struct Comment {
+    pub pos: Pos,
+    pub kind: CommentKind,
+    pub lines: Vec<String>,
+}
+
+
+/*
 #[derive(Debug, Default)]
 pub struct Chunk {
     pub loc: Loc,

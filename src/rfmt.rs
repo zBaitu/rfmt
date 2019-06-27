@@ -1,16 +1,12 @@
-use std::collections::BTreeSet;
 use std::fs;
-use std::fs::File;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 
 use syntax::parse::{self, lexer::comments, ParseSess};
 use syntax::source_map::FilePathMapping;
 use syntax_pos::FileName;
 use walkdir::WalkDir;
 
-use crate::ast;
 use crate::Opt;
 use crate::tr;
 
@@ -25,13 +21,6 @@ macro_rules! p {
 
 macro_rules! d {
     ($arg:expr) => ({println!("{:#?}", $arg)});
-}
-
-
-pub struct Result {
-    pub s: String,
-    pub exceed_lines: BTreeSet<u32>,
-    pub trailing_ws_lines: BTreeSet<u32>,
 }
 
 pub fn dump_ast(path: &PathBuf) {
@@ -102,14 +91,14 @@ fn fmt_str(src: String, path: &PathBuf, check: bool, debug: bool, overwrite: boo
         tr::trans(sess, krate, cmnts)
     });
 
-    /*
     if debug {
-        d!("{:#?}", result.krate);
-        d!("{:#?}", result.leading_cmnts);
-        d!("{:#?}", result.trailing_cmnts);
-        p!("\n{}\n", SEP);
+        //d!(result.krate);
+        d!(result.leading_cmnts);
+        d!(result.trailing_cmnts);
+        p!("{}\n", SEP);
     }
 
+    /*
     let result = ft::fmt(result.krate, result.leading_cmnts, result.trailing_cmnts);
     if overwrite {
         let mut file = File::create(path).unwrap();
