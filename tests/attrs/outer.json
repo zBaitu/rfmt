@@ -1,0 +1,183 @@
+{
+  "module": {
+    "inner": {
+      "lo": 0,
+      "hi": 24
+    },
+    "items": [
+      {
+        "ident": "a",
+        "attrs": [
+          {
+            "id": {
+              "_field0": 0
+            },
+            "style": "Outer",
+            "path": {
+              "span": {
+                "lo": 2,
+                "hi": 8
+              },
+              "segments": [
+                {
+                  "ident": "inline",
+                  "id": 4294967040,
+                  "args": null
+                }
+              ]
+            },
+            "tokens": [],
+            "is_sugared_doc": false,
+            "span": {
+              "lo": 0,
+              "hi": 9
+            }
+          }
+        ],
+        "id": 4294967040,
+        "node": {
+          "variant": "Ty",
+          "fields": [
+            {
+              "id": 4294967040,
+              "node": {
+                "variant": "Path",
+                "fields": [
+                  null,
+                  {
+                    "span": {
+                      "lo": 19,
+                      "hi": 23
+                    },
+                    "segments": [
+                      {
+                        "ident": "bool",
+                        "id": 4294967040,
+                        "args": null
+                      }
+                    ]
+                  }
+                ]
+              },
+              "span": {
+                "lo": 19,
+                "hi": 23
+              }
+            },
+            {
+              "params": [],
+              "where_clause": {
+                "predicates": [],
+                "span": {
+                  "lo": 15,
+                  "hi": 16
+                }
+              },
+              "span": {
+                "lo": 16,
+                "hi": 17
+              }
+            }
+          ]
+        },
+        "vis": {
+          "node": "Inherited",
+          "span": {
+            "lo": 10,
+            "hi": 10
+          }
+        },
+        "span": {
+          "lo": 10,
+          "hi": 24
+        },
+        "tokens": [
+          {
+            "variant": "Token",
+            "fields": [
+              {
+                "kind": {
+                  "variant": "Ident",
+                  "fields": [
+                    "type",
+                    false
+                  ]
+                },
+                "span": {
+                  "lo": 10,
+                  "hi": 14
+                }
+              }
+            ]
+          },
+          {
+            "variant": "Token",
+            "fields": [
+              {
+                "kind": {
+                  "variant": "Ident",
+                  "fields": [
+                    "a",
+                    false
+                  ]
+                },
+                "span": {
+                  "lo": 15,
+                  "hi": 16
+                }
+              }
+            ]
+          },
+          {
+            "variant": "Token",
+            "fields": [
+              {
+                "kind": "Eq",
+                "span": {
+                  "lo": 17,
+                  "hi": 18
+                }
+              }
+            ]
+          },
+          {
+            "variant": "Token",
+            "fields": [
+              {
+                "kind": {
+                  "variant": "Ident",
+                  "fields": [
+                    "bool",
+                    false
+                  ]
+                },
+                "span": {
+                  "lo": 19,
+                  "hi": 23
+                }
+              }
+            ]
+          },
+          {
+            "variant": "Token",
+            "fields": [
+              {
+                "kind": "Semi",
+                "span": {
+                  "lo": 23,
+                  "hi": 24
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "inline": true
+  },
+  "attrs": [],
+  "span": {
+    "lo": 0,
+    "hi": 24
+  }
+}

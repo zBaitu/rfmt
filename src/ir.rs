@@ -39,7 +39,6 @@ pub struct Comment {
 }
 
 
-/*
 #[derive(Debug, Default)]
 pub struct Chunk {
     pub loc: Loc,
@@ -56,42 +55,21 @@ impl Chunk {
 }
 
 #[derive(Debug)]
-pub enum AttrKind {
-    Doc(Doc),
-    Attr(Attr),
-}
-
-
-#[derive(Debug)]
-pub struct Attr {
-    pub loc: Loc,
-    pub is_inner: bool,
-    pub item: MetaItem,
-}
-
-#[derive(Debug)]
-pub struct MetaItem {
-    pub loc: Loc,
-    pub name: String,
-    pub items: Option<Box<Vec<MetaItem>>>,
-}
-
-#[derive(Debug)]
 pub struct Crate {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
-    pub module: Mod,
-}
-
-#[derive(Debug)]
-pub enum AttrKind {
-    Doc(Doc),
-    Attr(Attr),
+    //pub module: Mod,
 }
 
 pub type Doc = Chunk;
 
 #[derive(Debug)]
+pub enum AttrKind {
+    Doc(Doc),
+    Attr(Attr),
+}
+
+#[derive(Debug)]
 pub struct Attr {
     pub loc: Loc,
     pub is_inner: bool,
@@ -104,6 +82,8 @@ pub struct MetaItem {
     pub name: String,
     pub items: Option<Box<Vec<MetaItem>>>,
 }
+
+/*
 
 #[derive(Debug)]
 pub struct Mod {

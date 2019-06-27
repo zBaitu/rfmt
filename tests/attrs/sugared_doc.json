@@ -1,0 +1,426 @@
+{
+  "module": {
+    "inner": {
+      "lo": 472,
+      "hi": 591
+    },
+    "items": [
+      {
+        "ident": "f",
+        "attrs": [
+          {
+            "id": {
+              "_field0": 3
+            },
+            "style": "Outer",
+            "path": {
+              "span": {
+                "lo": 527,
+                "hi": 571
+              },
+              "segments": [
+                {
+                  "ident": "doc",
+                  "id": 4294967040,
+                  "args": null
+                }
+              ]
+            },
+            "tokens": [
+              {
+                "variant": "Token",
+                "fields": [
+                  {
+                    "kind": "Eq",
+                    "span": {
+                      "lo": 527,
+                      "hi": 571
+                    }
+                  }
+                ]
+              },
+              {
+                "variant": "Token",
+                "fields": [
+                  {
+                    "kind": {
+                      "variant": "Literal",
+                      "fields": [
+                        {
+                          "kind": "Str",
+                          "symbol": "/// # The Rust Standard Library             ",
+                          "suffix": null
+                        }
+                      ]
+                    },
+                    "span": {
+                      "lo": 527,
+                      "hi": 571
+                    }
+                  }
+                ]
+              }
+            ],
+            "is_sugared_doc": true,
+            "span": {
+              "lo": 527,
+              "hi": 571
+            }
+          },
+          {
+            "id": {
+              "_field0": 4
+            },
+            "style": "Outer",
+            "path": {
+              "span": {
+                "lo": 572,
+                "hi": 576
+              },
+              "segments": [
+                {
+                  "ident": "doc",
+                  "id": 4294967040,
+                  "args": null
+                }
+              ]
+            },
+            "tokens": [
+              {
+                "variant": "Token",
+                "fields": [
+                  {
+                    "kind": "Eq",
+                    "span": {
+                      "lo": 572,
+                      "hi": 576
+                    }
+                  }
+                ]
+              },
+              {
+                "variant": "Token",
+                "fields": [
+                  {
+                    "kind": {
+                      "variant": "Literal",
+                      "fields": [
+                        {
+                          "kind": "Str",
+                          "symbol": "/// ",
+                          "suffix": null
+                        }
+                      ]
+                    },
+                    "span": {
+                      "lo": 572,
+                      "hi": 576
+                    }
+                  }
+                ]
+              }
+            ],
+            "is_sugared_doc": true,
+            "span": {
+              "lo": 572,
+              "hi": 576
+            }
+          },
+          {
+            "id": {
+              "_field0": 5
+            },
+            "style": "Outer",
+            "path": {
+              "span": {
+                "lo": 577,
+                "hi": 580
+              },
+              "segments": [
+                {
+                  "ident": "doc",
+                  "id": 4294967040,
+                  "args": null
+                }
+              ]
+            },
+            "tokens": [
+              {
+                "variant": "Token",
+                "fields": [
+                  {
+                    "kind": "Eq",
+                    "span": {
+                      "lo": 577,
+                      "hi": 580
+                    }
+                  }
+                ]
+              },
+              {
+                "variant": "Token",
+                "fields": [
+                  {
+                    "kind": {
+                      "variant": "Literal",
+                      "fields": [
+                        {
+                          "kind": "Str",
+                          "symbol": "///",
+                          "suffix": null
+                        }
+                      ]
+                    },
+                    "span": {
+                      "lo": 577,
+                      "hi": 580
+                    }
+                  }
+                ]
+              }
+            ],
+            "is_sugared_doc": true,
+            "span": {
+              "lo": 577,
+              "hi": 580
+            }
+          }
+        ],
+        "id": 4294967040,
+        "node": {
+          "variant": "Fn",
+          "fields": [
+            {
+              "inputs": [],
+              "output": {
+                "variant": "Default",
+                "fields": [
+                  {
+                    "lo": 589,
+                    "hi": 589
+                  }
+                ]
+              },
+              "c_variadic": false
+            },
+            {
+              "unsafety": "Normal",
+              "asyncness": {
+                "node": "NotAsync",
+                "span": {
+                  "lo": 582,
+                  "hi": 584
+                }
+              },
+              "constness": {
+                "node": "NotConst",
+                "span": {
+                  "lo": 582,
+                  "hi": 584
+                }
+              },
+              "abi": "Rust"
+            },
+            {
+              "params": [],
+              "where_clause": {
+                "predicates": [],
+                "span": {
+                  "lo": 587,
+                  "hi": 588
+                }
+              },
+              "span": {
+                "lo": 586,
+                "hi": 586
+              }
+            },
+            {
+              "stmts": [],
+              "id": 4294967040,
+              "rules": "Default",
+              "span": {
+                "lo": 589,
+                "hi": 591
+              }
+            }
+          ]
+        },
+        "vis": {
+          "node": "Inherited",
+          "span": {
+            "lo": 582,
+            "hi": 582
+          }
+        },
+        "span": {
+          "lo": 582,
+          "hi": 591
+        },
+        "tokens": [
+          {
+            "variant": "Token",
+            "fields": [
+              {
+                "kind": {
+                  "variant": "Ident",
+                  "fields": [
+                    "fn",
+                    false
+                  ]
+                },
+                "span": {
+                  "lo": 582,
+                  "hi": 584
+                }
+              }
+            ]
+          },
+          {
+            "variant": "Token",
+            "fields": [
+              {
+                "kind": {
+                  "variant": "Ident",
+                  "fields": [
+                    "f",
+                    false
+                  ]
+                },
+                "span": {
+                  "lo": 585,
+                  "hi": 586
+                }
+              }
+            ]
+          },
+          {
+            "variant": "Delimited",
+            "fields": [
+              {
+                "open": {
+                  "lo": 586,
+                  "hi": 587
+                },
+                "close": {
+                  "lo": 587,
+                  "hi": 588
+                }
+              },
+              "Paren",
+              []
+            ]
+          },
+          {
+            "variant": "Delimited",
+            "fields": [
+              {
+                "open": {
+                  "lo": 589,
+                  "hi": 590
+                },
+                "close": {
+                  "lo": 590,
+                  "hi": 591
+                }
+              },
+              "Brace",
+              []
+            ]
+          }
+        ]
+      }
+    ],
+    "inline": true
+  },
+  "attrs": [
+    {
+      "id": {
+        "_field0": 0
+      },
+      "style": "Inner",
+      "path": {
+        "span": {
+          "lo": 472,
+          "hi": 516
+        },
+        "segments": [
+          {
+            "ident": "doc",
+            "id": 4294967040,
+            "args": null
+          }
+        ]
+      },
+      "tokens": [
+        {
+          "variant": "Token",
+          "fields": [
+            {
+              "kind": "Eq",
+              "span": {
+                "lo": 472,
+                "hi": 516
+              }
+            }
+          ]
+        },
+        {
+          "variant": "Token",
+          "fields": [
+            {
+              "kind": {
+                "variant": "Literal",
+                "fields": [
+                  {
+                    "kind": "Str",
+                    "symbol": "//! # The Rust Standard Library             ",
+                    "suffix": null
+                  }
+                ]
+              },
+              "span": {
+                "lo": 472,
+                "hi": 516
+              }
+            }
+          ]
+        }
+      ],
+      "is_sugared_doc": true,
+      "span": {
+        "lo": 472,
+        "hi": 516
+      }
+    },
+    {
+      "id": {
+        "_field0": 1
+      },
+      "style": "Inner",
+      "path": {
+        "span": {
+          "lo": 520,
+          "hi": 524
+        },
+        "segments": [
+          {
+            "ident": "test",
+            "id": 4294967040,
+            "args": null
+          }
+        ]
+      },
+      "tokens": [],
+      "is_sugared_doc": false,
+      "span": {
+        "lo": 517,
+        "hi": 525
+      }
+    }
+  ],
+  "span": {
+    "lo": 472,
+    "hi": 591
+  }
+}

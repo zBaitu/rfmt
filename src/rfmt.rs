@@ -92,7 +92,7 @@ fn fmt_str(src: String, path: &PathBuf, check: bool, debug: bool, overwrite: boo
     });
 
     if debug {
-        //d!(result.krate);
+        d!(result.krate);
         d!(result.leading_cmnts);
         d!(result.trailing_cmnts);
         p!("{}\n", SEP);
