@@ -60,14 +60,40 @@ fn is_inner(style: ast::AttrStyle) -> bool {
 }
 
 #[inline]
+fn symbol_to_string(symbol: &ast::Symbol) -> String {
+    symbol.as_str().to_string()
+}
+
+#[inline]
+fn token_lit_to_string(lit: &ast::TokenLit) -> String {
+    symbol_to_string(&lit.symbol)
+}
+
+#[inline]
 fn sugared_doc_to_string(tokens: &ast::TokenStream) -> String {
     let token_tree = &tokens.0.as_ref().unwrap()[1];
     if let ast::TokenTree::Token(ref token) = token_tree.0 {
         if let ast::TokenKind::Literal(ref lit) = token.kind {
-            return lit.symbol.as_str().to_string();
+            return token_lit_to_string(lit);
         }
     }
     unreachable!()
+}
+
+#[inline]
+fn ident_to_string(ident: &ast::Ident) -> String {
+    symbol_to_string(&ident.name)
+}
+
+#[inline]
+fn path_to_string(path: &ast::Path) -> String {
+    path.segments.iter().fold(String::new(), |mut s, e| {
+        if !s.is_empty() {
+            s.push_str("::");
+        }
+        s.push_str(&ident_to_string(&e.ident));
+        s
+    })
 }
 
 /*
@@ -130,27 +156,6 @@ fn is_halfopen(range_limit: ast::RangeLimits) -> bool {
 #[inline]
 fn is_default(defaultness: ast::Defaultness) -> bool {
     defaultness == ast::Defaultness::Default
-}
-
-#[inline]
-fn name_to_string(name: &ast::Name) -> String {
-    name.as_str().to_string()
-}
-
-#[inline]
-fn ident_to_string(ident: &ast::Ident) -> String {
-    name_to_string(&ident.name)
-}
-
-#[inline]
-fn path_to_string(path: &ast::Path) -> String {
-    path.segments.iter().fold(String::new(), |mut s, e| {
-        if !s.is_empty() {
-            s.push_str("::");
-        }
-        s.push_str(&ident_to_string(&e.identifier));
-        s
-    })
 }
 
 #[inline]
@@ -244,10 +249,10 @@ impl Translator {
         /*
         let crate_mod_name = self.crate_mod_name();
         let module = self.trans_mod(crate_mod_name, &krate.module);
+        */
 
         let crate_file_end = self.crate_file_end();
         self.trans_comments(crate_file_end);
-        */
 
         TrResult {
             krate: Crate {
@@ -318,8 +323,7 @@ impl Translator {
         if attr.is_sugared_doc {
             AttrKind::Doc(self.trans_doc(attr))
         } else {
-            AttrKind::Doc(Chunk::new(""))
-            //AttrKind::Attr(self.trans_attr(attr))
+            AttrKind::Attr(self.trans_attr(attr))
         }
     }
 
@@ -331,12 +335,11 @@ impl Translator {
         }
     }
 
-    /*
     #[inline]
     fn trans_attr(&mut self, attr: &ast::Attribute) -> Attr {
         let loc = self.loc(&attr.span);
-        let is_inner = is_inner(attr.node.style);
-        let item = self.trans_meta_item(&attr.node.value);
+        let is_inner = is_inner(attr.style);
+        let item = self.trans_meta_item(&attr.meta().unwrap());
         self.set_loc(&loc);
 
         Attr {
@@ -347,42 +350,58 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_meta_items(&mut self, meta_items: &Vec<ast::P<ast::MetaItem>>) -> Vec<MetaItem> {
-        trans_list!(self, meta_items, trans_meta_item)
-    }
-
-    #[inline]
     fn trans_meta_item(&mut self, meta_item: &ast::MetaItem) -> MetaItem {
+        let name = path_to_string(&meta_item.path);
         match meta_item.node {
-            ast::MetaItemKind::Word(ref ident) => {
+            ast::MetaItemKind::Word => {
                 MetaItem {
                     loc: self.leaf_loc(&meta_item.span),
-                    name: ident.to_string(),
+                    name,
                     items: None,
                 }
             }
-            ast::MetaItemKind::NameValue(ref ident, ref lit) => {
-                let s = format!("{} = {}", ident, self.literal_to_string(lit));
+            ast::MetaItemKind::NameValue(ref lit) => {
+                let s = format!("{} = {}", name, self.literal_to_string(lit));
                 MetaItem {
                     loc: self.leaf_loc(&meta_item.span),
                     name: s,
                     items: None,
                 }
             }
-            ast::MetaItemKind::List(ref ident, ref meta_items) => {
+            ast::MetaItemKind::List(ref meta_items) => {
                 let loc = self.loc(&meta_item.span);
-                let items = self.trans_meta_items(meta_items);
+                let items = self.trans_nested_meta_items(meta_items);
                 self.set_loc(&loc);
 
                 MetaItem {
                     loc,
-                    name: ident.to_string(),
+                    name,
                     items: Some(Box::new(items)),
                 }
             }
         }
     }
-    */
+
+    #[inline]
+    fn trans_nested_meta_items(&mut self, nested_meta_items: &Vec<ast::NestedMetaItem>) -> Vec<MetaItem> {
+        trans_list!(self, nested_meta_items, trans_nested_meta_item)
+    }
+
+    #[inline]
+    fn trans_nested_meta_item(&mut self, nested_meta_item: &ast::NestedMetaItem) -> MetaItem {
+        match nested_meta_item {
+            ast::NestedMetaItem::Literal(ref lit) => {
+                MetaItem {
+                    loc: self.leaf_loc(&nested_meta_item.span()),
+                    name: self.literal_to_string(lit),
+                    items: None,
+                }
+            }
+            ast::NestedMetaItem::MetaItem(ref meta_iten) => {
+                self.trans_meta_item(meta_iten)
+            }
+        }
+    }
 
 
     /*
@@ -396,10 +415,6 @@ impl Translator {
             name.truncate(pos);
         }
         name
-    }
-
-    fn crate_file_end(&self) -> Pos {
-        self.sess.codemap().files.borrow().last().unwrap().end_pos.0
     }
 
 
@@ -2212,5 +2227,9 @@ impl Translator {
     #[inline]
     fn literal_to_string(&self, lit: &ast::Lit) -> String {
         self.span_to_snippet(lit.span).unwrap()
+    }
+
+    fn crate_file_end(&self) -> Pos {
+        self.sess.source_map().files().last().unwrap().end_pos.0
     }
 }

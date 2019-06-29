@@ -1,0 +1,141 @@
+Crate {
+    module: Mod {
+        inner: Span {
+            lo: BytePos(
+                0,
+            ),
+            hi: BytePos(
+                23,
+            ),
+            ctxt: #0,
+        },
+        items: [],
+        inline: true,
+    },
+    attrs: [
+        Attribute {
+            id: AttrId(
+                0,
+            ),
+            style: Inner,
+            path: path(macro_use),
+            tokens: TokenStream(
+                Some(
+                    [
+                        (
+                            Delimited(
+                                DelimSpan {
+                                    open: Span {
+                                        lo: BytePos(
+                                            12,
+                                        ),
+                                        hi: BytePos(
+                                            13,
+                                        ),
+                                        ctxt: #0,
+                                    },
+                                    close: Span {
+                                        lo: BytePos(
+                                            21,
+                                        ),
+                                        hi: BytePos(
+                                            22,
+                                        ),
+                                        ctxt: #0,
+                                    },
+                                },
+                                Paren,
+                                TokenStream(
+                                    Some(
+                                        [
+                                            (
+                                                Token(
+                                                    Token {
+                                                        kind: Ident(
+                                                            foo,
+                                                            false,
+                                                        ),
+                                                        span: Span {
+                                                            lo: BytePos(
+                                                                13,
+                                                            ),
+                                                            hi: BytePos(
+                                                                16,
+                                                            ),
+                                                            ctxt: #0,
+                                                        },
+                                                    },
+                                                ),
+                                                Joint,
+                                            ),
+                                            (
+                                                Token(
+                                                    Token {
+                                                        kind: Comma,
+                                                        span: Span {
+                                                            lo: BytePos(
+                                                                16,
+                                                            ),
+                                                            hi: BytePos(
+                                                                17,
+                                                            ),
+                                                            ctxt: #0,
+                                                        },
+                                                    },
+                                                ),
+                                                NonJoint,
+                                            ),
+                                            (
+                                                Token(
+                                                    Token {
+                                                        kind: Ident(
+                                                            bar,
+                                                            false,
+                                                        ),
+                                                        span: Span {
+                                                            lo: BytePos(
+                                                                18,
+                                                            ),
+                                                            hi: BytePos(
+                                                                21,
+                                                            ),
+                                                            ctxt: #0,
+                                                        },
+                                                    },
+                                                ),
+                                                NonJoint,
+                                            ),
+                                        ],
+                                    ),
+                                ),
+                            ),
+                            NonJoint,
+                        ),
+                    ],
+                ),
+            ),
+            is_sugared_doc: false,
+            span: Span {
+                lo: BytePos(
+                    0,
+                ),
+                hi: BytePos(
+                    23,
+                ),
+                ctxt: #0,
+            },
+        },
+    ],
+    span: Span {
+        lo: BytePos(
+            0,
+        ),
+        hi: BytePos(
+            23,
+        ),
+        ctxt: #0,
+    },
+}
+
+--------------------------------------------------------------------------------
+

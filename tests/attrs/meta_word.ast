@@ -1,0 +1,49 @@
+Crate {
+    module: Mod {
+        inner: Span {
+            lo: BytePos(
+                0,
+            ),
+            hi: BytePos(
+                10,
+            ),
+            ctxt: #0,
+        },
+        items: [],
+        inline: true,
+    },
+    attrs: [
+        Attribute {
+            id: AttrId(
+                0,
+            ),
+            style: Inner,
+            path: path(no_std),
+            tokens: TokenStream(
+                None,
+            ),
+            is_sugared_doc: false,
+            span: Span {
+                lo: BytePos(
+                    0,
+                ),
+                hi: BytePos(
+                    10,
+                ),
+                ctxt: #0,
+            },
+        },
+    ],
+    span: Span {
+        lo: BytePos(
+            0,
+        ),
+        hi: BytePos(
+            10,
+        ),
+        ctxt: #0,
+    },
+}
+
+--------------------------------------------------------------------------------
+

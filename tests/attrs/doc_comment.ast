@@ -1,0 +1,371 @@
+Crate {
+    module: Mod {
+        inner: Span {
+            lo: BytePos(
+                0,
+            ),
+            hi: BytePos(
+                1638,
+            ),
+            ctxt: #0,
+        },
+        items: [
+            Item {
+                ident: main#0,
+                attrs: [
+                    Attribute {
+                        id: AttrId(
+                            1,
+                        ),
+                        style: Inner,
+                        path: path(doc),
+                        tokens: TokenStream(
+                            Some(
+                                [
+                                    (
+                                        Token(
+                                            Token {
+                                                kind: Eq,
+                                                span: Span {
+                                                    lo: BytePos(
+                                                        45,
+                                                    ),
+                                                    hi: BytePos(
+                                                        122,
+                                                    ),
+                                                    ctxt: #0,
+                                                },
+                                            },
+                                        ),
+                                        NonJoint,
+                                    ),
+                                    (
+                                        Token(
+                                            Token {
+                                                kind: Literal(
+                                                    Lit {
+                                                        kind: Str,
+                                                        symbol: //! A doc comment that applies to the implicit anonymous module of this crate,
+                                                        suffix: None,
+                                                    },
+                                                ),
+                                                span: Span {
+                                                    lo: BytePos(
+                                                        45,
+                                                    ),
+                                                    hi: BytePos(
+                                                        122,
+                                                    ),
+                                                    ctxt: #0,
+                                                },
+                                            },
+                                        ),
+                                        NonJoint,
+                                    ),
+                                ],
+                            ),
+                        ),
+                        is_sugared_doc: true,
+                        span: Span {
+                            lo: BytePos(
+                                45,
+                            ),
+                            hi: BytePos(
+                                122,
+                            ),
+                            ctxt: #0,
+                        },
+                    },
+                ],
+                id: NodeId(4294967040),
+                node: Fn(
+                    FnDecl {
+                        inputs: [],
+                        output: Default(
+                            Span {
+                                lo: BytePos(
+                                    39,
+                                ),
+                                hi: BytePos(
+                                    39,
+                                ),
+                                ctxt: #0,
+                            },
+                        ),
+                        c_variadic: false,
+                    },
+                    FnHeader {
+                        unsafety: Normal,
+                        asyncness: Spanned {
+                            node: NotAsync,
+                            span: Span {
+                                lo: BytePos(
+                                    29,
+                                ),
+                                hi: BytePos(
+                                    31,
+                                ),
+                                ctxt: #0,
+                            },
+                        },
+                        constness: Spanned {
+                            node: NotConst,
+                            span: Span {
+                                lo: BytePos(
+                                    29,
+                                ),
+                                hi: BytePos(
+                                    31,
+                                ),
+                                ctxt: #0,
+                            },
+                        },
+                        abi: Rust,
+                    },
+                    Generics {
+                        params: [],
+                        where_clause: WhereClause {
+                            predicates: [],
+                            span: Span {
+                                lo: BytePos(
+                                    37,
+                                ),
+                                hi: BytePos(
+                                    38,
+                                ),
+                                ctxt: #0,
+                            },
+                        },
+                        span: Span {
+                            lo: BytePos(
+                                36,
+                            ),
+                            hi: BytePos(
+                                36,
+                            ),
+                            ctxt: #0,
+                        },
+                    },
+                    Block {
+                        stmts: [
+                            stmt(4294967040: pub mod outer_module {
+                                //!  - Inner line doc
+                                //!! - Still an inner line doc (but with a bang at the beginning)
+                                /*!  - Inner block doc */
+                                /*!! - Still an inner block doc (but with a bang at the beginning) */
+                                ///  - Outer line doc (exactly 3 slashes)
+                                /**  - Outer block doc (exactly) 2 asterisks */
+                                pub mod inner_module { }
+                                pub mod nested_comments {
+                                    /*!  /* */  /** */  /*! */  */
+                                    /**  /* */  /** */  /*! */  */
+                                    pub mod dummy_item { }
+                                }
+                                pub mod degenerate_cases {
+                                    //!
+                                    /*!*/
+                                    ///
+                                    pub mod dummy_item { }
+                                }
+                                /// Where is my item?
+                                mod boo { }
+                            }),
+                        ],
+                        id: NodeId(4294967040),
+                        rules: Default,
+                        span: Span {
+                            lo: BytePos(
+                                39,
+                            ),
+                            hi: BytePos(
+                                1638,
+                            ),
+                            ctxt: #0,
+                        },
+                    },
+                ),
+                vis: Spanned {
+                    node: Inherited,
+                    span: Span {
+                        lo: BytePos(
+                            29,
+                        ),
+                        hi: BytePos(
+                            29,
+                        ),
+                        ctxt: #0,
+                    },
+                },
+                span: Span {
+                    lo: BytePos(
+                        29,
+                    ),
+                    hi: BytePos(
+                        1638,
+                    ),
+                    ctxt: #0,
+                },
+                tokens: None,
+            },
+        ],
+        inline: true,
+    },
+    attrs: [
+        Attribute {
+            id: AttrId(
+                0,
+            ),
+            style: Inner,
+            path: path(allow),
+            tokens: TokenStream(
+                Some(
+                    [
+                        (
+                            Delimited(
+                                DelimSpan {
+                                    open: Span {
+                                        lo: BytePos(
+                                            8,
+                                        ),
+                                        hi: BytePos(
+                                            9,
+                                        ),
+                                        ctxt: #0,
+                                    },
+                                    close: Span {
+                                        lo: BytePos(
+                                            25,
+                                        ),
+                                        hi: BytePos(
+                                            26,
+                                        ),
+                                        ctxt: #0,
+                                    },
+                                },
+                                Paren,
+                                TokenStream(
+                                    Some(
+                                        [
+                                            (
+                                                Token(
+                                                    Token {
+                                                        kind: Ident(
+                                                            unused_variables,
+                                                            false,
+                                                        ),
+                                                        span: Span {
+                                                            lo: BytePos(
+                                                                9,
+                                                            ),
+                                                            hi: BytePos(
+                                                                25,
+                                                            ),
+                                                            ctxt: #0,
+                                                        },
+                                                    },
+                                                ),
+                                                NonJoint,
+                                            ),
+                                        ],
+                                    ),
+                                ),
+                            ),
+                            NonJoint,
+                        ),
+                    ],
+                ),
+            ),
+            is_sugared_doc: false,
+            span: Span {
+                lo: BytePos(
+                    0,
+                ),
+                hi: BytePos(
+                    27,
+                ),
+                ctxt: #0,
+            },
+        },
+    ],
+    span: Span {
+        lo: BytePos(
+            0,
+        ),
+        hi: BytePos(
+            1638,
+        ),
+        ctxt: #0,
+    },
+}
+
+--------------------------------------------------------------------------------
+
+28: BlankLine []
+123: BlankLine []
+255: BlankLine []
+368: BlankLine []
+377: Isolated [
+    "//   - Only a comment",
+]
+457: Isolated [
+    "//// - Only a comment",
+]
+479: BlankLine []
+488: Isolated [
+    "/*   - Only a comment */",
+]
+577: Isolated [
+    "/*** - Only a comment */",
+]
+602: BlankLine []
+635: BlankLine []
+682: Isolated [
+    "/* In Rust /* we can /* nest comments */ */ */",
+]
+729: BlankLine []
+742: Isolated [
+    "// All three types of block comments can contain or be nested inside",
+    "// any other type:",
+]
+842: BlankLine []
+855: Isolated [
+    "/*   /* */  /** */  /*! */  */",
+]
+1016: BlankLine []
+1064: Isolated [
+    "// empty inner line doc",
+]
+1104: BlankLine []
+1117: Isolated [
+    "// empty inner block doc",
+]
+1160: BlankLine []
+1173: Isolated [
+    "// empty line comment",
+    "//",
+]
+1210: BlankLine []
+1223: Isolated [
+    "// empty outer line doc",
+]
+1263: BlankLine []
+1276: Isolated [
+    "// empty block comment",
+]
+1311: Isolated [
+    "/**/",
+]
+1316: BlankLine []
+1351: BlankLine []
+1364: Isolated [
+    "// empty 2-asterisk block isn\'t a doc block, it is a block comment",
+]
+1443: Isolated [
+    "/***/",
+]
+1459: BlankLine []
+1468: Isolated [
+    "/* The next one isn\'t allowed because outer doc comments",
+    "   require an item that will receive the doc */",
+]
+1581: BlankLine []

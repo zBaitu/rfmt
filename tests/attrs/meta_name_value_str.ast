@@ -1,0 +1,92 @@
+Crate {
+    module: Mod {
+        inner: Span {
+            lo: BytePos(
+                0,
+            ),
+            hi: BytePos(
+                19,
+            ),
+            ctxt: #0,
+        },
+        items: [],
+        inline: true,
+    },
+    attrs: [
+        Attribute {
+            id: AttrId(
+                0,
+            ),
+            style: Inner,
+            path: path(doc),
+            tokens: TokenStream(
+                Some(
+                    [
+                        (
+                            Token(
+                                Token {
+                                    kind: Eq,
+                                    span: Span {
+                                        lo: BytePos(
+                                            7,
+                                        ),
+                                        hi: BytePos(
+                                            8,
+                                        ),
+                                        ctxt: #0,
+                                    },
+                                },
+                            ),
+                            NonJoint,
+                        ),
+                        (
+                            Token(
+                                Token {
+                                    kind: Literal(
+                                        Lit {
+                                            kind: Str,
+                                            symbol: example,
+                                            suffix: None,
+                                        },
+                                    ),
+                                    span: Span {
+                                        lo: BytePos(
+                                            9,
+                                        ),
+                                        hi: BytePos(
+                                            18,
+                                        ),
+                                        ctxt: #0,
+                                    },
+                                },
+                            ),
+                            NonJoint,
+                        ),
+                    ],
+                ),
+            ),
+            is_sugared_doc: false,
+            span: Span {
+                lo: BytePos(
+                    0,
+                ),
+                hi: BytePos(
+                    19,
+                ),
+                ctxt: #0,
+            },
+        },
+    ],
+    span: Span {
+        lo: BytePos(
+            0,
+        ),
+        hi: BytePos(
+            19,
+        ),
+        ctxt: #0,
+    },
+}
+
+--------------------------------------------------------------------------------
+

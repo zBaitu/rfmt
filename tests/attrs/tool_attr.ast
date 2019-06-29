@@ -1,0 +1,776 @@
+Crate {
+    module: Mod {
+        inner: Span {
+            lo: BytePos(
+                0,
+            ),
+            hi: BytePos(
+                285,
+            ),
+            ctxt: #0,
+        },
+        items: [
+            Item {
+                ident: main#0,
+                attrs: [],
+                id: NodeId(4294967040),
+                node: Fn(
+                    FnDecl {
+                        inputs: [],
+                        output: Default(
+                            Span {
+                                lo: BytePos(
+                                    39,
+                                ),
+                                hi: BytePos(
+                                    39,
+                                ),
+                                ctxt: #0,
+                            },
+                        ),
+                        c_variadic: false,
+                    },
+                    FnHeader {
+                        unsafety: Normal,
+                        asyncness: Spanned {
+                            node: NotAsync,
+                            span: Span {
+                                lo: BytePos(
+                                    29,
+                                ),
+                                hi: BytePos(
+                                    31,
+                                ),
+                                ctxt: #0,
+                            },
+                        },
+                        constness: Spanned {
+                            node: NotConst,
+                            span: Span {
+                                lo: BytePos(
+                                    29,
+                                ),
+                                hi: BytePos(
+                                    31,
+                                ),
+                                ctxt: #0,
+                            },
+                        },
+                        abi: Rust,
+                    },
+                    Generics {
+                        params: [],
+                        where_clause: WhereClause {
+                            predicates: [],
+                            span: Span {
+                                lo: BytePos(
+                                    37,
+                                ),
+                                hi: BytePos(
+                                    38,
+                                ),
+                                ctxt: #0,
+                            },
+                        },
+                        span: Span {
+                            lo: BytePos(
+                                36,
+                            ),
+                            hi: BytePos(
+                                36,
+                            ),
+                            ctxt: #0,
+                        },
+                    },
+                    Block {
+                        stmts: [
+                            stmt(4294967040: #[rustfmt::skip]
+                            struct S {
+                            }),
+                            stmt(4294967040: #[clippy::cyclomatic_complexity = "100"]
+                            pub fn f() { }),
+                        ],
+                        id: NodeId(4294967040),
+                        rules: Default,
+                        span: Span {
+                            lo: BytePos(
+                                39,
+                            ),
+                            hi: BytePos(
+                                285,
+                            ),
+                            ctxt: #0,
+                        },
+                    },
+                ),
+                vis: Spanned {
+                    node: Inherited,
+                    span: Span {
+                        lo: BytePos(
+                            29,
+                        ),
+                        hi: BytePos(
+                            29,
+                        ),
+                        ctxt: #0,
+                    },
+                },
+                span: Span {
+                    lo: BytePos(
+                        29,
+                    ),
+                    hi: BytePos(
+                        285,
+                    ),
+                    ctxt: #0,
+                },
+                tokens: Some(
+                    TokenStream(
+                        Some(
+                            [
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                fn,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    29,
+                                                ),
+                                                hi: BytePos(
+                                                    31,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                main,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    32,
+                                                ),
+                                                hi: BytePos(
+                                                    36,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Delimited(
+                                        DelimSpan {
+                                            open: Span {
+                                                lo: BytePos(
+                                                    36,
+                                                ),
+                                                hi: BytePos(
+                                                    37,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                            close: Span {
+                                                lo: BytePos(
+                                                    37,
+                                                ),
+                                                hi: BytePos(
+                                                    38,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                        Paren,
+                                        TokenStream(
+                                            None,
+                                        ),
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Delimited(
+                                        DelimSpan {
+                                            open: Span {
+                                                lo: BytePos(
+                                                    39,
+                                                ),
+                                                hi: BytePos(
+                                                    40,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                            close: Span {
+                                                lo: BytePos(
+                                                    284,
+                                                ),
+                                                hi: BytePos(
+                                                    285,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                        Brace,
+                                        TokenStream(
+                                            Some(
+                                                [
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Pound,
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        112,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        113,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Delimited(
+                                                            DelimSpan {
+                                                                open: Span {
+                                                                    lo: BytePos(
+                                                                        113,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        114,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                                close: Span {
+                                                                    lo: BytePos(
+                                                                        127,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        128,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                            Bracket,
+                                                            TokenStream(
+                                                                Some(
+                                                                    [
+                                                                        (
+                                                                            Token(
+                                                                                Token {
+                                                                                    kind: Ident(
+                                                                                        rustfmt,
+                                                                                        false,
+                                                                                    ),
+                                                                                    span: Span {
+                                                                                        lo: BytePos(
+                                                                                            114,
+                                                                                        ),
+                                                                                        hi: BytePos(
+                                                                                            121,
+                                                                                        ),
+                                                                                        ctxt: #0,
+                                                                                    },
+                                                                                },
+                                                                            ),
+                                                                            Joint,
+                                                                        ),
+                                                                        (
+                                                                            Token(
+                                                                                Token {
+                                                                                    kind: ModSep,
+                                                                                    span: Span {
+                                                                                        lo: BytePos(
+                                                                                            121,
+                                                                                        ),
+                                                                                        hi: BytePos(
+                                                                                            123,
+                                                                                        ),
+                                                                                        ctxt: #0,
+                                                                                    },
+                                                                                },
+                                                                            ),
+                                                                            NonJoint,
+                                                                        ),
+                                                                        (
+                                                                            Token(
+                                                                                Token {
+                                                                                    kind: Ident(
+                                                                                        skip,
+                                                                                        false,
+                                                                                    ),
+                                                                                    span: Span {
+                                                                                        lo: BytePos(
+                                                                                            123,
+                                                                                        ),
+                                                                                        hi: BytePos(
+                                                                                            127,
+                                                                                        ),
+                                                                                        ctxt: #0,
+                                                                                    },
+                                                                                },
+                                                                            ),
+                                                                            NonJoint,
+                                                                        ),
+                                                                    ],
+                                                                ),
+                                                            ),
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    struct,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        133,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        139,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    S,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        140,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        141,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Delimited(
+                                                            DelimSpan {
+                                                                open: Span {
+                                                                    lo: BytePos(
+                                                                        142,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        143,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                                close: Span {
+                                                                    lo: BytePos(
+                                                                        143,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        144,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                            Brace,
+                                                            TokenStream(
+                                                                None,
+                                                            ),
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Pound,
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        225,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        226,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Delimited(
+                                                            DelimSpan {
+                                                                open: Span {
+                                                                    lo: BytePos(
+                                                                        226,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        227,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                                close: Span {
+                                                                    lo: BytePos(
+                                                                        264,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        265,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                            Bracket,
+                                                            TokenStream(
+                                                                Some(
+                                                                    [
+                                                                        (
+                                                                            Token(
+                                                                                Token {
+                                                                                    kind: Ident(
+                                                                                        clippy,
+                                                                                        false,
+                                                                                    ),
+                                                                                    span: Span {
+                                                                                        lo: BytePos(
+                                                                                            227,
+                                                                                        ),
+                                                                                        hi: BytePos(
+                                                                                            233,
+                                                                                        ),
+                                                                                        ctxt: #0,
+                                                                                    },
+                                                                                },
+                                                                            ),
+                                                                            Joint,
+                                                                        ),
+                                                                        (
+                                                                            Token(
+                                                                                Token {
+                                                                                    kind: ModSep,
+                                                                                    span: Span {
+                                                                                        lo: BytePos(
+                                                                                            233,
+                                                                                        ),
+                                                                                        hi: BytePos(
+                                                                                            235,
+                                                                                        ),
+                                                                                        ctxt: #0,
+                                                                                    },
+                                                                                },
+                                                                            ),
+                                                                            NonJoint,
+                                                                        ),
+                                                                        (
+                                                                            Token(
+                                                                                Token {
+                                                                                    kind: Ident(
+                                                                                        cyclomatic_complexity,
+                                                                                        false,
+                                                                                    ),
+                                                                                    span: Span {
+                                                                                        lo: BytePos(
+                                                                                            235,
+                                                                                        ),
+                                                                                        hi: BytePos(
+                                                                                            256,
+                                                                                        ),
+                                                                                        ctxt: #0,
+                                                                                    },
+                                                                                },
+                                                                            ),
+                                                                            NonJoint,
+                                                                        ),
+                                                                        (
+                                                                            Token(
+                                                                                Token {
+                                                                                    kind: Eq,
+                                                                                    span: Span {
+                                                                                        lo: BytePos(
+                                                                                            257,
+                                                                                        ),
+                                                                                        hi: BytePos(
+                                                                                            258,
+                                                                                        ),
+                                                                                        ctxt: #0,
+                                                                                    },
+                                                                                },
+                                                                            ),
+                                                                            NonJoint,
+                                                                        ),
+                                                                        (
+                                                                            Token(
+                                                                                Token {
+                                                                                    kind: Literal(
+                                                                                        Lit {
+                                                                                            kind: Str,
+                                                                                            symbol: 100,
+                                                                                            suffix: None,
+                                                                                        },
+                                                                                    ),
+                                                                                    span: Span {
+                                                                                        lo: BytePos(
+                                                                                            259,
+                                                                                        ),
+                                                                                        hi: BytePos(
+                                                                                            264,
+                                                                                        ),
+                                                                                        ctxt: #0,
+                                                                                    },
+                                                                                },
+                                                                            ),
+                                                                            NonJoint,
+                                                                        ),
+                                                                    ],
+                                                                ),
+                                                            ),
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    pub,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        270,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        273,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    fn,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        274,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        276,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    f,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        277,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        278,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Delimited(
+                                                            DelimSpan {
+                                                                open: Span {
+                                                                    lo: BytePos(
+                                                                        278,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        279,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                                close: Span {
+                                                                    lo: BytePos(
+                                                                        279,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        280,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                            Paren,
+                                                            TokenStream(
+                                                                None,
+                                                            ),
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Delimited(
+                                                            DelimSpan {
+                                                                open: Span {
+                                                                    lo: BytePos(
+                                                                        281,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        282,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                                close: Span {
+                                                                    lo: BytePos(
+                                                                        282,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        283,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                            Brace,
+                                                            TokenStream(
+                                                                None,
+                                                            ),
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                ],
+                                            ),
+                                        ),
+                                    ),
+                                    NonJoint,
+                                ),
+                            ],
+                        ),
+                    ),
+                ),
+            },
+        ],
+        inline: true,
+    },
+    attrs: [
+        Attribute {
+            id: AttrId(
+                0,
+            ),
+            style: Inner,
+            path: path(allow),
+            tokens: TokenStream(
+                Some(
+                    [
+                        (
+                            Delimited(
+                                DelimSpan {
+                                    open: Span {
+                                        lo: BytePos(
+                                            8,
+                                        ),
+                                        hi: BytePos(
+                                            9,
+                                        ),
+                                        ctxt: #0,
+                                    },
+                                    close: Span {
+                                        lo: BytePos(
+                                            25,
+                                        ),
+                                        hi: BytePos(
+                                            26,
+                                        ),
+                                        ctxt: #0,
+                                    },
+                                },
+                                Paren,
+                                TokenStream(
+                                    Some(
+                                        [
+                                            (
+                                                Token(
+                                                    Token {
+                                                        kind: Ident(
+                                                            unused_variables,
+                                                            false,
+                                                        ),
+                                                        span: Span {
+                                                            lo: BytePos(
+                                                                9,
+                                                            ),
+                                                            hi: BytePos(
+                                                                25,
+                                                            ),
+                                                            ctxt: #0,
+                                                        },
+                                                    },
+                                                ),
+                                                NonJoint,
+                                            ),
+                                        ],
+                                    ),
+                                ),
+                            ),
+                            NonJoint,
+                        ),
+                    ],
+                ),
+            ),
+            is_sugared_doc: false,
+            span: Span {
+                lo: BytePos(
+                    0,
+                ),
+                hi: BytePos(
+                    27,
+                ),
+                ctxt: #0,
+            },
+        },
+    ],
+    span: Span {
+        lo: BytePos(
+            0,
+        ),
+        hi: BytePos(
+            285,
+        ),
+        ctxt: #0,
+    },
+}
+
+--------------------------------------------------------------------------------
+
+28: BlankLine []
+45: Isolated [
+    "// Tells the rustfmt tool to not format the following element.",
+]
+145: BlankLine []
+150: Isolated [
+    "// Controls the \"cyclomatic complexity\" threshold for the clippy tool.",
+]
