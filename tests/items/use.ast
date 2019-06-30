@@ -1,0 +1,2599 @@
+Crate {
+    module: Mod {
+        inner: Span {
+            lo: BytePos(
+                0,
+            ),
+            hi: BytePos(
+                195,
+            ),
+            ctxt: #0,
+        },
+        items: [
+            Item {
+                ident: #0,
+                attrs: [],
+                id: NodeId(4294967040),
+                node: Use(
+                    UseTree {
+                        prefix: path(::f),
+                        kind: Simple(
+                            None,
+                            NodeId(4294967040),
+                            NodeId(4294967040),
+                        ),
+                        span: Span {
+                            lo: BytePos(
+                                4,
+                            ),
+                            hi: BytePos(
+                                7,
+                            ),
+                            ctxt: #0,
+                        },
+                    },
+                ),
+                vis: Spanned {
+                    node: Inherited,
+                    span: Span {
+                        lo: BytePos(
+                            0,
+                        ),
+                        hi: BytePos(
+                            0,
+                        ),
+                        ctxt: #0,
+                    },
+                },
+                span: Span {
+                    lo: BytePos(
+                        0,
+                    ),
+                    hi: BytePos(
+                        8,
+                    ),
+                    ctxt: #0,
+                },
+                tokens: Some(
+                    TokenStream(
+                        Some(
+                            [
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                use,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    0,
+                                                ),
+                                                hi: BytePos(
+                                                    3,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: ModSep,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    4,
+                                                ),
+                                                hi: BytePos(
+                                                    6,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                f,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    6,
+                                                ),
+                                                hi: BytePos(
+                                                    7,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Semi,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    7,
+                                                ),
+                                                hi: BytePos(
+                                                    8,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                            ],
+                        ),
+                    ),
+                ),
+            },
+            Item {
+                ident: #0,
+                attrs: [],
+                id: NodeId(4294967040),
+                node: Use(
+                    UseTree {
+                        prefix: path(a::b),
+                        kind: Nested(
+                            [
+                                (
+                                    UseTree {
+                                        prefix: path(c),
+                                        kind: Simple(
+                                            None,
+                                            NodeId(4294967040),
+                                            NodeId(4294967040),
+                                        ),
+                                        span: Span {
+                                            lo: BytePos(
+                                                20,
+                                            ),
+                                            hi: BytePos(
+                                                21,
+                                            ),
+                                            ctxt: #0,
+                                        },
+                                    },
+                                    NodeId(4294967040),
+                                ),
+                                (
+                                    UseTree {
+                                        prefix: path(d),
+                                        kind: Simple(
+                                            None,
+                                            NodeId(4294967040),
+                                            NodeId(4294967040),
+                                        ),
+                                        span: Span {
+                                            lo: BytePos(
+                                                23,
+                                            ),
+                                            hi: BytePos(
+                                                24,
+                                            ),
+                                            ctxt: #0,
+                                        },
+                                    },
+                                    NodeId(4294967040),
+                                ),
+                                (
+                                    UseTree {
+                                        prefix: path(e::f),
+                                        kind: Simple(
+                                            None,
+                                            NodeId(4294967040),
+                                            NodeId(4294967040),
+                                        ),
+                                        span: Span {
+                                            lo: BytePos(
+                                                26,
+                                            ),
+                                            hi: BytePos(
+                                                30,
+                                            ),
+                                            ctxt: #0,
+                                        },
+                                    },
+                                    NodeId(4294967040),
+                                ),
+                                (
+                                    UseTree {
+                                        prefix: path(g::h::i),
+                                        kind: Simple(
+                                            None,
+                                            NodeId(4294967040),
+                                            NodeId(4294967040),
+                                        ),
+                                        span: Span {
+                                            lo: BytePos(
+                                                32,
+                                            ),
+                                            hi: BytePos(
+                                                39,
+                                            ),
+                                            ctxt: #0,
+                                        },
+                                    },
+                                    NodeId(4294967040),
+                                ),
+                            ],
+                        ),
+                        span: Span {
+                            lo: BytePos(
+                                13,
+                            ),
+                            hi: BytePos(
+                                40,
+                            ),
+                            ctxt: #0,
+                        },
+                    },
+                ),
+                vis: Spanned {
+                    node: Inherited,
+                    span: Span {
+                        lo: BytePos(
+                            9,
+                        ),
+                        hi: BytePos(
+                            9,
+                        ),
+                        ctxt: #0,
+                    },
+                },
+                span: Span {
+                    lo: BytePos(
+                        9,
+                    ),
+                    hi: BytePos(
+                        41,
+                    ),
+                    ctxt: #0,
+                },
+                tokens: Some(
+                    TokenStream(
+                        Some(
+                            [
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                use,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    9,
+                                                ),
+                                                hi: BytePos(
+                                                    12,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                a,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    13,
+                                                ),
+                                                hi: BytePos(
+                                                    14,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: ModSep,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    14,
+                                                ),
+                                                hi: BytePos(
+                                                    16,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                b,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    16,
+                                                ),
+                                                hi: BytePos(
+                                                    17,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: ModSep,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    17,
+                                                ),
+                                                hi: BytePos(
+                                                    19,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Delimited(
+                                        DelimSpan {
+                                            open: Span {
+                                                lo: BytePos(
+                                                    19,
+                                                ),
+                                                hi: BytePos(
+                                                    20,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                            close: Span {
+                                                lo: BytePos(
+                                                    39,
+                                                ),
+                                                hi: BytePos(
+                                                    40,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                        Brace,
+                                        TokenStream(
+                                            Some(
+                                                [
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    c,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        20,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        21,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        Joint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Comma,
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        21,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        22,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    d,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        23,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        24,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        Joint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Comma,
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        24,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        25,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    e,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        26,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        27,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        Joint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: ModSep,
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        27,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        29,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    f,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        29,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        30,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        Joint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Comma,
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        30,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        31,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    g,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        32,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        33,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        Joint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: ModSep,
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        33,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        35,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    h,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        35,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        36,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        Joint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: ModSep,
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        36,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        38,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    i,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        38,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        39,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                ],
+                                            ),
+                                        ),
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Semi,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    40,
+                                                ),
+                                                hi: BytePos(
+                                                    41,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                            ],
+                        ),
+                    ),
+                ),
+            },
+            Item {
+                ident: #0,
+                attrs: [],
+                id: NodeId(4294967040),
+                node: Use(
+                    UseTree {
+                        prefix: path(a::b),
+                        kind: Nested(
+                            [
+                                (
+                                    UseTree {
+                                        prefix: path(self),
+                                        kind: Simple(
+                                            None,
+                                            NodeId(4294967040),
+                                            NodeId(4294967040),
+                                        ),
+                                        span: Span {
+                                            lo: BytePos(
+                                                53,
+                                            ),
+                                            hi: BytePos(
+                                                57,
+                                            ),
+                                            ctxt: #0,
+                                        },
+                                    },
+                                    NodeId(4294967040),
+                                ),
+                                (
+                                    UseTree {
+                                        prefix: path(c),
+                                        kind: Simple(
+                                            None,
+                                            NodeId(4294967040),
+                                            NodeId(4294967040),
+                                        ),
+                                        span: Span {
+                                            lo: BytePos(
+                                                59,
+                                            ),
+                                            hi: BytePos(
+                                                60,
+                                            ),
+                                            ctxt: #0,
+                                        },
+                                    },
+                                    NodeId(4294967040),
+                                ),
+                                (
+                                    UseTree {
+                                        prefix: path(d::e),
+                                        kind: Simple(
+                                            None,
+                                            NodeId(4294967040),
+                                            NodeId(4294967040),
+                                        ),
+                                        span: Span {
+                                            lo: BytePos(
+                                                62,
+                                            ),
+                                            hi: BytePos(
+                                                66,
+                                            ),
+                                            ctxt: #0,
+                                        },
+                                    },
+                                    NodeId(4294967040),
+                                ),
+                            ],
+                        ),
+                        span: Span {
+                            lo: BytePos(
+                                46,
+                            ),
+                            hi: BytePos(
+                                67,
+                            ),
+                            ctxt: #0,
+                        },
+                    },
+                ),
+                vis: Spanned {
+                    node: Inherited,
+                    span: Span {
+                        lo: BytePos(
+                            42,
+                        ),
+                        hi: BytePos(
+                            42,
+                        ),
+                        ctxt: #0,
+                    },
+                },
+                span: Span {
+                    lo: BytePos(
+                        42,
+                    ),
+                    hi: BytePos(
+                        68,
+                    ),
+                    ctxt: #0,
+                },
+                tokens: Some(
+                    TokenStream(
+                        Some(
+                            [
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                use,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    42,
+                                                ),
+                                                hi: BytePos(
+                                                    45,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                a,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    46,
+                                                ),
+                                                hi: BytePos(
+                                                    47,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: ModSep,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    47,
+                                                ),
+                                                hi: BytePos(
+                                                    49,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                b,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    49,
+                                                ),
+                                                hi: BytePos(
+                                                    50,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: ModSep,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    50,
+                                                ),
+                                                hi: BytePos(
+                                                    52,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Delimited(
+                                        DelimSpan {
+                                            open: Span {
+                                                lo: BytePos(
+                                                    52,
+                                                ),
+                                                hi: BytePos(
+                                                    53,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                            close: Span {
+                                                lo: BytePos(
+                                                    66,
+                                                ),
+                                                hi: BytePos(
+                                                    67,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                        Brace,
+                                        TokenStream(
+                                            Some(
+                                                [
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    self,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        53,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        57,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        Joint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Comma,
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        57,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        58,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    c,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        59,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        60,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        Joint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Comma,
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        60,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        61,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    d,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        62,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        63,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        Joint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: ModSep,
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        63,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        65,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    e,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        65,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        66,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                ],
+                                            ),
+                                        ),
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Semi,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    67,
+                                                ),
+                                                hi: BytePos(
+                                                    68,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                            ],
+                        ),
+                    ),
+                ),
+            },
+            Item {
+                ident: #0,
+                attrs: [],
+                id: NodeId(4294967040),
+                node: Use(
+                    UseTree {
+                        prefix: path(a::b),
+                        kind: Nested(
+                            [
+                                (
+                                    UseTree {
+                                        prefix: path(self),
+                                        kind: Simple(
+                                            Some(
+                                                ab#0,
+                                            ),
+                                            NodeId(4294967040),
+                                            NodeId(4294967040),
+                                        ),
+                                        span: Span {
+                                            lo: BytePos(
+                                                80,
+                                            ),
+                                            hi: BytePos(
+                                                90,
+                                            ),
+                                            ctxt: #0,
+                                        },
+                                    },
+                                    NodeId(4294967040),
+                                ),
+                                (
+                                    UseTree {
+                                        prefix: path(c),
+                                        kind: Simple(
+                                            Some(
+                                                abc#0,
+                                            ),
+                                            NodeId(4294967040),
+                                            NodeId(4294967040),
+                                        ),
+                                        span: Span {
+                                            lo: BytePos(
+                                                92,
+                                            ),
+                                            hi: BytePos(
+                                                100,
+                                            ),
+                                            ctxt: #0,
+                                        },
+                                    },
+                                    NodeId(4294967040),
+                                ),
+                            ],
+                        ),
+                        span: Span {
+                            lo: BytePos(
+                                73,
+                            ),
+                            hi: BytePos(
+                                101,
+                            ),
+                            ctxt: #0,
+                        },
+                    },
+                ),
+                vis: Spanned {
+                    node: Inherited,
+                    span: Span {
+                        lo: BytePos(
+                            69,
+                        ),
+                        hi: BytePos(
+                            69,
+                        ),
+                        ctxt: #0,
+                    },
+                },
+                span: Span {
+                    lo: BytePos(
+                        69,
+                    ),
+                    hi: BytePos(
+                        102,
+                    ),
+                    ctxt: #0,
+                },
+                tokens: Some(
+                    TokenStream(
+                        Some(
+                            [
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                use,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    69,
+                                                ),
+                                                hi: BytePos(
+                                                    72,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                a,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    73,
+                                                ),
+                                                hi: BytePos(
+                                                    74,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: ModSep,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    74,
+                                                ),
+                                                hi: BytePos(
+                                                    76,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                b,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    76,
+                                                ),
+                                                hi: BytePos(
+                                                    77,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: ModSep,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    77,
+                                                ),
+                                                hi: BytePos(
+                                                    79,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Delimited(
+                                        DelimSpan {
+                                            open: Span {
+                                                lo: BytePos(
+                                                    79,
+                                                ),
+                                                hi: BytePos(
+                                                    80,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                            close: Span {
+                                                lo: BytePos(
+                                                    100,
+                                                ),
+                                                hi: BytePos(
+                                                    101,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                        Brace,
+                                        TokenStream(
+                                            Some(
+                                                [
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    self,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        80,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        84,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    as,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        85,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        87,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    ab,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        88,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        90,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        Joint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Comma,
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        90,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        91,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    c,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        92,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        93,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    as,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        94,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        96,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    abc,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        97,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        100,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                ],
+                                            ),
+                                        ),
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Semi,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    101,
+                                                ),
+                                                hi: BytePos(
+                                                    102,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                            ],
+                        ),
+                    ),
+                ),
+            },
+            Item {
+                ident: #0,
+                attrs: [],
+                id: NodeId(4294967040),
+                node: Use(
+                    UseTree {
+                        prefix: path(a::b),
+                        kind: Glob,
+                        span: Span {
+                            lo: BytePos(
+                                107,
+                            ),
+                            hi: BytePos(
+                                114,
+                            ),
+                            ctxt: #0,
+                        },
+                    },
+                ),
+                vis: Spanned {
+                    node: Inherited,
+                    span: Span {
+                        lo: BytePos(
+                            103,
+                        ),
+                        hi: BytePos(
+                            103,
+                        ),
+                        ctxt: #0,
+                    },
+                },
+                span: Span {
+                    lo: BytePos(
+                        103,
+                    ),
+                    hi: BytePos(
+                        115,
+                    ),
+                    ctxt: #0,
+                },
+                tokens: Some(
+                    TokenStream(
+                        Some(
+                            [
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                use,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    103,
+                                                ),
+                                                hi: BytePos(
+                                                    106,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                a,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    107,
+                                                ),
+                                                hi: BytePos(
+                                                    108,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: ModSep,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    108,
+                                                ),
+                                                hi: BytePos(
+                                                    110,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                b,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    110,
+                                                ),
+                                                hi: BytePos(
+                                                    111,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: ModSep,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    111,
+                                                ),
+                                                hi: BytePos(
+                                                    113,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: BinOp(
+                                                Star,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    113,
+                                                ),
+                                                hi: BytePos(
+                                                    114,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Semi,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    114,
+                                                ),
+                                                hi: BytePos(
+                                                    115,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                            ],
+                        ),
+                    ),
+                ),
+            },
+            Item {
+                ident: #0,
+                attrs: [],
+                id: NodeId(4294967040),
+                node: Use(
+                    UseTree {
+                        prefix: path(a::b),
+                        kind: Nested(
+                            [
+                                (
+                                    UseTree {
+                                        prefix: path(self),
+                                        kind: Simple(
+                                            Some(
+                                                ab#0,
+                                            ),
+                                            NodeId(4294967040),
+                                            NodeId(4294967040),
+                                        ),
+                                        span: Span {
+                                            lo: BytePos(
+                                                127,
+                                            ),
+                                            hi: BytePos(
+                                                137,
+                                            ),
+                                            ctxt: #0,
+                                        },
+                                    },
+                                    NodeId(4294967040),
+                                ),
+                                (
+                                    UseTree {
+                                        prefix: path(c),
+                                        kind: Simple(
+                                            None,
+                                            NodeId(4294967040),
+                                            NodeId(4294967040),
+                                        ),
+                                        span: Span {
+                                            lo: BytePos(
+                                                139,
+                                            ),
+                                            hi: BytePos(
+                                                140,
+                                            ),
+                                            ctxt: #0,
+                                        },
+                                    },
+                                    NodeId(4294967040),
+                                ),
+                                (
+                                    UseTree {
+                                        prefix: path(d),
+                                        kind: Nested(
+                                            [
+                                                (
+                                                    UseTree {
+                                                        prefix: path(),
+                                                        kind: Glob,
+                                                        span: Span {
+                                                            lo: BytePos(
+                                                                146,
+                                                            ),
+                                                            hi: BytePos(
+                                                                147,
+                                                            ),
+                                                            ctxt: #0,
+                                                        },
+                                                    },
+                                                    NodeId(4294967040),
+                                                ),
+                                                (
+                                                    UseTree {
+                                                        prefix: path(e::f),
+                                                        kind: Simple(
+                                                            None,
+                                                            NodeId(4294967040),
+                                                            NodeId(4294967040),
+                                                        ),
+                                                        span: Span {
+                                                            lo: BytePos(
+                                                                149,
+                                                            ),
+                                                            hi: BytePos(
+                                                                153,
+                                                            ),
+                                                            ctxt: #0,
+                                                        },
+                                                    },
+                                                    NodeId(4294967040),
+                                                ),
+                                            ],
+                                        ),
+                                        span: Span {
+                                            lo: BytePos(
+                                                142,
+                                            ),
+                                            hi: BytePos(
+                                                154,
+                                            ),
+                                            ctxt: #0,
+                                        },
+                                    },
+                                    NodeId(4294967040),
+                                ),
+                            ],
+                        ),
+                        span: Span {
+                            lo: BytePos(
+                                120,
+                            ),
+                            hi: BytePos(
+                                155,
+                            ),
+                            ctxt: #0,
+                        },
+                    },
+                ),
+                vis: Spanned {
+                    node: Inherited,
+                    span: Span {
+                        lo: BytePos(
+                            116,
+                        ),
+                        hi: BytePos(
+                            116,
+                        ),
+                        ctxt: #0,
+                    },
+                },
+                span: Span {
+                    lo: BytePos(
+                        116,
+                    ),
+                    hi: BytePos(
+                        156,
+                    ),
+                    ctxt: #0,
+                },
+                tokens: Some(
+                    TokenStream(
+                        Some(
+                            [
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                use,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    116,
+                                                ),
+                                                hi: BytePos(
+                                                    119,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                a,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    120,
+                                                ),
+                                                hi: BytePos(
+                                                    121,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: ModSep,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    121,
+                                                ),
+                                                hi: BytePos(
+                                                    123,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                b,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    123,
+                                                ),
+                                                hi: BytePos(
+                                                    124,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: ModSep,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    124,
+                                                ),
+                                                hi: BytePos(
+                                                    126,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Delimited(
+                                        DelimSpan {
+                                            open: Span {
+                                                lo: BytePos(
+                                                    126,
+                                                ),
+                                                hi: BytePos(
+                                                    127,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                            close: Span {
+                                                lo: BytePos(
+                                                    154,
+                                                ),
+                                                hi: BytePos(
+                                                    155,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                        Brace,
+                                        TokenStream(
+                                            Some(
+                                                [
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    self,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        127,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        131,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    as,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        132,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        134,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    ab,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        135,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        137,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        Joint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Comma,
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        137,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        138,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    c,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        139,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        140,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        Joint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Comma,
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        140,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        141,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Ident(
+                                                                    d,
+                                                                    false,
+                                                                ),
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        142,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        143,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        Joint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: ModSep,
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        143,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        145,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Delimited(
+                                                            DelimSpan {
+                                                                open: Span {
+                                                                    lo: BytePos(
+                                                                        145,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        146,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                                close: Span {
+                                                                    lo: BytePos(
+                                                                        153,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        154,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
+                                                            Brace,
+                                                            TokenStream(
+                                                                Some(
+                                                                    [
+                                                                        (
+                                                                            Token(
+                                                                                Token {
+                                                                                    kind: BinOp(
+                                                                                        Star,
+                                                                                    ),
+                                                                                    span: Span {
+                                                                                        lo: BytePos(
+                                                                                            146,
+                                                                                        ),
+                                                                                        hi: BytePos(
+                                                                                            147,
+                                                                                        ),
+                                                                                        ctxt: #0,
+                                                                                    },
+                                                                                },
+                                                                            ),
+                                                                            Joint,
+                                                                        ),
+                                                                        (
+                                                                            Token(
+                                                                                Token {
+                                                                                    kind: Comma,
+                                                                                    span: Span {
+                                                                                        lo: BytePos(
+                                                                                            147,
+                                                                                        ),
+                                                                                        hi: BytePos(
+                                                                                            148,
+                                                                                        ),
+                                                                                        ctxt: #0,
+                                                                                    },
+                                                                                },
+                                                                            ),
+                                                                            NonJoint,
+                                                                        ),
+                                                                        (
+                                                                            Token(
+                                                                                Token {
+                                                                                    kind: Ident(
+                                                                                        e,
+                                                                                        false,
+                                                                                    ),
+                                                                                    span: Span {
+                                                                                        lo: BytePos(
+                                                                                            149,
+                                                                                        ),
+                                                                                        hi: BytePos(
+                                                                                            150,
+                                                                                        ),
+                                                                                        ctxt: #0,
+                                                                                    },
+                                                                                },
+                                                                            ),
+                                                                            Joint,
+                                                                        ),
+                                                                        (
+                                                                            Token(
+                                                                                Token {
+                                                                                    kind: ModSep,
+                                                                                    span: Span {
+                                                                                        lo: BytePos(
+                                                                                            150,
+                                                                                        ),
+                                                                                        hi: BytePos(
+                                                                                            152,
+                                                                                        ),
+                                                                                        ctxt: #0,
+                                                                                    },
+                                                                                },
+                                                                            ),
+                                                                            NonJoint,
+                                                                        ),
+                                                                        (
+                                                                            Token(
+                                                                                Token {
+                                                                                    kind: Ident(
+                                                                                        f,
+                                                                                        false,
+                                                                                    ),
+                                                                                    span: Span {
+                                                                                        lo: BytePos(
+                                                                                            152,
+                                                                                        ),
+                                                                                        hi: BytePos(
+                                                                                            153,
+                                                                                        ),
+                                                                                        ctxt: #0,
+                                                                                    },
+                                                                                },
+                                                                            ),
+                                                                            NonJoint,
+                                                                        ),
+                                                                    ],
+                                                                ),
+                                                            ),
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                ],
+                                            ),
+                                        ),
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Semi,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    155,
+                                                ),
+                                                hi: BytePos(
+                                                    156,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                            ],
+                        ),
+                    ),
+                ),
+            },
+            Item {
+                ident: #0,
+                attrs: [],
+                id: NodeId(4294967040),
+                node: Use(
+                    UseTree {
+                        prefix: path(p::q::r),
+                        kind: Simple(
+                            Some(
+                                x#0,
+                            ),
+                            NodeId(4294967040),
+                            NodeId(4294967040),
+                        ),
+                        span: Span {
+                            lo: BytePos(
+                                161,
+                            ),
+                            hi: BytePos(
+                                173,
+                            ),
+                            ctxt: #0,
+                        },
+                    },
+                ),
+                vis: Spanned {
+                    node: Inherited,
+                    span: Span {
+                        lo: BytePos(
+                            157,
+                        ),
+                        hi: BytePos(
+                            157,
+                        ),
+                        ctxt: #0,
+                    },
+                },
+                span: Span {
+                    lo: BytePos(
+                        157,
+                    ),
+                    hi: BytePos(
+                        174,
+                    ),
+                    ctxt: #0,
+                },
+                tokens: Some(
+                    TokenStream(
+                        Some(
+                            [
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                use,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    157,
+                                                ),
+                                                hi: BytePos(
+                                                    160,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                p,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    161,
+                                                ),
+                                                hi: BytePos(
+                                                    162,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: ModSep,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    162,
+                                                ),
+                                                hi: BytePos(
+                                                    164,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                q,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    164,
+                                                ),
+                                                hi: BytePos(
+                                                    165,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: ModSep,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    165,
+                                                ),
+                                                hi: BytePos(
+                                                    167,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                r,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    167,
+                                                ),
+                                                hi: BytePos(
+                                                    168,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                as,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    169,
+                                                ),
+                                                hi: BytePos(
+                                                    171,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                x,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    172,
+                                                ),
+                                                hi: BytePos(
+                                                    173,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Semi,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    173,
+                                                ),
+                                                hi: BytePos(
+                                                    174,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                            ],
+                        ),
+                    ),
+                ),
+            },
+            Item {
+                ident: #0,
+                attrs: [],
+                id: NodeId(4294967040),
+                node: Use(
+                    UseTree {
+                        prefix: path(crate::aa),
+                        kind: Simple(
+                            Some(
+                                x#0,
+                            ),
+                            NodeId(4294967040),
+                            NodeId(4294967040),
+                        ),
+                        span: Span {
+                            lo: BytePos(
+                                180,
+                            ),
+                            hi: BytePos(
+                                194,
+                            ),
+                            ctxt: #0,
+                        },
+                    },
+                ),
+                vis: Spanned {
+                    node: Inherited,
+                    span: Span {
+                        lo: BytePos(
+                            176,
+                        ),
+                        hi: BytePos(
+                            176,
+                        ),
+                        ctxt: #0,
+                    },
+                },
+                span: Span {
+                    lo: BytePos(
+                        176,
+                    ),
+                    hi: BytePos(
+                        195,
+                    ),
+                    ctxt: #0,
+                },
+                tokens: Some(
+                    TokenStream(
+                        Some(
+                            [
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                use,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    176,
+                                                ),
+                                                hi: BytePos(
+                                                    179,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                crate,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    180,
+                                                ),
+                                                hi: BytePos(
+                                                    185,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: ModSep,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    185,
+                                                ),
+                                                hi: BytePos(
+                                                    187,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                aa,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    187,
+                                                ),
+                                                hi: BytePos(
+                                                    189,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                as,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    190,
+                                                ),
+                                                hi: BytePos(
+                                                    192,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                x,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    193,
+                                                ),
+                                                hi: BytePos(
+                                                    194,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Semi,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    194,
+                                                ),
+                                                hi: BytePos(
+                                                    195,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                            ],
+                        ),
+                    ),
+                ),
+            },
+        ],
+        inline: true,
+    },
+    attrs: [],
+    span: Span {
+        lo: BytePos(
+            0,
+        ),
+        hi: BytePos(
+            195,
+        ),
+        ctxt: #0,
+    },
+}
+
+--------------------------------------------------------------------------------
+
+175: BlankLine []
+196: BlankLine []

@@ -80,7 +80,8 @@ pub struct Attr {
 pub struct MetaItem {
     pub loc: Loc,
     pub name: String,
-    pub items: Option<Box<Vec<MetaItem>>>,
+    //pub items: Option<Box<Vec<MetaItem>>>,
+    pub items: Option<Vec<MetaItem>>,
 }
 
 #[derive(Debug)]
@@ -137,7 +138,7 @@ pub struct ExternCrate {
 /*
 #[derive(Debug)]
 pub struct Use {
-    pub base: String,
+    pub prefix: String,
     pub names: Vec<Chunk>,
 }
 

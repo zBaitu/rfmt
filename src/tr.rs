@@ -374,7 +374,8 @@ impl Translator {
                 MetaItem {
                     loc,
                     name,
-                    items: Some(Box::new(items)),
+                    //items: Some(Box::new(items)),
+                    items: Some(items),
                 }
             }
         }
