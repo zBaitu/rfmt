@@ -1,3 +1,5 @@
+use *;
+use ::*;
 use ::f;
 use a::b::{c, d, e::f, g::h::i};
 use a::b::{self, c, d::e};

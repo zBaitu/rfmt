@@ -5,7 +5,7 @@ Crate {
                 0,
             ),
             hi: BytePos(
-                195,
+                222,
             ),
             ctxt: #0,
         },
@@ -16,18 +16,14 @@ Crate {
                 id: NodeId(4294967040),
                 node: Use(
                     UseTree {
-                        prefix: path(::f),
-                        kind: Simple(
-                            None,
-                            NodeId(4294967040),
-                            NodeId(4294967040),
-                        ),
+                        prefix: path(),
+                        kind: Glob,
                         span: Span {
                             lo: BytePos(
                                 4,
                             ),
                             hi: BytePos(
-                                7,
+                                5,
                             ),
                             ctxt: #0,
                         },
@@ -50,7 +46,7 @@ Crate {
                         0,
                     ),
                     hi: BytePos(
-                        8,
+                        6,
                     ),
                     ctxt: #0,
                 },
@@ -81,13 +77,244 @@ Crate {
                                 (
                                     Token(
                                         Token {
-                                            kind: ModSep,
+                                            kind: BinOp(
+                                                Star,
+                                            ),
                                             span: Span {
                                                 lo: BytePos(
                                                     4,
                                                 ),
                                                 hi: BytePos(
+                                                    5,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Semi,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    5,
+                                                ),
+                                                hi: BytePos(
                                                     6,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                            ],
+                        ),
+                    ),
+                ),
+            },
+            Item {
+                ident: #0,
+                attrs: [],
+                id: NodeId(4294967040),
+                node: Use(
+                    UseTree {
+                        prefix: path(),
+                        kind: Glob,
+                        span: Span {
+                            lo: BytePos(
+                                11,
+                            ),
+                            hi: BytePos(
+                                14,
+                            ),
+                            ctxt: #0,
+                        },
+                    },
+                ),
+                vis: Spanned {
+                    node: Inherited,
+                    span: Span {
+                        lo: BytePos(
+                            7,
+                        ),
+                        hi: BytePos(
+                            7,
+                        ),
+                        ctxt: #0,
+                    },
+                },
+                span: Span {
+                    lo: BytePos(
+                        7,
+                    ),
+                    hi: BytePos(
+                        15,
+                    ),
+                    ctxt: #0,
+                },
+                tokens: Some(
+                    TokenStream(
+                        Some(
+                            [
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                use,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    7,
+                                                ),
+                                                hi: BytePos(
+                                                    10,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: ModSep,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    11,
+                                                ),
+                                                hi: BytePos(
+                                                    13,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: BinOp(
+                                                Star,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    13,
+                                                ),
+                                                hi: BytePos(
+                                                    14,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Semi,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    14,
+                                                ),
+                                                hi: BytePos(
+                                                    15,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                            ],
+                        ),
+                    ),
+                ),
+            },
+            Item {
+                ident: #0,
+                attrs: [],
+                id: NodeId(4294967040),
+                node: Use(
+                    UseTree {
+                        prefix: path(::f),
+                        kind: Simple(
+                            None,
+                            NodeId(4294967040),
+                            NodeId(4294967040),
+                        ),
+                        span: Span {
+                            lo: BytePos(
+                                20,
+                            ),
+                            hi: BytePos(
+                                23,
+                            ),
+                            ctxt: #0,
+                        },
+                    },
+                ),
+                vis: Spanned {
+                    node: Inherited,
+                    span: Span {
+                        lo: BytePos(
+                            16,
+                        ),
+                        hi: BytePos(
+                            16,
+                        ),
+                        ctxt: #0,
+                    },
+                },
+                span: Span {
+                    lo: BytePos(
+                        16,
+                    ),
+                    hi: BytePos(
+                        24,
+                    ),
+                    ctxt: #0,
+                },
+                tokens: Some(
+                    TokenStream(
+                        Some(
+                            [
+                                (
+                                    Token(
+                                        Token {
+                                            kind: Ident(
+                                                use,
+                                                false,
+                                            ),
+                                            span: Span {
+                                                lo: BytePos(
+                                                    16,
+                                                ),
+                                                hi: BytePos(
+                                                    19,
+                                                ),
+                                                ctxt: #0,
+                                            },
+                                        },
+                                    ),
+                                    NonJoint,
+                                ),
+                                (
+                                    Token(
+                                        Token {
+                                            kind: ModSep,
+                                            span: Span {
+                                                lo: BytePos(
+                                                    20,
+                                                ),
+                                                hi: BytePos(
+                                                    22,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -104,10 +331,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    6,
+                                                    22,
                                                 ),
                                                 hi: BytePos(
-                                                    7,
+                                                    23,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -121,10 +348,10 @@ Crate {
                                             kind: Semi,
                                             span: Span {
                                                 lo: BytePos(
-                                                    7,
+                                                    23,
                                                 ),
                                                 hi: BytePos(
-                                                    8,
+                                                    24,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -156,10 +383,10 @@ Crate {
                                         ),
                                         span: Span {
                                             lo: BytePos(
-                                                20,
+                                                36,
                                             ),
                                             hi: BytePos(
-                                                21,
+                                                37,
                                             ),
                                             ctxt: #0,
                                         },
@@ -176,10 +403,10 @@ Crate {
                                         ),
                                         span: Span {
                                             lo: BytePos(
-                                                23,
+                                                39,
                                             ),
                                             hi: BytePos(
-                                                24,
+                                                40,
                                             ),
                                             ctxt: #0,
                                         },
@@ -196,10 +423,10 @@ Crate {
                                         ),
                                         span: Span {
                                             lo: BytePos(
-                                                26,
+                                                42,
                                             ),
                                             hi: BytePos(
-                                                30,
+                                                46,
                                             ),
                                             ctxt: #0,
                                         },
@@ -216,10 +443,10 @@ Crate {
                                         ),
                                         span: Span {
                                             lo: BytePos(
-                                                32,
+                                                48,
                                             ),
                                             hi: BytePos(
-                                                39,
+                                                55,
                                             ),
                                             ctxt: #0,
                                         },
@@ -230,10 +457,10 @@ Crate {
                         ),
                         span: Span {
                             lo: BytePos(
-                                13,
+                                29,
                             ),
                             hi: BytePos(
-                                40,
+                                56,
                             ),
                             ctxt: #0,
                         },
@@ -243,20 +470,20 @@ Crate {
                     node: Inherited,
                     span: Span {
                         lo: BytePos(
-                            9,
+                            25,
                         ),
                         hi: BytePos(
-                            9,
+                            25,
                         ),
                         ctxt: #0,
                     },
                 },
                 span: Span {
                     lo: BytePos(
-                        9,
+                        25,
                     ),
                     hi: BytePos(
-                        41,
+                        57,
                     ),
                     ctxt: #0,
                 },
@@ -273,10 +500,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    9,
+                                                    25,
                                                 ),
                                                 hi: BytePos(
-                                                    12,
+                                                    28,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -293,10 +520,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    13,
+                                                    29,
                                                 ),
                                                 hi: BytePos(
-                                                    14,
+                                                    30,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -310,10 +537,10 @@ Crate {
                                             kind: ModSep,
                                             span: Span {
                                                 lo: BytePos(
-                                                    14,
+                                                    30,
                                                 ),
                                                 hi: BytePos(
-                                                    16,
+                                                    32,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -330,10 +557,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    16,
+                                                    32,
                                                 ),
                                                 hi: BytePos(
-                                                    17,
+                                                    33,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -347,10 +574,10 @@ Crate {
                                             kind: ModSep,
                                             span: Span {
                                                 lo: BytePos(
-                                                    17,
+                                                    33,
                                                 ),
                                                 hi: BytePos(
-                                                    19,
+                                                    35,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -363,19 +590,19 @@ Crate {
                                         DelimSpan {
                                             open: Span {
                                                 lo: BytePos(
-                                                    19,
+                                                    35,
                                                 ),
                                                 hi: BytePos(
-                                                    20,
+                                                    36,
                                                 ),
                                                 ctxt: #0,
                                             },
                                             close: Span {
                                                 lo: BytePos(
-                                                    39,
+                                                    55,
                                                 ),
                                                 hi: BytePos(
-                                                    40,
+                                                    56,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -393,10 +620,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        20,
+                                                                        36,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        21,
+                                                                        37,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -410,10 +637,10 @@ Crate {
                                                                 kind: Comma,
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        21,
+                                                                        37,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        22,
+                                                                        38,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -430,10 +657,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        23,
+                                                                        39,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        24,
+                                                                        40,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -447,10 +674,10 @@ Crate {
                                                                 kind: Comma,
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        24,
+                                                                        40,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        25,
+                                                                        41,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -467,10 +694,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        26,
+                                                                        42,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        27,
+                                                                        43,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -484,10 +711,10 @@ Crate {
                                                                 kind: ModSep,
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        27,
+                                                                        43,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        29,
+                                                                        45,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -504,10 +731,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        29,
+                                                                        45,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        30,
+                                                                        46,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -521,10 +748,10 @@ Crate {
                                                                 kind: Comma,
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        30,
+                                                                        46,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        31,
+                                                                        47,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -541,10 +768,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        32,
+                                                                        48,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        33,
+                                                                        49,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -558,10 +785,10 @@ Crate {
                                                                 kind: ModSep,
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        33,
+                                                                        49,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        35,
+                                                                        51,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -578,10 +805,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        35,
+                                                                        51,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        36,
+                                                                        52,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -595,10 +822,10 @@ Crate {
                                                                 kind: ModSep,
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        36,
+                                                                        52,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        38,
+                                                                        54,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -615,10 +842,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        38,
+                                                                        54,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        39,
+                                                                        55,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -638,10 +865,10 @@ Crate {
                                             kind: Semi,
                                             span: Span {
                                                 lo: BytePos(
-                                                    40,
+                                                    56,
                                                 ),
                                                 hi: BytePos(
-                                                    41,
+                                                    57,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -673,10 +900,10 @@ Crate {
                                         ),
                                         span: Span {
                                             lo: BytePos(
-                                                53,
+                                                69,
                                             ),
                                             hi: BytePos(
-                                                57,
+                                                73,
                                             ),
                                             ctxt: #0,
                                         },
@@ -693,10 +920,10 @@ Crate {
                                         ),
                                         span: Span {
                                             lo: BytePos(
-                                                59,
+                                                75,
                                             ),
                                             hi: BytePos(
-                                                60,
+                                                76,
                                             ),
                                             ctxt: #0,
                                         },
@@ -713,10 +940,10 @@ Crate {
                                         ),
                                         span: Span {
                                             lo: BytePos(
-                                                62,
+                                                78,
                                             ),
                                             hi: BytePos(
-                                                66,
+                                                82,
                                             ),
                                             ctxt: #0,
                                         },
@@ -727,10 +954,10 @@ Crate {
                         ),
                         span: Span {
                             lo: BytePos(
-                                46,
+                                62,
                             ),
                             hi: BytePos(
-                                67,
+                                83,
                             ),
                             ctxt: #0,
                         },
@@ -740,20 +967,20 @@ Crate {
                     node: Inherited,
                     span: Span {
                         lo: BytePos(
-                            42,
+                            58,
                         ),
                         hi: BytePos(
-                            42,
+                            58,
                         ),
                         ctxt: #0,
                     },
                 },
                 span: Span {
                     lo: BytePos(
-                        42,
+                        58,
                     ),
                     hi: BytePos(
-                        68,
+                        84,
                     ),
                     ctxt: #0,
                 },
@@ -770,10 +997,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    42,
+                                                    58,
                                                 ),
                                                 hi: BytePos(
-                                                    45,
+                                                    61,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -790,10 +1017,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    46,
+                                                    62,
                                                 ),
                                                 hi: BytePos(
-                                                    47,
+                                                    63,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -807,10 +1034,10 @@ Crate {
                                             kind: ModSep,
                                             span: Span {
                                                 lo: BytePos(
-                                                    47,
+                                                    63,
                                                 ),
                                                 hi: BytePos(
-                                                    49,
+                                                    65,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -827,10 +1054,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    49,
+                                                    65,
                                                 ),
                                                 hi: BytePos(
-                                                    50,
+                                                    66,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -844,10 +1071,10 @@ Crate {
                                             kind: ModSep,
                                             span: Span {
                                                 lo: BytePos(
-                                                    50,
+                                                    66,
                                                 ),
                                                 hi: BytePos(
-                                                    52,
+                                                    68,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -860,19 +1087,19 @@ Crate {
                                         DelimSpan {
                                             open: Span {
                                                 lo: BytePos(
-                                                    52,
+                                                    68,
                                                 ),
                                                 hi: BytePos(
-                                                    53,
+                                                    69,
                                                 ),
                                                 ctxt: #0,
                                             },
                                             close: Span {
                                                 lo: BytePos(
-                                                    66,
+                                                    82,
                                                 ),
                                                 hi: BytePos(
-                                                    67,
+                                                    83,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -890,10 +1117,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        53,
+                                                                        69,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        57,
+                                                                        73,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -907,10 +1134,10 @@ Crate {
                                                                 kind: Comma,
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        57,
+                                                                        73,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        58,
+                                                                        74,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -927,10 +1154,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        59,
+                                                                        75,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        60,
+                                                                        76,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -944,10 +1171,10 @@ Crate {
                                                                 kind: Comma,
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        60,
+                                                                        76,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        61,
+                                                                        77,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -964,10 +1191,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        62,
+                                                                        78,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        63,
+                                                                        79,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -981,10 +1208,10 @@ Crate {
                                                                 kind: ModSep,
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        63,
+                                                                        79,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        65,
+                                                                        81,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -1001,10 +1228,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        65,
+                                                                        81,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        66,
+                                                                        82,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -1024,10 +1251,10 @@ Crate {
                                             kind: Semi,
                                             span: Span {
                                                 lo: BytePos(
-                                                    67,
+                                                    83,
                                                 ),
                                                 hi: BytePos(
-                                                    68,
+                                                    84,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1061,10 +1288,10 @@ Crate {
                                         ),
                                         span: Span {
                                             lo: BytePos(
-                                                80,
+                                                96,
                                             ),
                                             hi: BytePos(
-                                                90,
+                                                106,
                                             ),
                                             ctxt: #0,
                                         },
@@ -1083,10 +1310,10 @@ Crate {
                                         ),
                                         span: Span {
                                             lo: BytePos(
-                                                92,
+                                                108,
                                             ),
                                             hi: BytePos(
-                                                100,
+                                                116,
                                             ),
                                             ctxt: #0,
                                         },
@@ -1097,10 +1324,10 @@ Crate {
                         ),
                         span: Span {
                             lo: BytePos(
-                                73,
+                                89,
                             ),
                             hi: BytePos(
-                                101,
+                                117,
                             ),
                             ctxt: #0,
                         },
@@ -1110,20 +1337,20 @@ Crate {
                     node: Inherited,
                     span: Span {
                         lo: BytePos(
-                            69,
+                            85,
                         ),
                         hi: BytePos(
-                            69,
+                            85,
                         ),
                         ctxt: #0,
                     },
                 },
                 span: Span {
                     lo: BytePos(
-                        69,
+                        85,
                     ),
                     hi: BytePos(
-                        102,
+                        118,
                     ),
                     ctxt: #0,
                 },
@@ -1140,10 +1367,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    69,
+                                                    85,
                                                 ),
                                                 hi: BytePos(
-                                                    72,
+                                                    88,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1160,10 +1387,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    73,
+                                                    89,
                                                 ),
                                                 hi: BytePos(
-                                                    74,
+                                                    90,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1177,10 +1404,10 @@ Crate {
                                             kind: ModSep,
                                             span: Span {
                                                 lo: BytePos(
-                                                    74,
+                                                    90,
                                                 ),
                                                 hi: BytePos(
-                                                    76,
+                                                    92,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1197,10 +1424,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    76,
+                                                    92,
                                                 ),
                                                 hi: BytePos(
-                                                    77,
+                                                    93,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1214,10 +1441,10 @@ Crate {
                                             kind: ModSep,
                                             span: Span {
                                                 lo: BytePos(
-                                                    77,
+                                                    93,
                                                 ),
                                                 hi: BytePos(
-                                                    79,
+                                                    95,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1230,19 +1457,19 @@ Crate {
                                         DelimSpan {
                                             open: Span {
                                                 lo: BytePos(
-                                                    79,
+                                                    95,
                                                 ),
                                                 hi: BytePos(
-                                                    80,
+                                                    96,
                                                 ),
                                                 ctxt: #0,
                                             },
                                             close: Span {
                                                 lo: BytePos(
-                                                    100,
+                                                    116,
                                                 ),
                                                 hi: BytePos(
-                                                    101,
+                                                    117,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1260,10 +1487,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        80,
+                                                                        96,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        84,
+                                                                        100,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -1280,10 +1507,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        85,
+                                                                        101,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        87,
+                                                                        103,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -1300,10 +1527,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        88,
+                                                                        104,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        90,
+                                                                        106,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -1317,10 +1544,10 @@ Crate {
                                                                 kind: Comma,
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        90,
+                                                                        106,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        91,
+                                                                        107,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -1337,10 +1564,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        92,
+                                                                        108,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        93,
+                                                                        109,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -1357,10 +1584,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        94,
+                                                                        110,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        96,
+                                                                        112,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -1377,10 +1604,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        97,
+                                                                        113,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        100,
+                                                                        116,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -1400,10 +1627,10 @@ Crate {
                                             kind: Semi,
                                             span: Span {
                                                 lo: BytePos(
-                                                    101,
+                                                    117,
                                                 ),
                                                 hi: BytePos(
-                                                    102,
+                                                    118,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1426,10 +1653,10 @@ Crate {
                         kind: Glob,
                         span: Span {
                             lo: BytePos(
-                                107,
+                                123,
                             ),
                             hi: BytePos(
-                                114,
+                                130,
                             ),
                             ctxt: #0,
                         },
@@ -1439,20 +1666,20 @@ Crate {
                     node: Inherited,
                     span: Span {
                         lo: BytePos(
-                            103,
+                            119,
                         ),
                         hi: BytePos(
-                            103,
+                            119,
                         ),
                         ctxt: #0,
                     },
                 },
                 span: Span {
                     lo: BytePos(
-                        103,
+                        119,
                     ),
                     hi: BytePos(
-                        115,
+                        131,
                     ),
                     ctxt: #0,
                 },
@@ -1469,10 +1696,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    103,
+                                                    119,
                                                 ),
                                                 hi: BytePos(
-                                                    106,
+                                                    122,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1489,10 +1716,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    107,
+                                                    123,
                                                 ),
                                                 hi: BytePos(
-                                                    108,
+                                                    124,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1506,10 +1733,10 @@ Crate {
                                             kind: ModSep,
                                             span: Span {
                                                 lo: BytePos(
-                                                    108,
+                                                    124,
                                                 ),
                                                 hi: BytePos(
-                                                    110,
+                                                    126,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1526,10 +1753,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    110,
+                                                    126,
                                                 ),
                                                 hi: BytePos(
-                                                    111,
+                                                    127,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1543,10 +1770,10 @@ Crate {
                                             kind: ModSep,
                                             span: Span {
                                                 lo: BytePos(
-                                                    111,
+                                                    127,
                                                 ),
                                                 hi: BytePos(
-                                                    113,
+                                                    129,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1562,10 +1789,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    113,
+                                                    129,
                                                 ),
                                                 hi: BytePos(
-                                                    114,
+                                                    130,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1579,10 +1806,10 @@ Crate {
                                             kind: Semi,
                                             span: Span {
                                                 lo: BytePos(
-                                                    114,
+                                                    130,
                                                 ),
                                                 hi: BytePos(
-                                                    115,
+                                                    131,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1616,10 +1843,10 @@ Crate {
                                         ),
                                         span: Span {
                                             lo: BytePos(
-                                                127,
+                                                148,
                                             ),
                                             hi: BytePos(
-                                                137,
+                                                158,
                                             ),
                                             ctxt: #0,
                                         },
@@ -1636,10 +1863,10 @@ Crate {
                                         ),
                                         span: Span {
                                             lo: BytePos(
-                                                139,
+                                                160,
                                             ),
                                             hi: BytePos(
-                                                140,
+                                                161,
                                             ),
                                             ctxt: #0,
                                         },
@@ -1657,10 +1884,10 @@ Crate {
                                                         kind: Glob,
                                                         span: Span {
                                                             lo: BytePos(
-                                                                146,
+                                                                171,
                                                             ),
                                                             hi: BytePos(
-                                                                147,
+                                                                172,
                                                             ),
                                                             ctxt: #0,
                                                         },
@@ -1677,10 +1904,10 @@ Crate {
                                                         ),
                                                         span: Span {
                                                             lo: BytePos(
-                                                                149,
+                                                                174,
                                                             ),
                                                             hi: BytePos(
-                                                                153,
+                                                                178,
                                                             ),
                                                             ctxt: #0,
                                                         },
@@ -1691,10 +1918,10 @@ Crate {
                                         ),
                                         span: Span {
                                             lo: BytePos(
-                                                142,
+                                                167,
                                             ),
                                             hi: BytePos(
-                                                154,
+                                                179,
                                             ),
                                             ctxt: #0,
                                         },
@@ -1705,10 +1932,10 @@ Crate {
                         ),
                         span: Span {
                             lo: BytePos(
-                                120,
+                                136,
                             ),
                             hi: BytePos(
-                                155,
+                                182,
                             ),
                             ctxt: #0,
                         },
@@ -1718,20 +1945,20 @@ Crate {
                     node: Inherited,
                     span: Span {
                         lo: BytePos(
-                            116,
+                            132,
                         ),
                         hi: BytePos(
-                            116,
+                            132,
                         ),
                         ctxt: #0,
                     },
                 },
                 span: Span {
                     lo: BytePos(
-                        116,
+                        132,
                     ),
                     hi: BytePos(
-                        156,
+                        183,
                     ),
                     ctxt: #0,
                 },
@@ -1748,10 +1975,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    116,
+                                                    132,
                                                 ),
                                                 hi: BytePos(
-                                                    119,
+                                                    135,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1768,10 +1995,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    120,
+                                                    136,
                                                 ),
                                                 hi: BytePos(
-                                                    121,
+                                                    137,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1785,10 +2012,10 @@ Crate {
                                             kind: ModSep,
                                             span: Span {
                                                 lo: BytePos(
-                                                    121,
+                                                    137,
                                                 ),
                                                 hi: BytePos(
-                                                    123,
+                                                    139,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1805,10 +2032,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    123,
+                                                    139,
                                                 ),
                                                 hi: BytePos(
-                                                    124,
+                                                    140,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1822,10 +2049,10 @@ Crate {
                                             kind: ModSep,
                                             span: Span {
                                                 lo: BytePos(
-                                                    124,
+                                                    140,
                                                 ),
                                                 hi: BytePos(
-                                                    126,
+                                                    142,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1838,19 +2065,19 @@ Crate {
                                         DelimSpan {
                                             open: Span {
                                                 lo: BytePos(
-                                                    126,
+                                                    142,
                                                 ),
                                                 hi: BytePos(
-                                                    127,
+                                                    143,
                                                 ),
                                                 ctxt: #0,
                                             },
                                             close: Span {
                                                 lo: BytePos(
-                                                    154,
+                                                    181,
                                                 ),
                                                 hi: BytePos(
-                                                    155,
+                                                    182,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -1868,10 +2095,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        127,
+                                                                        148,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        131,
+                                                                        152,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -1888,10 +2115,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        132,
+                                                                        153,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        134,
+                                                                        155,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -1908,10 +2135,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        135,
+                                                                        156,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        137,
+                                                                        158,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -1925,10 +2152,10 @@ Crate {
                                                                 kind: Comma,
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        137,
+                                                                        158,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        138,
+                                                                        159,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -1945,10 +2172,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        139,
+                                                                        160,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        140,
+                                                                        161,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -1962,10 +2189,10 @@ Crate {
                                                                 kind: Comma,
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        140,
+                                                                        161,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        141,
+                                                                        162,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -1982,10 +2209,10 @@ Crate {
                                                                 ),
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        142,
+                                                                        167,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        143,
+                                                                        168,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -1999,10 +2226,10 @@ Crate {
                                                                 kind: ModSep,
                                                                 span: Span {
                                                                     lo: BytePos(
-                                                                        143,
+                                                                        168,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        145,
+                                                                        170,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -2015,19 +2242,19 @@ Crate {
                                                             DelimSpan {
                                                                 open: Span {
                                                                     lo: BytePos(
-                                                                        145,
+                                                                        170,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        146,
+                                                                        171,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
                                                                 close: Span {
                                                                     lo: BytePos(
-                                                                        153,
+                                                                        178,
                                                                     ),
                                                                     hi: BytePos(
-                                                                        154,
+                                                                        179,
                                                                     ),
                                                                     ctxt: #0,
                                                                 },
@@ -2044,10 +2271,10 @@ Crate {
                                                                                     ),
                                                                                     span: Span {
                                                                                         lo: BytePos(
-                                                                                            146,
+                                                                                            171,
                                                                                         ),
                                                                                         hi: BytePos(
-                                                                                            147,
+                                                                                            172,
                                                                                         ),
                                                                                         ctxt: #0,
                                                                                     },
@@ -2061,10 +2288,10 @@ Crate {
                                                                                     kind: Comma,
                                                                                     span: Span {
                                                                                         lo: BytePos(
-                                                                                            147,
+                                                                                            172,
                                                                                         ),
                                                                                         hi: BytePos(
-                                                                                            148,
+                                                                                            173,
                                                                                         ),
                                                                                         ctxt: #0,
                                                                                     },
@@ -2081,10 +2308,10 @@ Crate {
                                                                                     ),
                                                                                     span: Span {
                                                                                         lo: BytePos(
-                                                                                            149,
+                                                                                            174,
                                                                                         ),
                                                                                         hi: BytePos(
-                                                                                            150,
+                                                                                            175,
                                                                                         ),
                                                                                         ctxt: #0,
                                                                                     },
@@ -2098,10 +2325,10 @@ Crate {
                                                                                     kind: ModSep,
                                                                                     span: Span {
                                                                                         lo: BytePos(
-                                                                                            150,
+                                                                                            175,
                                                                                         ),
                                                                                         hi: BytePos(
-                                                                                            152,
+                                                                                            177,
                                                                                         ),
                                                                                         ctxt: #0,
                                                                                     },
@@ -2118,10 +2345,10 @@ Crate {
                                                                                     ),
                                                                                     span: Span {
                                                                                         lo: BytePos(
-                                                                                            152,
+                                                                                            177,
                                                                                         ),
                                                                                         hi: BytePos(
-                                                                                            153,
+                                                                                            178,
                                                                                         ),
                                                                                         ctxt: #0,
                                                                                     },
@@ -2132,6 +2359,23 @@ Crate {
                                                                     ],
                                                                 ),
                                                             ),
+                                                        ),
+                                                        NonJoint,
+                                                    ),
+                                                    (
+                                                        Token(
+                                                            Token {
+                                                                kind: Comma,
+                                                                span: Span {
+                                                                    lo: BytePos(
+                                                                        179,
+                                                                    ),
+                                                                    hi: BytePos(
+                                                                        180,
+                                                                    ),
+                                                                    ctxt: #0,
+                                                                },
+                                                            },
                                                         ),
                                                         NonJoint,
                                                     ),
@@ -2147,10 +2391,10 @@ Crate {
                                             kind: Semi,
                                             span: Span {
                                                 lo: BytePos(
-                                                    155,
+                                                    182,
                                                 ),
                                                 hi: BytePos(
-                                                    156,
+                                                    183,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -2179,10 +2423,10 @@ Crate {
                         ),
                         span: Span {
                             lo: BytePos(
-                                161,
+                                188,
                             ),
                             hi: BytePos(
-                                173,
+                                200,
                             ),
                             ctxt: #0,
                         },
@@ -2192,20 +2436,20 @@ Crate {
                     node: Inherited,
                     span: Span {
                         lo: BytePos(
-                            157,
+                            184,
                         ),
                         hi: BytePos(
-                            157,
+                            184,
                         ),
                         ctxt: #0,
                     },
                 },
                 span: Span {
                     lo: BytePos(
-                        157,
+                        184,
                     ),
                     hi: BytePos(
-                        174,
+                        201,
                     ),
                     ctxt: #0,
                 },
@@ -2222,10 +2466,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    157,
+                                                    184,
                                                 ),
                                                 hi: BytePos(
-                                                    160,
+                                                    187,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -2242,10 +2486,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    161,
+                                                    188,
                                                 ),
                                                 hi: BytePos(
-                                                    162,
+                                                    189,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -2259,10 +2503,10 @@ Crate {
                                             kind: ModSep,
                                             span: Span {
                                                 lo: BytePos(
-                                                    162,
+                                                    189,
                                                 ),
                                                 hi: BytePos(
-                                                    164,
+                                                    191,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -2279,10 +2523,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    164,
+                                                    191,
                                                 ),
                                                 hi: BytePos(
-                                                    165,
+                                                    192,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -2296,10 +2540,10 @@ Crate {
                                             kind: ModSep,
                                             span: Span {
                                                 lo: BytePos(
-                                                    165,
+                                                    192,
                                                 ),
                                                 hi: BytePos(
-                                                    167,
+                                                    194,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -2316,10 +2560,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    167,
+                                                    194,
                                                 ),
                                                 hi: BytePos(
-                                                    168,
+                                                    195,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -2336,10 +2580,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    169,
+                                                    196,
                                                 ),
                                                 hi: BytePos(
-                                                    171,
+                                                    198,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -2356,10 +2600,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    172,
+                                                    199,
                                                 ),
                                                 hi: BytePos(
-                                                    173,
+                                                    200,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -2373,10 +2617,10 @@ Crate {
                                             kind: Semi,
                                             span: Span {
                                                 lo: BytePos(
-                                                    173,
+                                                    200,
                                                 ),
                                                 hi: BytePos(
-                                                    174,
+                                                    201,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -2405,10 +2649,10 @@ Crate {
                         ),
                         span: Span {
                             lo: BytePos(
-                                180,
+                                207,
                             ),
                             hi: BytePos(
-                                194,
+                                221,
                             ),
                             ctxt: #0,
                         },
@@ -2418,20 +2662,20 @@ Crate {
                     node: Inherited,
                     span: Span {
                         lo: BytePos(
-                            176,
+                            203,
                         ),
                         hi: BytePos(
-                            176,
+                            203,
                         ),
                         ctxt: #0,
                     },
                 },
                 span: Span {
                     lo: BytePos(
-                        176,
+                        203,
                     ),
                     hi: BytePos(
-                        195,
+                        222,
                     ),
                     ctxt: #0,
                 },
@@ -2448,10 +2692,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    176,
+                                                    203,
                                                 ),
                                                 hi: BytePos(
-                                                    179,
+                                                    206,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -2468,10 +2712,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    180,
+                                                    207,
                                                 ),
                                                 hi: BytePos(
-                                                    185,
+                                                    212,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -2485,10 +2729,10 @@ Crate {
                                             kind: ModSep,
                                             span: Span {
                                                 lo: BytePos(
-                                                    185,
+                                                    212,
                                                 ),
                                                 hi: BytePos(
-                                                    187,
+                                                    214,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -2505,10 +2749,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    187,
+                                                    214,
                                                 ),
                                                 hi: BytePos(
-                                                    189,
+                                                    216,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -2525,10 +2769,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    190,
+                                                    217,
                                                 ),
                                                 hi: BytePos(
-                                                    192,
+                                                    219,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -2545,10 +2789,10 @@ Crate {
                                             ),
                                             span: Span {
                                                 lo: BytePos(
-                                                    193,
+                                                    220,
                                                 ),
                                                 hi: BytePos(
-                                                    194,
+                                                    221,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -2562,10 +2806,10 @@ Crate {
                                             kind: Semi,
                                             span: Span {
                                                 lo: BytePos(
-                                                    194,
+                                                    221,
                                                 ),
                                                 hi: BytePos(
-                                                    195,
+                                                    222,
                                                 ),
                                                 ctxt: #0,
                                             },
@@ -2587,7 +2831,7 @@ Crate {
             0,
         ),
         hi: BytePos(
-            195,
+            222,
         ),
         ctxt: #0,
     },
@@ -2595,5 +2839,5 @@ Crate {
 
 --------------------------------------------------------------------------------
 
-175: BlankLine []
-196: BlankLine []
+202: BlankLine []
+223: BlankLine []

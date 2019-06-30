@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use syntax::parse::ParseSess;
@@ -82,15 +83,21 @@ fn sugared_doc_to_string(tokens: &ast::TokenStream) -> String {
 
 #[inline]
 fn ident_to_string(ident: &ast::Ident) -> String {
-    symbol_to_string(&ident.name)
+    if (*ident).name != ast::kw::PathRoot {
+        symbol_to_string(&ident.name)
+    } else {
+        "".to_string()
+    }
 }
 
 #[inline]
 fn path_to_string(path: &ast::Path) -> String {
+    let mut first = true;
     path.segments.iter().fold(String::new(), |mut s, e| {
-        if !s.is_empty() {
+        if !first {
             s.push_str("::");
         }
+        first = false;
         s.push_str(&ident_to_string(&e.ident));
         s
     })
@@ -217,7 +224,6 @@ struct Translator {
     cmnts: Vec<Comment>,
     cmnt_idx: usize,
     last_loc: Loc,
-
     leading_cmnts: HashMap<Pos, Vec<String>>,
     trailing_cmnts: HashMap<Pos, String>,
 }
@@ -235,7 +241,6 @@ impl Translator {
             cmnts,
             cmnt_idx: 0,
             last_loc: Default::default(),
-
             leading_cmnts: HashMap::new(),
             trailing_cmnts: HashMap::new(),
         }
@@ -313,7 +318,7 @@ impl Translator {
 
     #[inline]
     fn trans_attrs(&mut self, attrs: &Vec<ast::Attribute>) -> Vec<AttrKind> {
-        trans_list!(self, attrs, trans_attr_kind)
+        trans_list!( self, attrs, trans_attr_kind)
     }
 
     #[inline]
@@ -374,7 +379,6 @@ impl Translator {
                 MetaItem {
                     loc,
                     name,
-                    //items: Some(Box::new(items)),
                     items: Some(items),
                 }
             }
@@ -383,7 +387,7 @@ impl Translator {
 
     #[inline]
     fn trans_nested_meta_items(&mut self, nested_meta_items: &Vec<ast::NestedMetaItem>) -> Vec<MetaItem> {
-        trans_list!(self, nested_meta_items, trans_nested_meta_item)
+        trans_list!( self, nested_meta_items, trans_nested_meta_item)
     }
 
     #[inline]
@@ -414,6 +418,7 @@ impl Translator {
         name
     }
 
+    #[inline]
     fn trans_mod(&mut self, name: String, module: &ast::Mod) -> Mod {
         let loc = self.loc(&module.inner);
         let items = self.trans_items(&module.items);
@@ -426,10 +431,12 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_items(&mut self, items: &Vec<ast::P<ast::Item>>) -> Vec<Item> {
-        trans_list!(self, items, trans_item)
+        trans_list!( self, items, trans_item)
     }
 
+    #[inline]
     fn trans_item(&mut self, item: &ast::Item) -> Item {
         let loc = self.loc(&item.span);
         let attrs = self.trans_attrs(&item.attrs);
@@ -443,11 +450,9 @@ impl Translator {
                     ItemKind::ModDecl(self.trans_mod_decl(ident))
                 }
             }
-            ast::ItemKind::ExternCrate(ref rename) => {
-                ItemKind::ExternCrate(self.trans_extren_crate(ident, rename))
-            }
+            ast::ItemKind::ExternCrate(ref rename) => ItemKind::ExternCrate(self.trans_extren_crate(ident, rename)),
+            ast::ItemKind::Use(ref tree) => ItemKind::Use(self.trans_use(tree)),
             /*
-            ast::ItemKind::Use(ref view_path) => ItemKind::Use(self.trans_use(view_path)),
             ast::ItemKind::Ty(ref ty, ref generics) => {
                 ItemKind::TypeAlias(self.trans_type_alias(ident, generics, ty))
             }
@@ -495,6 +500,7 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_vis(&mut self, vis: &ast::Visibility) -> Vis {
         let name = match vis.node {
             ast::VisibilityKind::Public => "pub".to_string(),
@@ -518,15 +524,17 @@ impl Translator {
         }
     }
 
+    #[inline]
     fn trans_mod_decl(&mut self, ident: String) -> ModDecl {
         ModDecl {
             name: ident,
         }
     }
 
+    #[inline]
     fn trans_extren_crate(&mut self, ident: String, rename: &Option<ast::Symbol>) -> ExternCrate {
         let name = match *rename {
-            Some(ref name) => format!("{} as {}", symbol_to_string(name), ident),
+            Some(ref rename) => format!("{} as {}", symbol_to_string(rename), ident),
             None => ident,
         };
 
@@ -535,74 +543,62 @@ impl Translator {
         }
     }
 
-    /*
-    fn trans_use(&mut self, view_path: &ast::ViewPath) -> Use {
-        let (base, mut names) = match view_path.node {
-            ast::ViewPathSimple(ref ident, ref path) => {
-                self.leaf_loc(&path.span);
-                let mut base = path_to_string(path);
-                if path.segments.last().unwrap().identifier.name != ident.name {
-                    base = format!("{} as {}", base, ident_to_string(ident));
+    #[inline]
+    fn trans_use(&mut self, tree: &ast::UseTree) -> Use {
+        let (path, trees) = match tree.kind {
+            ast::UseTreeKind::Simple(rename, ..) => {
+                self.leaf_loc(&tree.span);
+                let mut path = path_to_string(&tree.prefix);
+                if let Some(ref rename) = rename {
+                    path = format!("{} as {}", path, ident_to_string(rename));
                 }
-                (base, Vec::new())
+                (path, None)
             }
-            ast::ViewPathGlob(ref path) => {
-                self.leaf_loc(&path.span);
-                let base = format!("{}::*", path_to_string(path));
-                (base, Vec::new())
+            ast::UseTreeKind::Glob => {
+                self.leaf_loc(&tree.span);
+                let mut path = String::new();
+                if !tree.prefix.segments.is_empty() {
+                    path.push_str(&path_to_string(&tree.prefix));
+                    path.push_str("::");
+                }
+                path.push_str("*");
+                (path, None)
             }
-            ast::ViewPathList(ref path, ref items) => {
-                let loc = self.loc(&path.span);
-                let base = path_to_string(path);
-                let names = self.trans_use_names(items);
+            ast::UseTreeKind::Nested(ref trees) => {
+                let loc = self.loc(&tree.span);
+                let path = path_to_string(&tree.prefix);
+                let mut trees = self.trans_use_trees(trees);
                 self.set_loc(&loc);
-                (base, names)
+                trees.sort_by(|a, b| {
+                    if a.path.starts_with("self") {
+                        Ordering::Less
+                    } else if b.path.starts_with("self") {
+                        Ordering::Greater
+                    } else {
+                        a.path.cmp(&b.path)
+                    }
+                });
+                (path, Some(trees))
             }
         };
-
-        names.sort_by(|a, b| {
-            if a.s == "self" {
-                Ordering::Less
-            } else if b.s == "self" {
-                Ordering::Greater
-            } else {
-                a.s.cmp(&b.s)
-            }
-        });
 
         Use {
-            base: base,
-            names: names,
+            path,
+            trees,
         }
     }
 
-    fn trans_use_names(&mut self, items: &Vec<ast::PathListItem>) -> Vec<Chunk> {
-        trans_list!(self, items, trans_use_name)
+    #[inline]
+    fn trans_use_trees(&mut self, trees: &Vec<(ast::UseTree, ast::NodeId)>) -> Vec<Use> {
+        trans_list!( self, trees, trans_use_tree)
     }
 
-    fn trans_use_name(&mut self, item: &ast::PathListItem) -> Chunk {
-        let loc = self.leaf_loc(&item.span);
-        let (mut s, rename) = match item.node {
-            ast::PathListItemKind::Ident {
-                ref name,
-                ref rename,
-                ..
-            } => (ident_to_string(name), rename),
-            ast::PathListItemKind::Mod {
-                ref rename,
-                ..
-            } => ("self".to_string(), rename),
-        };
-        if let Some(ref ident) = *rename {
-            s = format!("{} as {}", s, ident_to_string(ident));
-        };
-
-        Chunk {
-            loc: loc,
-            s: s,
-        }
+    #[inline]
+    fn trans_use_tree(&mut self, tree: &(ast::UseTree, ast::NodeId)) -> Use {
+        self.trans_use(&tree.0)
     }
 
+    /*
     fn trans_type_alias(&mut self, ident: String, generics: &ast::Generics, ty: &ast::Ty)
                         -> TypeAlias {
         TypeAlias {

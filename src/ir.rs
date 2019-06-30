@@ -80,7 +80,6 @@ pub struct Attr {
 pub struct MetaItem {
     pub loc: Loc,
     pub name: String,
-    //pub items: Option<Box<Vec<MetaItem>>>,
     pub items: Option<Vec<MetaItem>>,
 }
 
@@ -109,8 +108,8 @@ pub enum ItemKind {
     Mod(Mod),
     ModDecl(ModDecl),
     ExternCrate(ExternCrate),
-    /*
     Use(Use),
+    /*
     TypeAlias(TypeAlias),
     ForeignMod(ForeignMod),
     Const(Const),
@@ -135,13 +134,13 @@ pub struct ExternCrate {
     pub name: String,
 }
 
-/*
 #[derive(Debug)]
 pub struct Use {
-    pub prefix: String,
-    pub names: Vec<Chunk>,
+    pub path: String,
+    pub trees: Option<Vec<Use>>,
 }
 
+/*
 #[derive(Debug)]
 pub struct TypeAlias {
     pub name: String,
