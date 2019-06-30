@@ -58,7 +58,7 @@ impl Chunk {
 pub struct Crate {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
-    //pub module: Mod,
+    pub module: Mod,
 }
 
 pub type Doc = Chunk;
@@ -83,8 +83,6 @@ pub struct MetaItem {
     pub items: Option<Box<Vec<MetaItem>>>,
 }
 
-/*
-
 #[derive(Debug)]
 pub struct Mod {
     pub loc: Loc,
@@ -96,16 +94,22 @@ pub struct Mod {
 pub struct Item {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
-    pub is_pub: bool,
+    pub vis: Vis,
     pub item: ItemKind,
 }
 
 #[derive(Debug)]
+pub struct Vis {
+    pub name: String,
+}
+
+#[derive(Debug)]
 pub enum ItemKind {
+    Mod(Mod),
+    ModDecl(ModDecl),
+    /*
     ExternCrate(ExternCrate),
     Use(Use),
-    ModDecl(ModDecl),
-    Mod(Mod),
     TypeAlias(TypeAlias),
     ForeignMod(ForeignMod),
     Const(Const),
@@ -117,8 +121,15 @@ pub enum ItemKind {
     ImplDefault(ImplDefault),
     Impl(Impl),
     Macro(MacroRaw),
+    */
 }
 
+#[derive(Debug)]
+pub struct ModDecl {
+    pub name: String,
+}
+
+/*
 #[derive(Debug)]
 pub struct ExternCrate {
     pub name: String,
@@ -128,11 +139,6 @@ pub struct ExternCrate {
 pub struct Use {
     pub base: String,
     pub names: Vec<Chunk>,
-}
-
-#[derive(Debug)]
-pub struct ModDecl {
-    pub name: String,
 }
 
 #[derive(Debug)]

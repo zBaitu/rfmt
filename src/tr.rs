@@ -246,10 +246,8 @@ impl Translator {
 
         let loc = self.loc(&krate.span);
         let attrs = self.trans_attrs(&krate.attrs);
-        /*
         let crate_mod_name = self.crate_mod_name();
         let module = self.trans_mod(crate_mod_name, &krate.module);
-        */
 
         let crate_file_end = self.crate_file_end();
         self.trans_comments(crate_file_end);
@@ -258,7 +256,7 @@ impl Translator {
             krate: Crate {
                 loc,
                 attrs,
-                //module: module,
+                module,
             },
             leading_cmnts: self.leading_cmnts,
             trailing_cmnts: self.trailing_cmnts,
@@ -403,10 +401,8 @@ impl Translator {
         }
     }
 
-
-    /*
     fn crate_file_name(&self) -> String {
-        self.sess.codemap().files.borrow().fiast().unwrap().name.clone()
+        self.sess.source_map().files().first().unwrap().name.to_string()
     }
 
     fn crate_mod_name(&self) -> String {
@@ -417,22 +413,16 @@ impl Translator {
         name
     }
 
-
-   fn trans_mod(&mut self, name: String, module: &ast::Mod) -> Mod {
+    fn trans_mod(&mut self, name: String, module: &ast::Mod) -> Mod {
         let loc = self.loc(&module.inner);
         let items = self.trans_items(&module.items);
         self.set_loc(&loc);
 
         Mod {
-            loc: loc,
-            name: name,
-            items: items,
+            loc,
+            name,
+            items,
         }
-    }
-
-    #[inline]
-    fn is_mod_decl(&self, module: &ast::Mod) -> bool {
-        module.inner.lo == module.inner.hi
     }
 
     fn trans_items(&mut self, items: &Vec<ast::P<ast::Item>>) -> Vec<Item> {
@@ -442,21 +432,21 @@ impl Translator {
     fn trans_item(&mut self, item: &ast::Item) -> Item {
         let loc = self.loc(&item.span);
         let attrs = self.trans_attrs(&item.attrs);
-
-        let is_pub = is_pub(&item.vis);
+        let vis = self.trans_vis(&item.vis);
         let ident = ident_to_string(&item.ident);
         let item = match item.node {
+            ast::ItemKind::Mod(ref module) => {
+                if module.inline {
+                    ItemKind::Mod(self.trans_mod(ident, module))
+                } else {
+                    ItemKind::ModDecl(self.trans_mod_decl(ident))
+                }
+            }
+            /*
             ast::ItemKind::ExternCrate(ref rename) => {
                 ItemKind::ExternCrate(self.trans_extren_crate(ident, rename))
             }
             ast::ItemKind::Use(ref view_path) => ItemKind::Use(self.trans_use(view_path)),
-            ast::ItemKind::Mod(ref module) => {
-                if self.is_mod_decl(module) {
-                    ItemKind::ModDecl(self.trans_mod_decl(ident))
-                } else {
-                    ItemKind::Mod(self.trans_mod(ident, module))
-                }
-            }
             ast::ItemKind::Ty(ref ty, ref generics) => {
                 ItemKind::TypeAlias(self.trans_type_alias(ident, generics, ty))
             }
@@ -491,17 +481,49 @@ impl Translator {
                                                trait_ref, ty, items))
             }
             ast::ItemKind::Mac(ref mac) => ItemKind::Macro(self.trans_macro_raw(mac)),
+            */
+            _ => unreachable!(),
         };
 
         self.set_loc(&loc);
         Item {
-            loc: loc,
-            attrs: attrs,
-            is_pub: is_pub,
-            item: item,
+            loc,
+            attrs,
+            vis,
+            item,
         }
     }
 
+    fn trans_vis(&mut self, vis: &ast::Visibility) -> Vis {
+        let name = match vis.node {
+            ast::VisibilityKind::Public => "pub".to_string(),
+            ast::VisibilityKind::Crate(sugar) => match sugar {
+                ast::CrateSugar::PubCrate => "pub(crate)".to_string(),
+                ast::CrateSugar::JustCrate => "crate".to_string(),
+            }
+            ast::VisibilityKind::Restricted { ref path, .. } => {
+                let path = path_to_string(path);
+                if path == "self" || path == "super" {
+                    format!("pub({})", path)
+                } else {
+                    format!("pub(in {})", path)
+                }
+            }
+            ast::VisibilityKind::Inherited => "".to_string(),
+        };
+
+        Vis {
+            name,
+        }
+    }
+
+    fn trans_mod_decl(&mut self, ident: String) -> ModDecl {
+        ModDecl {
+            name: ident,
+        }
+    }
+
+    /*
     fn trans_extren_crate(&mut self, ident: String, rename: &Option<ast::Name>) -> ExternCrate {
         let name = match *rename {
             Some(ref name) => format!("{} as {}", name_to_string(name), ident),
@@ -577,12 +599,6 @@ impl Translator {
         Chunk {
             loc: loc,
             s: s,
-        }
-    }
-
-    fn trans_mod_decl(&mut self, ident: String) -> ModDecl {
-        ModDecl {
-            name: ident,
         }
     }
 

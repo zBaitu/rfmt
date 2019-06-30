@@ -1,4 +1,8 @@
-mod aa {}
 mod a;
-mod c {}
+
+mod aa {}
+
 pub mod b;
+
+mod c {}
+
