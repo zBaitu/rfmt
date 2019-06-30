@@ -442,10 +442,10 @@ impl Translator {
                     ItemKind::ModDecl(self.trans_mod_decl(ident))
                 }
             }
-            /*
             ast::ItemKind::ExternCrate(ref rename) => {
                 ItemKind::ExternCrate(self.trans_extren_crate(ident, rename))
             }
+            /*
             ast::ItemKind::Use(ref view_path) => ItemKind::Use(self.trans_use(view_path)),
             ast::ItemKind::Ty(ref ty, ref generics) => {
                 ItemKind::TypeAlias(self.trans_type_alias(ident, generics, ty))
@@ -523,18 +523,18 @@ impl Translator {
         }
     }
 
-    /*
-    fn trans_extren_crate(&mut self, ident: String, rename: &Option<ast::Name>) -> ExternCrate {
+    fn trans_extren_crate(&mut self, ident: String, rename: &Option<ast::Symbol>) -> ExternCrate {
         let name = match *rename {
-            Some(ref name) => format!("{} as {}", name_to_string(name), ident),
+            Some(ref name) => format!("{} as {}", symbol_to_string(name), ident),
             None => ident,
         };
 
         ExternCrate {
-            name: name,
+            name,
         }
     }
 
+    /*
     fn trans_use(&mut self, view_path: &ast::ViewPath) -> Use {
         let (base, mut names) = match view_path.node {
             ast::ViewPathSimple(ref ident, ref path) => {

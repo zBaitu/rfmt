@@ -107,8 +107,8 @@ pub struct Vis {
 pub enum ItemKind {
     Mod(Mod),
     ModDecl(ModDecl),
-    /*
     ExternCrate(ExternCrate),
+    /*
     Use(Use),
     TypeAlias(TypeAlias),
     ForeignMod(ForeignMod),
@@ -129,12 +129,12 @@ pub struct ModDecl {
     pub name: String,
 }
 
-/*
 #[derive(Debug)]
 pub struct ExternCrate {
     pub name: String,
 }
 
+/*
 #[derive(Debug)]
 pub struct Use {
     pub base: String,
