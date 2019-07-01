@@ -109,8 +109,8 @@ pub enum ItemKind {
     ModDecl(ModDecl),
     ExternCrate(ExternCrate),
     Use(Use),
-    /*
     TypeAlias(TypeAlias),
+    /*
     ForeignMod(ForeignMod),
     Const(Const),
     Static(Static),
@@ -140,7 +140,6 @@ pub struct Use {
     pub trees: Option<Vec<Use>>,
 }
 
-/*
 #[derive(Debug)]
 pub struct TypeAlias {
     pub name: String,
@@ -195,7 +194,7 @@ pub struct PolyTraitRef {
 impl PolyTraitRef {
     pub fn new_sized(loc: Loc) -> PolyTraitRef {
         PolyTraitRef {
-            loc: loc,
+            loc,
             lifetime_defs: Vec::new(),
             trait_ref: TraitRef::new_sized(loc),
         }
@@ -238,16 +237,14 @@ pub struct WhereBound {
 #[derive(Debug)]
 pub struct Path {
     pub loc: Loc,
-    pub global: bool,
-    pub segs: Vec<PathSegment>,
+    pub segments: Vec<PathSegment>,
 }
 
 impl Path {
     pub fn new_sized(loc: Loc) -> Path {
         Path {
-            loc: loc,
-            global: Default::default(),
-            segs: vec![PathSegment::new_sized()],
+            loc,
+            segments: vec![PathSegment::new_sized()],
         }
     }
 }
@@ -288,10 +285,16 @@ impl AngleParam {
 }
 
 #[derive(Debug)]
+pub enum TypeBindingKind {
+    Eq(Type),
+    Bound(Vec<TypeParamBound>),
+}
+
+#[derive(Debug)]
 pub struct TypeBinding {
     pub loc: Loc,
     pub name: String,
-    pub ty: Type,
+    pub binding: TypeBindingKind,
 }
 
 #[derive(Debug)]
@@ -310,11 +313,12 @@ pub struct QSelf {
 #[derive(Debug)]
 pub struct Type {
     pub loc: Loc,
-    pub ty: TypeKind,
+    //pub ty: TypeKind,
 }
 
 #[derive(Debug)]
 pub enum TypeKind {
+    /*
     Path(Box<PathType>),
     Ptr(Box<PtrType>),
     Ref(Box<RefType>),
@@ -326,8 +330,10 @@ pub enum TypeKind {
     PolyTraitRef(Box<PolyTraitRefType>),
     Macro(Box<Macro>),
     Infer,
+    */
 }
 
+/*
 #[derive(Debug)]
 pub struct PathType {
     pub qself: Option<QSelf>,

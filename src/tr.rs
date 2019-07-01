@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
+use syntax::mut_visit::noop_flat_map_stmt_kind;
 use syntax::parse::ParseSess;
 
 use crate::ast;
@@ -103,17 +104,12 @@ fn path_to_string(path: &ast::Path) -> String {
     })
 }
 
-/*
-#[inline]
-fn is_pub(vis: &ast::Visibility) -> bool {
-    *vis == ast::Visibility::Public
-}
-
 #[inline]
 fn is_sized(modifier: ast::TraitBoundModifier) -> bool {
     modifier == ast::TraitBoundModifier::Maybe
 }
 
+/*
 #[inline]
 fn is_mut(mutbl: ast::Mutability) -> bool {
     mutbl == ast::Mutability::Mutable
@@ -198,6 +194,7 @@ fn token_to_macro_expr_sep(token: &ast::Token) -> Option<MacroExprSep> {
         s: s,
     })
 }
+*/
 
 #[inline]
 fn map_ref_mut<T, F, R>(opt: &Option<T>, mut f: F) -> Option<R> where F: FnMut(&T) -> R {
@@ -206,7 +203,6 @@ fn map_ref_mut<T, F, R>(opt: &Option<T>, mut f: F) -> Option<R> where F: FnMut(&
         None => None,
     }
 }
-*/
 
 
 pub struct TrResult {
@@ -452,10 +448,10 @@ impl Translator {
             }
             ast::ItemKind::ExternCrate(ref rename) => ItemKind::ExternCrate(self.trans_extren_crate(ident, rename)),
             ast::ItemKind::Use(ref tree) => ItemKind::Use(self.trans_use(tree)),
-            /*
             ast::ItemKind::Ty(ref ty, ref generics) => {
                 ItemKind::TypeAlias(self.trans_type_alias(ident, generics, ty))
             }
+            /*
             ast::ItemKind::ForeignMod(ref module)
             => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
             ast::ItemKind::Const(ref ty, ref expr)
@@ -598,7 +594,6 @@ impl Translator {
         self.trans_use(&tree.0)
     }
 
-    /*
     fn trans_type_alias(&mut self, ident: String, generics: &ast::Generics, ty: &ast::Ty)
                         -> TypeAlias {
         TypeAlias {
@@ -610,87 +605,103 @@ impl Translator {
 
     fn trans_generics(&mut self, generics: &ast::Generics) -> Generics {
         Generics {
-            lifetime_defs: self.trans_lifetime_defs(&generics.lifetimes),
-            type_params: self.trans_type_params(&generics.ty_params),
+            lifetime_defs: self.trans_lifetime_defs(&generics.params),
+            type_params: self.trans_type_params(&generics.params),
             wh: self.trans_where(&generics.where_clause.predicates),
         }
     }
 
-    fn trans_lifetime_defs(&mut self, lifetime_defs: &Vec<ast::LifetimeDef>)
-                           -> Vec<LifetimeDef> {
-        trans_list!(self, lifetime_defs, trans_lifetime_def)
+    fn trans_lifetime_defs(&mut self, params: &Vec<ast::GenericParam>) -> Vec<LifetimeDef> {
+        params.into_iter().fold(Vec::new(), |mut lifetime_defs, param| {
+            if let ast::GenericParamKind::Lifetime = param.kind {
+                lifetime_defs.push(self.trans_lifetime_def(param));
+            }
+            lifetime_defs
+        })
     }
 
-    fn trans_lifetime_def(&mut self, lifetime_def: &ast::LifetimeDef) -> LifetimeDef {
-        let lifetime = self.trans_lifetime(&lifetime_def.lifetime);
+    fn trans_lifetime_def(&mut self, param: &ast::GenericParam) -> LifetimeDef {
+        let lifetime = self.trans_lifetime(&param.ident);
         LifetimeDef {
             loc: lifetime.loc,
-            lifetime: lifetime,
-            bounds: self.trans_lifetimes(&lifetime_def.bounds),
+            lifetime,
+            bounds: self.trans_lifetimes(&param.bounds),
         }
     }
 
-    fn trans_lifetimes(&mut self, lifetimes: &Vec<ast::Lifetime>) -> Vec<Lifetime> {
-        trans_list!(self, lifetimes, trans_lifetime)
-    }
-
-    fn trans_lifetime(&mut self, lifetime: &ast::Lifetime) -> Lifetime {
+    fn trans_lifetime(&mut self, ident: &ast::Ident) -> Lifetime {
         Lifetime {
-            loc: self.leaf_loc(&lifetime.span),
-            s: name_to_string(&lifetime.name),
+            loc: self.leaf_loc(&ident.span),
+            s: symbol_to_string(&ident.name),
         }
     }
 
-    fn trans_type_params(&mut self, type_params: &[ast::TyParam]) -> Vec<TypeParam> {
-        trans_list!(self, type_params, trans_type_param)
+    fn trans_lifetimes(&mut self, bounds: &ast::GenericBounds) -> Vec<Lifetime> {
+        bounds.into_iter().fold(Vec::new(), |mut lifetimes, bound| {
+            if let ast::GenericBound::Outlives(ref lifetime) = bound {
+                lifetimes.push(self.trans_lifetime(&lifetime.ident));
+            }
+            lifetimes
+        })
     }
 
-    fn trans_type_param(&mut self, type_param: &ast::TyParam) -> TypeParam {
-        let loc = self.loc(&type_param.span);
-        let name = ident_to_string(&type_param.ident);
-        let bounds = self.trans_type_param_bounds(&type_param.bounds);
-        let default = map_ref_mut(&type_param.default, |ty| self.trans_type(ty));
+    fn trans_type_params(&mut self, params: &Vec<ast::GenericParam>) -> Vec<TypeParam> {
+        params.into_iter().fold(Vec::new(), |mut type_params, param| {
+            if let ast::GenericParamKind::Type { .. } = param.kind {
+                type_params.push(self.trans_type_param(param));
+            }
+            type_params
+        })
+    }
+
+    fn trans_type_param(&mut self, param: &ast::GenericParam) -> TypeParam {
+        let loc = self.loc(&param.ident.span);
+        let name = ident_to_string(&param.ident);
+        let bounds = self.trans_type_param_bounds(&param.bounds);
+        let default = match param.kind {
+            ast::GenericParamKind::Type { ref default } => map_ref_mut(default, |ty| self.trans_type(ty)),
+            _ => None,
+        };
         self.set_loc(&loc);
 
         TypeParam {
-            loc: loc,
-            name: name,
-            bounds: bounds,
-            default: default,
+            loc,
+            name,
+            bounds,
+            default,
         }
     }
 
-    fn trans_type_param_bounds(&mut self, bounds: &[ast::TyParamBound]) -> Vec<TypeParamBound> {
+    fn trans_type_param_bounds(&mut self, bounds: &ast::GenericBounds) -> Vec<TypeParamBound> {
         trans_list!(self, bounds, trans_type_param_bound)
     }
 
-    fn trans_type_param_bound(&mut self, bound: &ast::TyParamBound) -> TypeParamBound {
+    fn trans_type_param_bound(&mut self, bound: &ast::GenericBound) -> TypeParamBound {
         match *bound {
-            ast::RegionTyParamBound(ref lifetime) => {
-                TypeParamBound::Lifetime(self.trans_lifetime(lifetime))
+            ast::GenericBound::Outlives(ref lifetime) => {
+                TypeParamBound::Lifetime(self.trans_lifetime(&lifetime.ident))
             }
-            ast::TraitTyParamBound(ref poly_trait_ref, modifier) => {
+            ast::GenericBound::Trait(ref poly_trait_ref, modifier) => {
                 TypeParamBound::PolyTraitRef(self.trans_poly_trait_ref(poly_trait_ref, modifier))
             }
         }
     }
 
-    fn trans_poly_trait_ref(&mut self, poly_trait_ref: &ast::PolyTraitRef,
-                            modifier: ast::TraitBoundModifier)
+    fn trans_poly_trait_ref(&mut self, poly_trait_ref: &ast::PolyTraitRef, modifier: ast::TraitBoundModifier)
                             -> PolyTraitRef {
         if is_sized(modifier) {
             return PolyTraitRef::new_sized(self.leaf_loc(&poly_trait_ref.span));
         }
 
         let loc = self.loc(&poly_trait_ref.span);
-        let lifetime_defs = self.trans_lifetime_defs(&poly_trait_ref.bound_lifetimes);
+        let lifetime_defs = self.trans_lifetime_defs(&poly_trait_ref.bound_generic_params);
         let trait_ref = self.trans_trait_ref(&poly_trait_ref.trait_ref);
         self.set_loc(&loc);
 
         PolyTraitRef {
-            loc: loc,
-            lifetime_defs: lifetime_defs,
-            trait_ref: trait_ref,
+            loc,
+            lifetime_defs,
+            trait_ref,
         }
     }
 
@@ -704,15 +715,13 @@ impl Translator {
         }
     }
 
-    fn trans_where_clauses(&mut self, predicates: &Vec<ast::WherePredicate>)
-                           -> Vec<WhereClause> {
+    fn trans_where_clauses(&mut self, predicates: &Vec<ast::WherePredicate>) -> Vec<WhereClause> {
         trans_list!(self, predicates, trans_where_clause)
     }
 
     fn trans_where_clause(&mut self, predicate: &ast::WherePredicate) -> WhereClause {
         match *predicate {
-            ast::WherePredicate::RegionPredicate(ref region)
-            => self.trans_where_lifetime(region),
+            ast::WherePredicate::RegionPredicate(ref region) => self.trans_where_lifetime(region),
             ast::WherePredicate::BoundPredicate(ref bound) => self.trans_where_bound(bound),
             _ => unreachable!(),
         }
@@ -720,102 +729,131 @@ impl Translator {
 
     fn trans_where_lifetime(&mut self, region: &ast::WhereRegionPredicate) -> WhereClause {
         let loc = self.loc(&region.span);
-        let lifetime = self.trans_lifetime(&region.lifetime);
+        let lifetime = self.trans_lifetime(&region.lifetime.ident);
         let bounds = self.trans_lifetimes(&region.bounds);
         self.set_loc(&loc);
 
         WhereClause {
-            loc: loc,
+            loc,
             clause: WhereKind::LifetimeDef(LifetimeDef {
                 loc: lifetime.loc,
-                lifetime: lifetime,
-                bounds: bounds,
+                lifetime,
+                bounds,
             }),
         }
     }
 
     fn trans_where_bound(&mut self, bound: &ast::WhereBoundPredicate) -> WhereClause {
         let loc = self.loc(&bound.span);
-        let lifetime_defs = self.trans_lifetime_defs(&bound.bound_lifetimes);
+        let lifetime_defs = self.trans_lifetime_defs(&bound.bound_generic_params);
         let ty = self.trans_type(&bound.bounded_ty);
         let bounds = self.trans_type_param_bounds(&bound.bounds);
         self.set_loc(&loc);
 
         WhereClause {
-            loc: loc,
+            loc,
             clause: WhereKind::Bound(WhereBound {
-                lifetime_defs: lifetime_defs,
-                ty: ty,
-                bounds: bounds,
+                lifetime_defs,
+                ty,
+                bounds,
             }),
         }
     }
 
     fn trans_path(&mut self, path: &ast::Path) -> Path {
         let loc = self.loc(&path.span);
-        let segs = self.trans_path_segments(&path.segments);
+        let segments = self.trans_path_segments(&path.segments);
         self.set_loc(&loc);
 
         Path {
-            loc: loc,
-            global: path.global,
-            segs: segs,
+            loc,
+            segments,
         }
     }
 
-    fn trans_path_segments(&mut self, segs: &Vec<ast::PathSegment>) -> Vec<PathSegment> {
-        trans_list!(self, segs, trans_path_segment)
+    fn trans_path_segments(&mut self, segments: &Vec<ast::PathSegment>) -> Vec<PathSegment> {
+        trans_list!(self, segments, trans_path_segment)
     }
 
     fn trans_path_segment(&mut self, seg: &ast::PathSegment) -> PathSegment {
         PathSegment {
-            name: ident_to_string(&seg.identifier),
-            param: self.trans_path_param(&seg.parameters),
+            name: ident_to_string(&seg.ident),
+            param: self.trans_generics_args_or_none(&seg.args),
         }
     }
 
-    fn trans_path_param(&mut self, params: &ast::PathParameters) -> PathParam {
-        match *params {
+    fn trans_generics_args_or_none(&mut self, args: &Option<ast::P<ast::GenericArgs>>) -> PathParam {
+        match *args {
+            Some(ref args) => self.trans_generic_args(args),
+            None => PathParam::Angle(Default::default()),
+        }
+    }
+
+    fn trans_generic_args(&mut self, args: &ast::GenericArgs) -> PathParam {
+        match *args {
             ast::AngleBracketed(ref param) => PathParam::Angle(self.trans_angle_param(param)),
             ast::Parenthesized(ref param) => PathParam::Paren(self.trans_paren_param(param)),
         }
     }
 
-    fn trans_angle_param(&mut self, param: &ast::AngleBracketedParameterData) -> AngleParam {
+    fn trans_angle_param(&mut self, param: &ast::AngleBracketedArgs) -> AngleParam {
         AngleParam {
-            lifetimes: self.trans_lifetimes(&param.lifetimes),
-            types: self.trans_types(&param.types),
-            bindings: self.trans_type_bindings(&param.bindings),
+            lifetimes: self.trans_generic_args_to_lifetime(&param.args),
+            types: self.trans_generic_args_to_types(&param.args),
+            bindings: self.trans_type_bindings(&param.constraints),
         }
     }
 
-    fn trans_type_bindings(&mut self, bindings: &[ast::TypeBinding]) -> Vec<TypeBinding> {
+    fn trans_generic_args_to_lifetime(&mut self, args: &Vec<ast::GenericArg>) -> Vec<Lifetime> {
+        args.into_iter().fold(Vec::new(), |mut lifetimes, arg| {
+            if let ast::GenericArg::Lifetime(ref lifetime) = arg {
+                lifetimes.push(self.trans_lifetime(&lifetime.ident));
+            }
+            lifetimes
+        })
+    }
+
+    fn trans_generic_args_to_types(&mut self, args: &Vec<ast::GenericArg>) -> Vec<Type> {
+        args.into_iter().fold(Vec::new(), |mut types, arg| {
+            if let ast::GenericArg::Type(ref ty) = arg {
+                types.push(self.trans_type(ty));
+            }
+            types
+        })
+    }
+
+    fn trans_type_bindings(&mut self, bindings: &Vec<ast::AssocTyConstraint>) -> Vec<TypeBinding> {
         trans_list!(self, bindings, trans_type_binding)
     }
 
-    fn trans_type_binding(&mut self, binding: &ast::TypeBinding) -> TypeBinding {
+    fn trans_type_binding(&mut self, binding: &ast::AssocTyConstraint) -> TypeBinding {
         let loc = self.loc(&binding.span);
         let name = ident_to_string(&binding.ident);
-        let ty = self.trans_type(&binding.ty);
+        let binding = match binding.kind {
+            ast::AssocTyConstraintKind::Equality { ref ty } =>
+                TypeBindingKind::Eq(self.trans_type(ty)),
+            ast::AssocTyConstraintKind::Bound { ref bounds } =>
+                TypeBindingKind::Bound(self.trans_type_param_bounds(bounds)),
+        };
         self.set_loc(&loc);
 
         TypeBinding {
-            loc: loc,
-            name: name,
-            ty: ty,
+            loc,
+            name,
+            binding,
         }
     }
 
-    fn trans_paren_param(&mut self, param: &ast::ParenthesizedParameterData) -> ParenParam {
-        let loc = self.loc(&param.span);
-        let inputs = self.trans_types(&param.inputs);
-        let output = map_ref_mut(&param.output, |ty| self.trans_type(ty));
+    fn trans_paren_param(&mut self, args: &ast::ParenthesizedArgs) -> ParenParam {
+        let loc = self.loc(&args.span);
+        let inputs = self.trans_types(&args.inputs);
+        let output = map_ref_mut(&args.output, |ty| self.trans_type(ty));
         self.set_loc(&loc);
 
         ParenParam {
-            loc: loc,
-            inputs: inputs,
-            output: output,
+            loc,
+            inputs,
+            output,
         }
     }
 
@@ -826,52 +864,55 @@ impl Translator {
         }
     }
 
-    fn trans_types(&mut self, types: &[ast::P<ast::Ty>]) -> Vec<Type> {
+    fn trans_types(&mut self, types: &Vec<ast::P<ast::Ty>>) -> Vec<Type> {
         trans_list!(self, types, trans_type)
     }
 
     fn trans_type(&mut self, ty: &ast::Ty) -> Type {
         let loc = self.loc(&ty.span);
 
-        let ty = match ty.node {
-            ast::TyKind::Path(ref qself, ref path) => {
-                TypeKind::Path(Box::new(self.trans_path_type(qself, path)))
-            }
-            ast::TyKind::Ptr(ref mut_type)
-            => TypeKind::Ptr(Box::new(self.trans_ptr_type(mut_type))),
-            ast::TyKind::Rptr(ref lifetime, ref mut_type) => {
-                TypeKind::Ref(Box::new(self.trans_ref_type(lifetime, mut_type)))
-            }
-            ast::TyKind::Vec(ref ty) => TypeKind::Array(Box::new(self.trans_array_type(ty))),
-            ast::TyKind::FixedLengthVec(ref ty, ref expr) => {
-                TypeKind::FixedSizeArray(Box::new(self.trans_fixed_size_array_type(ty, expr)))
-            }
-            ast::TyKind::Tup(ref types)
-            => TypeKind::Tuple(Box::new(self.trans_tuple_type(types))),
-            ast::TyKind::Paren(ref ty) => {
-                TypeKind::Tuple(Box::new(self.trans_tuple_type(&vec![ty.clone()])))
-            }
-            ast::TyKind::BareFn(ref bare_fn) => {
-                TypeKind::BareFn(Box::new(self.trans_bare_fn_type(bare_fn)))
-            }
-            ast::TyKind::ObjectSum(ref ty, ref bounds) => {
-                TypeKind::Sum(Box::new(self.trans_sum_type(ty, bounds)))
-            }
-            ast::TyKind::PolyTraitRef(ref bounds) => {
-                TypeKind::PolyTraitRef(Box::new(self.trans_poly_trait_ref_type(bounds)))
-            }
-            ast::TyKind::Mac(ref mac) => TypeKind::Macro(Box::new(self.trans_macro(mac))),
-            ast::TyKind::Infer => TypeKind::Infer,
-            ast::TyKind::Typeof(_) => unreachable!(),
-        };
+        /*
+    let ty = match ty.node {
+        ast::TyKind::Path(ref qself, ref path) => {
+            TypeKind::Path(Box::new(self.trans_path_type(qself, path)))
+        }
+        ast::TyKind::Ptr(ref mut_type)
+        => TypeKind::Ptr(Box::new(self.trans_ptr_type(mut_type))),
+        ast::TyKind::Rptr(ref lifetime, ref mut_type) => {
+            TypeKind::Ref(Box::new(self.trans_ref_type(lifetime, mut_type)))
+        }
+        ast::TyKind::Vec(ref ty) => TypeKind::Array(Box::new(self.trans_array_type(ty))),
+        ast::TyKind::FixedLengthVec(ref ty, ref expr) => {
+            TypeKind::FixedSizeArray(Box::new(self.trans_fixed_size_array_type(ty, expr)))
+        }
+        ast::TyKind::Tup(ref types)
+        => TypeKind::Tuple(Box::new(self.trans_tuple_type(types))),
+        ast::TyKind::Paren(ref ty) => {
+            TypeKind::Tuple(Box::new(self.trans_tuple_type(&vec![ty.clone()])))
+        }
+        ast::TyKind::BareFn(ref bare_fn) => {
+            TypeKind::BareFn(Box::new(self.trans_bare_fn_type(bare_fn)))
+        }
+        ast::TyKind::ObjectSum(ref ty, ref bounds) => {
+            TypeKind::Sum(Box::new(self.trans_sum_type(ty, bounds)))
+        }
+        ast::TyKind::PolyTraitRef(ref bounds) => {
+            TypeKind::PolyTraitRef(Box::new(self.trans_poly_trait_ref_type(bounds)))
+        }
+        ast::TyKind::Mac(ref mac) => TypeKind::Macro(Box::new(self.trans_macro(mac))),
+        ast::TyKind::Infer => TypeKind::Infer,
+        ast::TyKind::Typeof(_) => unreachable!(),
+    };
+        */
 
         self.set_loc(&loc);
         Type {
-            loc: loc,
-            ty: ty,
+            loc,
+            //ty: ty,
         }
     }
 
+    /*
     #[inline]
     fn trans_path_type(&mut self, qself: &Option<ast::QSelf>, path: &ast::Path) -> PathType {
         PathType {
