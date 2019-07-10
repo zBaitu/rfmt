@@ -7,4 +7,3 @@ pub use syntax_pos::*;
 pub use syntax_pos::symbol::*;
 
 pub type TokenLit = token::Lit;
-

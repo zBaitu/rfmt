@@ -313,13 +313,14 @@ pub struct QSelf {
 #[derive(Debug)]
 pub struct Type {
     pub loc: Loc,
-    //pub ty: TypeKind,
+    pub ty: TypeKind,
 }
 
 #[derive(Debug)]
 pub enum TypeKind {
-    /*
+    Symbol(&'static str),
     Path(Box<PathType>),
+    /*
     Ptr(Box<PtrType>),
     Ref(Box<RefType>),
     Array(Box<ArrayType>),
@@ -333,13 +334,13 @@ pub enum TypeKind {
     */
 }
 
-/*
 #[derive(Debug)]
 pub struct PathType {
     pub qself: Option<QSelf>,
     pub path: Path,
 }
 
+/*
 #[derive(Debug)]
 pub struct PtrType {
     pub is_mut: bool,

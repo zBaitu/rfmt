@@ -1,7 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-use syntax::mut_visit::noop_flat_map_stmt_kind;
 use syntax::parse::ParseSess;
 
 use crate::ast;
@@ -448,9 +447,7 @@ impl Translator {
             }
             ast::ItemKind::ExternCrate(ref rename) => ItemKind::ExternCrate(self.trans_extren_crate(ident, rename)),
             ast::ItemKind::Use(ref tree) => ItemKind::Use(self.trans_use(tree)),
-            ast::ItemKind::Ty(ref ty, ref generics) => {
-                ItemKind::TypeAlias(self.trans_type_alias(ident, generics, ty))
-            }
+            ast::ItemKind::Ty(ref ty, ref generics) => ItemKind::TypeAlias(self.trans_type_alias(ident, generics, ty)),
             /*
             ast::ItemKind::ForeignMod(ref module)
             => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
@@ -871,48 +868,48 @@ impl Translator {
     fn trans_type(&mut self, ty: &ast::Ty) -> Type {
         let loc = self.loc(&ty.span);
 
-        /*
-    let ty = match ty.node {
-        ast::TyKind::Path(ref qself, ref path) => {
-            TypeKind::Path(Box::new(self.trans_path_type(qself, path)))
-        }
-        ast::TyKind::Ptr(ref mut_type)
-        => TypeKind::Ptr(Box::new(self.trans_ptr_type(mut_type))),
-        ast::TyKind::Rptr(ref lifetime, ref mut_type) => {
-            TypeKind::Ref(Box::new(self.trans_ref_type(lifetime, mut_type)))
-        }
-        ast::TyKind::Vec(ref ty) => TypeKind::Array(Box::new(self.trans_array_type(ty))),
-        ast::TyKind::FixedLengthVec(ref ty, ref expr) => {
-            TypeKind::FixedSizeArray(Box::new(self.trans_fixed_size_array_type(ty, expr)))
-        }
-        ast::TyKind::Tup(ref types)
-        => TypeKind::Tuple(Box::new(self.trans_tuple_type(types))),
-        ast::TyKind::Paren(ref ty) => {
-            TypeKind::Tuple(Box::new(self.trans_tuple_type(&vec![ty.clone()])))
-        }
-        ast::TyKind::BareFn(ref bare_fn) => {
-            TypeKind::BareFn(Box::new(self.trans_bare_fn_type(bare_fn)))
-        }
-        ast::TyKind::ObjectSum(ref ty, ref bounds) => {
-            TypeKind::Sum(Box::new(self.trans_sum_type(ty, bounds)))
-        }
-        ast::TyKind::PolyTraitRef(ref bounds) => {
-            TypeKind::PolyTraitRef(Box::new(self.trans_poly_trait_ref_type(bounds)))
-        }
-        ast::TyKind::Mac(ref mac) => TypeKind::Macro(Box::new(self.trans_macro(mac))),
-        ast::TyKind::Infer => TypeKind::Infer,
-        ast::TyKind::Typeof(_) => unreachable!(),
-    };
-        */
+        let ty = match ty.node {
+            ast::TyKind::Infer => TypeKind::Symbol("_"),
+            ast::TyKind::Never => TypeKind::Symbol("!"),
+            ast::TyKind::Path(ref qself, ref path) => TypeKind::Path(Box::new(self.trans_path_type(qself, path))),
+            /*
+            ast::TyKind::Ptr(ref mut_type)
+            => TypeKind::Ptr(Box::new(self.trans_ptr_type(mut_type))),
+            ast::TyKind::Rptr(ref lifetime, ref mut_type) => {
+                TypeKind::Ref(Box::new(self.trans_ref_type(lifetime, mut_type)))
+            }
+            ast::TyKind::Vec(ref ty) => TypeKind::Array(Box::new(self.trans_array_type(ty))),
+            ast::TyKind::FixedLengthVec(ref ty, ref expr) => {
+                TypeKind::FixedSizeArray(Box::new(self.trans_fixed_size_array_type(ty, expr)))
+            }
+            ast::TyKind::Tup(ref types)
+            => TypeKind::Tuple(Box::new(self.trans_tuple_type(types))),
+            ast::TyKind::Paren(ref ty) => {
+                TypeKind::Tuple(Box::new(self.trans_tuple_type(&vec![ty.clone()])))
+            }
+            ast::TyKind::BareFn(ref bare_fn) => {
+                TypeKind::BareFn(Box::new(self.trans_bare_fn_type(bare_fn)))
+            }
+            ast::TyKind::ObjectSum(ref ty, ref bounds) => {
+                TypeKind::Sum(Box::new(self.trans_sum_type(ty, bounds)))
+            }
+            ast::TyKind::PolyTraitRef(ref bounds) => {
+                TypeKind::PolyTraitRef(Box::new(self.trans_poly_trait_ref_type(bounds)))
+            }
+            ast::TyKind::Mac(ref mac) => TypeKind::Macro(Box::new(self.trans_macro(mac))),
+            ast::TyKind::Infer => TypeKind::Infer,
+            ast::TyKind::Typeof(_) => unreachable!(),
+            */
+            _ => unreachable!()
+        };
 
         self.set_loc(&loc);
         Type {
             loc,
-            //ty: ty,
+            ty,
         }
     }
 
-    /*
     #[inline]
     fn trans_path_type(&mut self, qself: &Option<ast::QSelf>, path: &ast::Path) -> PathType {
         PathType {
@@ -921,6 +918,7 @@ impl Translator {
         }
     }
 
+    /*
     #[inline]
     fn trans_ptr_type(&mut self, mut_type: &ast::MutTy) -> PtrType {
         PtrType {
