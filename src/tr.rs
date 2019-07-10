@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
@@ -108,12 +109,12 @@ fn is_sized(modifier: ast::TraitBoundModifier) -> bool {
     modifier == ast::TraitBoundModifier::Maybe
 }
 
-/*
 #[inline]
 fn is_mut(mutbl: ast::Mutability) -> bool {
     mutbl == ast::Mutability::Mutable
 }
 
+/*
 #[inline]
 fn is_unsafe(safety: ast::Unsafety) -> bool {
     safety == ast::Unsafety::Unsafe
@@ -872,21 +873,15 @@ impl Translator {
             ast::TyKind::Infer => TypeKind::Symbol("_"),
             ast::TyKind::Never => TypeKind::Symbol("!"),
             ast::TyKind::Path(ref qself, ref path) => TypeKind::Path(Box::new(self.trans_path_type(qself, path))),
-            /*
-            ast::TyKind::Ptr(ref mut_type)
-            => TypeKind::Ptr(Box::new(self.trans_ptr_type(mut_type))),
+            ast::TyKind::Ptr(ref mut_type) => TypeKind::Ptr(Box::new(self.trans_ptr_type(mut_type))),
             ast::TyKind::Rptr(ref lifetime, ref mut_type) => {
                 TypeKind::Ref(Box::new(self.trans_ref_type(lifetime, mut_type)))
             }
-            ast::TyKind::Vec(ref ty) => TypeKind::Array(Box::new(self.trans_array_type(ty))),
-            ast::TyKind::FixedLengthVec(ref ty, ref expr) => {
-                TypeKind::FixedSizeArray(Box::new(self.trans_fixed_size_array_type(ty, expr)))
-            }
-            ast::TyKind::Tup(ref types)
-            => TypeKind::Tuple(Box::new(self.trans_tuple_type(types))),
-            ast::TyKind::Paren(ref ty) => {
-                TypeKind::Tuple(Box::new(self.trans_tuple_type(&vec![ty.clone()])))
-            }
+            ast::TyKind::Tup(ref types) => TypeKind::Tuple(Box::new(self.trans_tuple_type(types))),
+            ast::TyKind::Paren(ref ty) => TypeKind::Tuple(Box::new(self.trans_tuple_type(&vec![ty.clone()]))),
+            ast::TyKind::Slice(ref ty) => TypeKind::Slice(Box::new(self.trans_slice_type(ty))),
+            ast::TyKind::Array(ref ty, ref ac) => TypeKind::Array(Box::new(self.trans_array_type(ty, &ac.value))),
+            /*
             ast::TyKind::BareFn(ref bare_fn) => {
                 TypeKind::BareFn(Box::new(self.trans_bare_fn_type(bare_fn)))
             }
@@ -897,10 +892,12 @@ impl Translator {
                 TypeKind::PolyTraitRef(Box::new(self.trans_poly_trait_ref_type(bounds)))
             }
             ast::TyKind::Mac(ref mac) => TypeKind::Macro(Box::new(self.trans_macro(mac))),
-            ast::TyKind::Infer => TypeKind::Infer,
             ast::TyKind::Typeof(_) => unreachable!(),
             */
-            _ => unreachable!()
+            _ => {
+                println!("{:#?}", ty.node);
+                unreachable!()
+            }
         };
 
         self.set_loc(&loc);
@@ -918,7 +915,6 @@ impl Translator {
         }
     }
 
-    /*
     #[inline]
     fn trans_ptr_type(&mut self, mut_type: &ast::MutTy) -> PtrType {
         PtrType {
@@ -928,28 +924,11 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_ref_type(&mut self, lifetime: &Option<ast::Lifetime>, mut_type: &ast::MutTy)
-                      -> RefType {
+    fn trans_ref_type(&mut self, lifetime: &Option<ast::Lifetime>, mut_type: &ast::MutTy) -> RefType {
         RefType {
-            lifetime: map_ref_mut(lifetime, |lifetime| self.trans_lifetime(lifetime)),
+            lifetime: map_ref_mut(lifetime, |lifetime| self.trans_lifetime(&lifetime.ident)),
             is_mut: is_mut(mut_type.mutbl),
             ty: self.trans_type(&mut_type.ty),
-        }
-    }
-
-    #[inline]
-    fn trans_array_type(&mut self, ty: &ast::Ty) -> ArrayType {
-        ArrayType {
-            ty: self.trans_type(ty),
-        }
-    }
-
-    #[inline]
-    fn trans_fixed_size_array_type(&mut self, ty: &ast::Ty, expr: &ast::Expr)
-                                   -> FixedSizeArrayType {
-        FixedSizeArrayType {
-            ty: self.trans_type(ty),
-            expr: self.trans_expr(expr),
         }
     }
 
@@ -960,6 +939,21 @@ impl Translator {
         }
     }
 
+    #[inline]
+    fn trans_slice_type(&mut self, ty: &ast::Ty) -> SliceType {
+        SliceType {
+            ty: self.trans_type(ty),
+        }
+    }
+
+    #[inline]
+    fn trans_array_type(&mut self, ty: &ast::Ty, expr: &ast::Expr) -> ArrayType {
+        ArrayType {
+            ty: self.trans_type(ty),
+        }
+    }
+
+    /*
     #[inline]
     fn trans_bare_fn_type(&mut self, bare_fn: &ast::BareFnTy) -> BareFnType {
         BareFnType {

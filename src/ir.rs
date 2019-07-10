@@ -320,12 +320,12 @@ pub struct Type {
 pub enum TypeKind {
     Symbol(&'static str),
     Path(Box<PathType>),
-    /*
     Ptr(Box<PtrType>),
     Ref(Box<RefType>),
-    Array(Box<ArrayType>),
-    FixedSizeArray(Box<FixedSizeArrayType>),
     Tuple(Box<TupleType>),
+    Slice(Box<SliceType>),
+    Array(Box<ArrayType>),
+    /*
     BareFn(Box<BareFnType>),
     Sum(Box<SumType>),
     PolyTraitRef(Box<PolyTraitRefType>),
@@ -340,7 +340,6 @@ pub struct PathType {
     pub path: Path,
 }
 
-/*
 #[derive(Debug)]
 pub struct PtrType {
     pub is_mut: bool,
@@ -355,21 +354,22 @@ pub struct RefType {
 }
 
 #[derive(Debug)]
-pub struct ArrayType {
-    pub ty: Type,
-}
-
-#[derive(Debug)]
-pub struct FixedSizeArrayType {
-    pub ty: Type,
-    pub expr: Expr,
-}
-
-#[derive(Debug)]
 pub struct TupleType {
     pub types: Vec<Type>,
 }
 
+#[derive(Debug)]
+pub struct SliceType {
+    pub ty: Type,
+}
+
+#[derive(Debug)]
+pub struct ArrayType {
+    pub ty: Type,
+    //pub expr: Expr,
+}
+
+/*
 #[derive(Debug)]
 pub struct BareFnType {
     pub lifetime_defs: Vec<LifetimeDef>,
