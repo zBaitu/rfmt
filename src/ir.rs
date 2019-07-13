@@ -327,8 +327,8 @@ pub enum TypeKind {
     Slice(Box<SliceType>),
     Array(Box<ArrayType>),
     Trait(Box<TraitType>),
-    /*
     BareFn(Box<BareFnType>),
+    /*
     Macro(Box<Macro>),
     */
 }
@@ -375,7 +375,6 @@ pub struct TraitType {
     pub bounds: Vec<TypeParamBound>,
 }
 
-/*
 #[derive(Debug)]
 pub struct BareFnType {
     pub lifetime_defs: Vec<LifetimeDef>,
@@ -383,7 +382,6 @@ pub struct BareFnType {
     pub abi: String,
     pub fn_sig: FnSig,
 }
-*/
 
 #[derive(Debug)]
 pub struct Const {
@@ -458,6 +456,25 @@ pub struct EnumField {
     pub name: String,
     pub body: StructBody,
     pub expr: Option<Expr>,
+}
+
+#[derive(Debug)]
+pub struct FnSig {
+    pub args: Vec<Arg>,
+    pub ret: Return,
+}
+
+#[derive(Debug)]
+pub struct Arg {
+    pub loc: Loc,
+    pub pat: Patten,
+    pub ty: Type,
+}
+
+#[derive(Debug)]
+pub struct Return {
+    pub nl: bool,
+    pub ret: Option<Type>,
 }
 
 /*
@@ -611,37 +628,7 @@ pub struct MethodImplItem {
     pub block: Block,
 }
 
-#[derive(Debug)]
-pub struct FnSig {
-    pub arg: FnArg,
-    pub ret: FnReturn,
-}
 
-#[derive(Debug)]
-pub struct FnArg {
-    pub args: Vec<Arg>,
-    pub va: bool,
-}
-
-#[derive(Debug)]
-pub struct Arg {
-    pub loc: Loc,
-    pub pat: Patten,
-    pub ty: Type,
-}
-
-#[derive(Debug)]
-pub struct FnReturn {
-    pub nl: bool,
-    pub ret: FnReturnKind,
-}
-
-#[derive(Debug)]
-pub enum FnReturnKind {
-    Unit,
-    Diverge,
-    Normal(Type),
-}
 
 #[derive(Debug)]
 pub struct MethodSig {
@@ -696,13 +683,16 @@ pub struct Local {
     pub ty: Option<Type>,
     pub init: Option<Expr>,
 }
+*/
 
 #[derive(Debug)]
 pub struct Patten {
     pub loc: Loc,
-    pub pat: PattenKind,
+    //pub pat: PattenKind,
+    pub s: String,
 }
 
+/*
 #[derive(Debug)]
 pub enum PattenKind {
     Wildcard,
