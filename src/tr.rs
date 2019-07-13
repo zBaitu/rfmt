@@ -317,18 +317,14 @@ impl Translator {
         }
     }
 
-
-    #[inline]
     fn trans_attrs(&mut self, attrs: &Vec<ast::Attribute>) -> Vec<AttrKind> {
         trans_list!(self, attrs, trans_attr_kind)
     }
 
-    #[inline]
     fn trans_thin_attrs(&mut self, attrs: &ThinVec<ast::Attribute>) -> Vec<AttrKind> {
         trans_list!(self, attrs, trans_attr_kind)
     }
 
-    #[inline]
     fn trans_attr_kind(&mut self, attr: &ast::Attribute) -> AttrKind {
         if attr.is_sugared_doc {
             AttrKind::Doc(self.trans_doc(attr))
@@ -337,7 +333,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_doc(&mut self, attr: &ast::Attribute) -> Doc {
         Doc {
             loc: self.leaf_loc(&attr.span),
@@ -345,7 +340,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_attr(&mut self, attr: &ast::Attribute) -> Attr {
         let loc = self.loc(&attr.span);
         let is_inner = is_inner(attr.style);
@@ -359,7 +353,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_meta_item(&mut self, meta_item: &ast::MetaItem) -> MetaItem {
         let name = path_to_string(&meta_item.path);
         match meta_item.node {
@@ -392,12 +385,10 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_nested_meta_items(&mut self, nested_meta_items: &Vec<ast::NestedMetaItem>) -> Vec<MetaItem> {
         trans_list!(self, nested_meta_items, trans_nested_meta_item)
     }
 
-    #[inline]
     fn trans_nested_meta_item(&mut self, nested_meta_item: &ast::NestedMetaItem) -> MetaItem {
         match nested_meta_item {
             ast::NestedMetaItem::Literal(ref lit) => {
@@ -425,7 +416,6 @@ impl Translator {
         name
     }
 
-    #[inline]
     fn trans_mod(&mut self, name: String, module: &ast::Mod) -> Mod {
         let loc = self.loc(&module.inner);
         let items = self.trans_items(&module.items);
@@ -438,7 +428,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_items(&mut self, items: &Vec<ast::P<ast::Item>>) -> Vec<Item> {
         trans_list!(self, items, trans_item)
     }
@@ -460,14 +449,13 @@ impl Translator {
             ast::ItemKind::ExternCrate(ref rename) => ItemKind::ExternCrate(self.trans_extren_crate(ident, rename)),
             ast::ItemKind::Use(ref tree) => ItemKind::Use(self.trans_use(tree)),
             ast::ItemKind::Ty(ref ty, ref generics) => ItemKind::TypeAlias(self.trans_type_alias(ident, generics, ty)),
+            ast::ItemKind::Const(ref ty, ref expr) => ItemKind::Const(self.trans_const(ident, ty, expr)),
+            ast::ItemKind::Static(ref ty, mutbl, ref expr) => {
+                ItemKind::Static(self.trans_static(mutbl, ident, ty, expr))
+            }
             /*
             ast::ItemKind::ForeignMod(ref module)
             => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
-            ast::ItemKind::Const(ref ty, ref expr)
-            => ItemKind::Const(self.trans_const(ident, ty, expr)),
-            ast::ItemKind::Static(ref ty, mutbl, ref expr) => {
-                ItemKind::Static(self.trans_static(is_mut(mutbl), ident, ty, expr))
-            }
             ast::ItemKind::Struct(ref variant, ref generics) => {
                 ItemKind::Struct(self.trans_struct(ident, generics, variant))
             }
@@ -529,14 +517,12 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_mod_decl(&mut self, ident: String) -> ModDecl {
         ModDecl {
             name: ident,
         }
     }
 
-    #[inline]
     fn trans_extren_crate(&mut self, ident: String, rename: &Option<ast::Symbol>) -> ExternCrate {
         let name = match *rename {
             Some(ref rename) => format!("{} as {}", symbol_to_string(rename), ident),
@@ -548,7 +534,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_use(&mut self, tree: &ast::UseTree) -> Use {
         let (path, trees) = match tree.kind {
             ast::UseTreeKind::Simple(rename, ..) => {
@@ -593,12 +578,10 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_use_trees(&mut self, trees: &Vec<(ast::UseTree, ast::NodeId)>) -> Vec<Use> {
         trans_list!(self, trees, trans_use_tree)
     }
 
-    #[inline]
     fn trans_use_tree(&mut self, tree: &(ast::UseTree, ast::NodeId)) -> Use {
         self.trans_use(&tree.0)
     }
@@ -918,7 +901,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_path_type(&mut self, qself: &Option<ast::QSelf>, path: &ast::Path) -> PathType {
         PathType {
             qself: map_ref_mut(qself, |qself| self.trans_qself(qself)),
@@ -926,7 +908,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_ptr_type(&mut self, mut_type: &ast::MutTy) -> PtrType {
         PtrType {
             is_mut: is_mut(mut_type.mutbl),
@@ -934,7 +915,6 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_ref_type(&mut self, lifetime: &Option<ast::Lifetime>, mut_type: &ast::MutTy) -> RefType {
         RefType {
             lifetime: map_ref_mut(lifetime, |lifetime| self.trans_lifetime(&lifetime.ident)),
@@ -943,21 +923,18 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_tuple_type(&mut self, types: &Vec<ast::P<ast::Ty>>) -> TupleType {
         TupleType {
             types: self.trans_types(types),
         }
     }
 
-    #[inline]
     fn trans_slice_type(&mut self, ty: &ast::Ty) -> SliceType {
         SliceType {
             ty: self.trans_type(ty),
         }
     }
 
-    #[inline]
     fn trans_array_type(&mut self, ty: &ast::Ty, expr: &ast::Expr) -> ArrayType {
         ArrayType {
             ty: self.trans_type(ty),
@@ -965,12 +942,29 @@ impl Translator {
         }
     }
 
-    #[inline]
     fn trans_trait_type(&mut self, is_dyn: bool, is_impl: bool, bounds: &ast::GenericBounds) -> TraitType {
         TraitType {
             is_dyn,
             is_impl,
             bounds: self.trans_type_param_bounds(bounds),
+        }
+    }
+
+    fn trans_const(&mut self, ident: String, ty: &ast::Ty, expr: &ast::Expr) -> Const {
+        Const {
+            name: ident,
+            ty: self.trans_type(ty),
+            expr: self.trans_expr(expr),
+        }
+    }
+
+    fn trans_static(&mut self, mutbl: ast::Mutability, ident: String, ty: &ast::Ty, expr: &ast::Expr)
+                    -> Static {
+        Static {
+            is_mut: is_mut(mutbl),
+            name: ident,
+            ty: self.trans_type(ty),
+            expr: self.trans_expr(expr),
         }
     }
 
@@ -982,13 +976,6 @@ impl Translator {
             is_unsafe: is_unsafe(bare_fn.unsafety),
             abi: abi_to_string(bare_fn.abi),
             fn_sig: self.trans_fn_sig(&bare_fn.decl),
-        }
-    }
-
-    #[inline]
-    fn trans_poly_trait_ref_type(&mut self, bounds: &ast::TyParamBounds) -> PolyTraitRefType {
-        PolyTraitRefType {
-            bounds: self.trans_type_param_bounds(bounds),
         }
     }
 
@@ -1043,24 +1030,6 @@ impl Translator {
             name: ident,
             generics: self.trans_generics(generics),
             fn_sig: self.trans_fn_sig(fn_decl),
-        }
-    }
-
-    fn trans_const(&mut self, ident: String, ty: &ast::Ty, expr: &ast::Expr) -> Const {
-        Const {
-            name: ident,
-            ty: self.trans_type(ty),
-            expr: self.trans_expr(expr),
-        }
-    }
-
-    fn trans_static(&mut self, is_mut: bool, ident: String, ty: &ast::Ty, expr: &ast::Expr)
-                    -> Static {
-        Static {
-            is_mut: is_mut,
-            name: ident,
-            ty: self.trans_type(ty),
-            expr: self.trans_expr(expr),
         }
     }
 
@@ -1653,7 +1622,6 @@ impl Translator {
     }
     */
 
-    #[inline]
     fn trans_exprs(&mut self, exprs: &[ast::P<ast::Expr>]) -> Vec<Expr> {
         trans_list!(self, exprs, trans_expr)
     }

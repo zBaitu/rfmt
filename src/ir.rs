@@ -110,10 +110,10 @@ pub enum ItemKind {
     ExternCrate(ExternCrate),
     Use(Use),
     TypeAlias(TypeAlias),
-    /*
-    ForeignMod(ForeignMod),
     Const(Const),
     Static(Static),
+    /*
+    ForeignMod(ForeignMod),
     Struct(Struct),
     Enum(Enum),
     Fn(Fn),
@@ -382,7 +382,24 @@ pub struct BareFnType {
     pub abi: String,
     pub fn_sig: FnSig,
 }
+*/
 
+#[derive(Debug)]
+pub struct Const {
+    pub name: String,
+    pub ty: Type,
+    pub expr: Expr,
+}
+
+#[derive(Debug)]
+pub struct Static {
+    pub is_mut: bool,
+    pub name: String,
+    pub ty: Type,
+    pub expr: Expr,
+}
+
+/*
 #[derive(Debug)]
 pub struct ForeignMod {
     pub abi: String,
@@ -415,21 +432,6 @@ pub struct ForeignFn {
     pub name: String,
     pub generics: Generics,
     pub fn_sig: FnSig,
-}
-
-#[derive(Debug)]
-pub struct Const {
-    pub name: String,
-    pub ty: Type,
-    pub expr: Expr,
-}
-
-#[derive(Debug)]
-pub struct Static {
-    pub is_mut: bool,
-    pub name: String,
-    pub ty: Type,
-    pub expr: Expr,
 }
 
 #[derive(Debug)]
