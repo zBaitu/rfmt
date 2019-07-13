@@ -458,12 +458,15 @@ impl Translator {
             ast::ItemKind::Struct(ref var, ref generics) => {
                 ItemKind::Struct(self.trans_struct(ident, generics, var))
             }
-            /*
-            ast::ItemKind::ForeignMod(ref module)
-            => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
+            ast::ItemKind::Union(ref var, ref generics) => {
+                ItemKind::Union(self.trans_union(ident, generics, var))
+            }
             ast::ItemKind::Enum(ref enum_def, ref generics) => {
                 ItemKind::Enum(self.trans_enum(ident, generics, enum_def))
             }
+            /*
+            ast::ItemKind::ForeignMod(ref module)
+            => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
             ast::ItemKind::Fn(ref fn_decl, unsafety, constness, abi, ref generics, ref block)
             => {
                 ItemKind::Fn(self.trans_fn(is_unsafe(unsafety), is_const(constness),
@@ -1038,6 +1041,57 @@ impl Translator {
         }
     }
 
+    fn trans_union(&mut self, ident: String, generics: &ast::Generics, var: &ast::VariantData) -> Union {
+        let fields = match *var {
+            ast::VariantData::Struct(ref fields, _) => {
+                self.trans_struct_fields(fields)
+            }
+            _ => unreachable!(),
+        };
+
+        Union {
+            name: ident,
+            generics: self.trans_generics(generics),
+            fields,
+        }
+    }
+
+    fn trans_enum(&mut self, ident: String, generics: &ast::Generics, enum_def: &ast::EnumDef) -> Enum {
+        Enum {
+            name: ident,
+            generics: self.trans_generics(generics),
+            body: self.trans_enum_body(enum_def),
+        }
+    }
+
+    fn trans_enum_body(&mut self, enum_def: &ast::EnumDef) -> EnumBody {
+        EnumBody {
+            fields: self.trans_enum_fields(&enum_def.variants),
+        }
+    }
+
+    fn trans_enum_fields(&mut self, vars: &Vec<ast::Variant>) -> Vec<EnumField> {
+        trans_list!(self, vars, trans_enum_field)
+    }
+
+    #[inline]
+    fn trans_enum_field(&mut self, var: &ast::Variant) -> EnumField {
+        let loc = self.loc(&var.span);
+        let attrs = self.trans_attrs(&var.node.attrs);
+        let name = ident_to_string(&var.node.ident);
+        let body = self.trans_struct_body(&var.node.data);
+        let expr = map_ref_mut(&var.node.disr_expr, |ac| self.trans_expr(&ac.value));
+        self.set_loc(&loc);
+
+        EnumField {
+            loc,
+            attrs,
+            name,
+            body,
+            expr,
+        }
+    }
+
     /*
     #[inline]
     fn trans_bare_fn_type(&mut self, bare_fn: &ast::BareFnTy) -> BareFnType {
@@ -1104,41 +1158,6 @@ impl Translator {
     }
 
 
-    fn trans_enum(&mut self, ident: String, generics: &ast::Generics, enum_def: &ast::EnumDef)
-                  -> Enum {
-        Enum {
-            name: ident,
-            generics: self.trans_generics(generics),
-            body: self.trans_enum_body(enum_def),
-        }
-    }
-
-    fn trans_enum_body(&mut self, enum_def: &ast::EnumDef) -> EnumBody {
-        EnumBody {
-            fields: self.trans_enum_fields(&enum_def.variants),
-        }
-    }
-
-    fn trans_enum_fields(&mut self, variants: &Vec<ast::Variant>) -> Vec<EnumField> {
-        trans_list!(self, variants, trans_enum_field)
-    }
-
-    fn trans_enum_field(&mut self, variant: &ast::Variant) -> EnumField {
-        let loc = self.loc(&variant.span);
-        let attrs = self.trans_attrs(&variant.node.attrs);
-        let name = ident_to_string(&variant.node.name);
-        let body = self.trans_struct_body(&variant.node.data);
-        let expr = map_ref_mut(&variant.node.disr_expr, |expr| self.trans_expr(expr));
-        self.set_loc(&loc);
-
-        EnumField {
-            loc: loc,
-            attrs: attrs,
-            name: name,
-            body: body,
-            expr: expr,
-        }
-    }
 
     fn trans_fn(&mut self, is_unsafe: bool, is_const: bool, abi: String, ident: String,
                 generics: &ast::Generics, fn_decl: &ast::FnDecl, block: &ast::Block)

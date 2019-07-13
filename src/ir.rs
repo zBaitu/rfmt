@@ -113,9 +113,10 @@ pub enum ItemKind {
     Const(Const),
     Static(Static),
     Struct(Struct),
+    Union(Union),
+    Enum(Enum),
     /*
     ForeignMod(ForeignMod),
-    Enum(Enum),
     Fn(Fn),
     Trait(Trait),
     ImplDefault(ImplDefault),
@@ -430,6 +431,35 @@ pub struct TupleField {
     pub ty: Type,
 }
 
+
+#[derive(Debug)]
+pub struct Union {
+    pub name: String,
+    pub generics: Generics,
+    pub fields: Vec<StructField>,
+}
+
+#[derive(Debug)]
+pub struct Enum {
+    pub name: String,
+    pub generics: Generics,
+    pub body: EnumBody,
+}
+
+#[derive(Debug)]
+pub struct EnumBody {
+    pub fields: Vec<EnumField>,
+}
+
+#[derive(Debug)]
+pub struct EnumField {
+    pub loc: Loc,
+    pub attrs: Vec<AttrKind>,
+    pub name: String,
+    pub body: StructBody,
+    pub expr: Option<Expr>,
+}
+
 /*
 #[derive(Debug)]
 pub struct ForeignMod {
@@ -466,26 +496,6 @@ pub struct ForeignFn {
 }
 
 
-#[derive(Debug)]
-pub struct Enum {
-    pub name: String,
-    pub generics: Generics,
-    pub body: EnumBody,
-}
-
-#[derive(Debug)]
-pub struct EnumBody {
-    pub fields: Vec<EnumField>,
-}
-
-#[derive(Debug)]
-pub struct EnumField {
-    pub loc: Loc,
-    pub attrs: Vec<AttrKind>,
-    pub name: String,
-    pub body: StructBody,
-    pub expr: Option<Expr>,
-}
 
 #[derive(Debug)]
 pub struct Fn {

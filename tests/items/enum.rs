@@ -1,19 +1,16 @@
-/*
 enum A {
     Dog = 10,
     Cat,
 }
-*/
 
-/*
 struct BA;
+
 struct BB;
 
 enum B {
     A(BA),
     B(BB),
 }
-*/
 
 enum C {
     CA {
@@ -21,5 +18,5 @@ enum C {
     },
     CB {
         b: i32,
-    }
+    },
 }
