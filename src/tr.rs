@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use syntax::parse::ParseSess;
+use syntax::ThinVec;
 
 use crate::ast;
 use crate::ir::*;
@@ -319,7 +320,12 @@ impl Translator {
 
     #[inline]
     fn trans_attrs(&mut self, attrs: &Vec<ast::Attribute>) -> Vec<AttrKind> {
-        trans_list!( self, attrs, trans_attr_kind)
+        trans_list!(self, attrs, trans_attr_kind)
+    }
+
+    #[inline]
+    fn trans_thin_attrs(&mut self, attrs: &ThinVec<ast::Attribute>) -> Vec<AttrKind> {
+        trans_list!(self, attrs, trans_attr_kind)
     }
 
     #[inline]
@@ -388,7 +394,7 @@ impl Translator {
 
     #[inline]
     fn trans_nested_meta_items(&mut self, nested_meta_items: &Vec<ast::NestedMetaItem>) -> Vec<MetaItem> {
-        trans_list!( self, nested_meta_items, trans_nested_meta_item)
+        trans_list!(self, nested_meta_items, trans_nested_meta_item)
     }
 
     #[inline]
@@ -434,7 +440,7 @@ impl Translator {
 
     #[inline]
     fn trans_items(&mut self, items: &Vec<ast::P<ast::Item>>) -> Vec<Item> {
-        trans_list!( self, items, trans_item)
+        trans_list!(self, items, trans_item)
     }
 
     #[inline]
@@ -589,7 +595,7 @@ impl Translator {
 
     #[inline]
     fn trans_use_trees(&mut self, trees: &Vec<(ast::UseTree, ast::NodeId)>) -> Vec<Use> {
-        trans_list!( self, trees, trans_use_tree)
+        trans_list!(self, trees, trans_use_tree)
     }
 
     #[inline]
@@ -955,6 +961,7 @@ impl Translator {
     fn trans_array_type(&mut self, ty: &ast::Ty, expr: &ast::Expr) -> ArrayType {
         ArrayType {
             ty: self.trans_type(ty),
+            expr: self.trans_expr(expr),
         }
     }
 
@@ -1491,14 +1498,6 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_thin_attrs(&mut self, attrs: &ast::ThinAttributes) -> Vec<AttrKind> {
-        match *attrs {
-            Some(ref attrs) => self.trans_attrs(attrs),
-            None => Vec::new(),
-        }
-    }
-
-    #[inline]
     fn trans_pattens(&mut self, pats: &Vec<ast::P<ast::Pat>>) -> Vec<Patten> {
         trans_list!(self, pats, trans_patten)
     }
@@ -1652,6 +1651,7 @@ impl Translator {
             stmt: StmtKind::Expr(expr, false),
         }
     }
+    */
 
     #[inline]
     fn trans_exprs(&mut self, exprs: &[ast::P<ast::Expr>]) -> Vec<Expr> {
@@ -1661,6 +1661,7 @@ impl Translator {
     fn trans_expr(&mut self, expr: &ast::Expr) -> Expr {
         let loc = self.loc(&expr.span);
         let attrs = self.trans_thin_attrs(&expr.attrs);
+        /*
         let expr = match expr.node {
             ast::ExprKind::Lit(ref lit) => ExprKind::Literal(self.trans_literal_expr(lit)),
             ast::ExprKind::Path(ref qself, ref path)
@@ -1755,15 +1756,17 @@ impl Translator {
             ast::ExprKind::Try(ref expr) => ExprKind::Try(Box::new(self.trans_expr(expr))),
             ast::ExprKind::InlineAsm(_) => unreachable!(),
         };
+        */
         self.set_loc(&loc);
 
         Expr {
-            loc: loc,
-            attrs: attrs,
-            expr: expr,
+            loc,
+            attrs,
+            s: self.span_to_snippet(expr.span).unwrap(),
         }
     }
 
+    /*
     #[inline]
     fn trans_ident(&mut self, ident: &ast::SpannedIdent) -> Chunk {
         Chunk {

@@ -364,7 +364,7 @@ pub struct SliceType {
 #[derive(Debug)]
 pub struct ArrayType {
     pub ty: Type,
-    //pub expr: Expr,
+    pub expr: Expr,
 }
 
 #[derive(Debug)]
@@ -381,11 +381,6 @@ pub struct BareFnType {
     pub is_unsafe: bool,
     pub abi: String,
     pub fn_sig: FnSig,
-}
-
-#[derive(Debug)]
-pub struct PolyTraitRefType {
-    pub bounds: Vec<TypeParamBound>,
 }
 
 #[derive(Debug)]
@@ -769,14 +764,17 @@ pub struct VecPatten {
 pub struct TuplePatten {
     pub pats: Vec<Patten>,
 }
+*/
 
 #[derive(Debug)]
 pub struct Expr {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
-    pub expr: ExprKind,
+    //pub expr: ExprKind,
+    pub s: String,
 }
 
+/*
 #[derive(Debug)]
 pub enum ExprKind {
     Literal(Chunk),
