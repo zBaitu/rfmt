@@ -325,12 +325,10 @@ pub enum TypeKind {
     Tuple(Box<TupleType>),
     Slice(Box<SliceType>),
     Array(Box<ArrayType>),
+    Trait(Box<TraitType>),
     /*
     BareFn(Box<BareFnType>),
-    Sum(Box<SumType>),
-    PolyTraitRef(Box<PolyTraitRefType>),
     Macro(Box<Macro>),
-    Infer,
     */
 }
 
@@ -369,6 +367,13 @@ pub struct ArrayType {
     //pub expr: Expr,
 }
 
+#[derive(Debug)]
+pub struct TraitType {
+    pub is_dyn: bool,
+    pub is_impl: bool,
+    pub bounds: Vec<TypeParamBound>,
+}
+
 /*
 #[derive(Debug)]
 pub struct BareFnType {
@@ -376,12 +381,6 @@ pub struct BareFnType {
     pub is_unsafe: bool,
     pub abi: String,
     pub fn_sig: FnSig,
-}
-
-#[derive(Debug)]
-pub struct SumType {
-    pub ty: Type,
-    pub bounds: Vec<TypeParamBound>,
 }
 
 #[derive(Debug)]

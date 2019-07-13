@@ -114,6 +114,11 @@ fn is_mut(mutbl: ast::Mutability) -> bool {
     mutbl == ast::Mutability::Mutable
 }
 
+#[inline]
+fn is_dyn(syntax: ast::TraitObjectSyntax) -> bool {
+    syntax == ast::TraitObjectSyntax::Dyn
+}
+
 /*
 #[inline]
 fn is_unsafe(safety: ast::Unsafety) -> bool {
@@ -881,15 +886,15 @@ impl Translator {
             ast::TyKind::Paren(ref ty) => TypeKind::Tuple(Box::new(self.trans_tuple_type(&vec![ty.clone()]))),
             ast::TyKind::Slice(ref ty) => TypeKind::Slice(Box::new(self.trans_slice_type(ty))),
             ast::TyKind::Array(ref ty, ref ac) => TypeKind::Array(Box::new(self.trans_array_type(ty, &ac.value))),
+            ast::TyKind::TraitObject(ref bounds, syntax) => {
+                TypeKind::Trait(Box::new(self.trans_trait_type(is_dyn(syntax), false, bounds)))
+            }
+            ast::TyKind::ImplTrait(_, ref bounds) => {
+                TypeKind::Trait(Box::new(self.trans_trait_type(false, true, bounds)))
+            }
             /*
             ast::TyKind::BareFn(ref bare_fn) => {
                 TypeKind::BareFn(Box::new(self.trans_bare_fn_type(bare_fn)))
-            }
-            ast::TyKind::ObjectSum(ref ty, ref bounds) => {
-                TypeKind::Sum(Box::new(self.trans_sum_type(ty, bounds)))
-            }
-            ast::TyKind::PolyTraitRef(ref bounds) => {
-                TypeKind::PolyTraitRef(Box::new(self.trans_poly_trait_ref_type(bounds)))
             }
             ast::TyKind::Mac(ref mac) => TypeKind::Macro(Box::new(self.trans_macro(mac))),
             ast::TyKind::Typeof(_) => unreachable!(),
@@ -953,6 +958,15 @@ impl Translator {
         }
     }
 
+    #[inline]
+    fn trans_trait_type(&mut self, is_dyn: bool, is_impl: bool, bounds: &ast::GenericBounds) -> TraitType {
+        TraitType {
+            is_dyn,
+            is_impl,
+            bounds: self.trans_type_param_bounds(bounds),
+        }
+    }
+
     /*
     #[inline]
     fn trans_bare_fn_type(&mut self, bare_fn: &ast::BareFnTy) -> BareFnType {
@@ -961,14 +975,6 @@ impl Translator {
             is_unsafe: is_unsafe(bare_fn.unsafety),
             abi: abi_to_string(bare_fn.abi),
             fn_sig: self.trans_fn_sig(&bare_fn.decl),
-        }
-    }
-
-    #[inline]
-    fn trans_sum_type(&mut self, ty: &ast::Ty, bounds: &ast::TyParamBounds) -> SumType {
-        SumType {
-            ty: self.trans_type(ty),
-            bounds: self.trans_type_param_bounds(bounds),
         }
     }
 
