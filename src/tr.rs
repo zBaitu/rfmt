@@ -464,9 +464,8 @@ impl Translator {
             ast::ItemKind::Enum(ref enum_def, ref generics) => {
                 ItemKind::Enum(self.trans_enum(ident, generics, enum_def))
             }
+            ast::ItemKind::ForeignMod(ref module) => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
             /*
-            ast::ItemKind::ForeignMod(ref module)
-            => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
             ast::ItemKind::Fn(ref fn_decl, unsafety, constness, abi, ref generics, ref block)
             => {
                 ItemKind::Fn(self.trans_fn(is_unsafe(unsafety), is_const(constness),
@@ -500,7 +499,7 @@ impl Translator {
 
     #[inline]
     fn trans_vis(&mut self, vis: &ast::Visibility) -> Vis {
-        let name = match vis.node {
+        let vis = match vis.node {
             ast::VisibilityKind::Public => "pub".to_string(),
             ast::VisibilityKind::Crate(sugar) => match sugar {
                 ast::CrateSugar::PubCrate => "pub(crate)".to_string(),
@@ -517,9 +516,7 @@ impl Translator {
             ast::VisibilityKind::Inherited => "".to_string(),
         };
 
-        Vis {
-            name,
-        }
+        vis
     }
 
     fn trans_mod_decl(&mut self, ident: String) -> ModDecl {
@@ -898,7 +895,6 @@ impl Translator {
             }
             /*
             ast::TyKind::Mac(ref mac) => TypeKind::Macro(Box::new(self.trans_macro(mac))),
-            ast::TyKind::Typeof(_) => unreachable!(),
             */
             _ => {
                 println!("{:#?}", ty.node);
@@ -1141,7 +1137,6 @@ impl Translator {
         self.is_nl(right_arrow_pos)
     }
 
-    /*
     fn trans_foreign_mod(&mut self, module: &ast::ForeignMod) -> ForeignMod {
         ForeignMod {
             abi: abi_to_string(module.abi),
@@ -1153,42 +1148,42 @@ impl Translator {
         trans_list!(self, items, trans_foreign_item)
     }
 
+    #[inline]
     fn trans_foreign_item(&mut self, item: &ast::ForeignItem) -> ForeignItem {
         let loc = self.loc(&item.span);
         let attrs = self.trans_attrs(&item.attrs);
-
-        let is_pub = is_pub(&item.vis);
+        let vis = self.trans_vis(&item.vis);
         let ident = ident_to_string(&item.ident);
         let item = match item.node {
-            ast::ForeignItemKind::Static(ref ty, is_mut) => {
-                ForeignKind::Static(self.trans_foreign_static(is_mut, ident, ty))
+            ast::ForeignItemKind::Ty => ForeignKind::Type(ident),
+            ast::ForeignItemKind::Static(ref ty, mutbl) => {
+                ForeignKind::Static(self.trans_foreign_static(mutbl, ident, ty))
             }
             ast::ForeignItemKind::Fn(ref fn_decl, ref generics) => {
                 ForeignKind::Fn(self.trans_foreign_fn(ident, generics, fn_decl))
             }
+            //ast::ForeignItemKind::Macro(_) => {}
+            _ => unreachable!(),
         };
-
         self.set_loc(&loc);
+
         ForeignItem {
-            loc: loc,
-            attrs: attrs,
-            is_pub: is_pub,
-            item: item,
+            loc,
+            attrs,
+            vis,
+            item,
         }
     }
 
-    fn trans_foreign_static(&mut self, is_mut: bool, ident: String, ty: &ast::Ty)
-                            -> ForeignStatic {
+    fn trans_foreign_static(&mut self, mutbl: ast::Mutability, ident: String, ty: &ast::Ty) -> ForeignStatic {
         ForeignStatic {
-            is_mut: is_mut,
+            is_mut: is_mut(mutbl),
             name: ident,
             ty: self.trans_type(ty),
         }
     }
 
-    fn trans_foreign_fn(&mut self, ident: String, generics: &ast::Generics,
-                        fn_decl: &ast::FnDecl)
-                        -> ForeignFn {
+    fn trans_foreign_fn(&mut self, ident: String, generics: &ast::Generics, fn_decl: &ast::FnDecl) -> ForeignFn {
         ForeignFn {
             name: ident,
             generics: self.trans_generics(generics),
@@ -1196,8 +1191,7 @@ impl Translator {
         }
     }
 
-
-
+    /*
     fn trans_fn(&mut self, is_unsafe: bool, is_const: bool, abi: String, ident: String,
                 generics: &ast::Generics, fn_decl: &ast::FnDecl, block: &ast::Block)
                 -> Fn {

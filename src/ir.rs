@@ -98,10 +98,7 @@ pub struct Item {
     pub item: ItemKind,
 }
 
-#[derive(Debug)]
-pub struct Vis {
-    pub name: String,
-}
+pub type Vis = String;
 
 #[derive(Debug)]
 pub enum ItemKind {
@@ -115,8 +112,8 @@ pub enum ItemKind {
     Struct(Struct),
     Union(Union),
     Enum(Enum),
-    /*
     ForeignMod(ForeignMod),
+    /*
     Fn(Fn),
     Trait(Trait),
     ImplDefault(ImplDefault),
@@ -477,7 +474,6 @@ pub struct Return {
     pub ret: Option<Type>,
 }
 
-/*
 #[derive(Debug)]
 pub struct ForeignMod {
     pub abi: String,
@@ -488,15 +484,18 @@ pub struct ForeignMod {
 pub struct ForeignItem {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
-    pub is_pub: bool,
+    pub vis: Vis,
     pub item: ForeignKind,
 }
 
 #[derive(Debug)]
 pub enum ForeignKind {
+    Type(ForeignType),
     Static(ForeignStatic),
     Fn(ForeignFn),
 }
+
+pub type ForeignType = String;
 
 #[derive(Debug)]
 pub struct ForeignStatic {
@@ -512,8 +511,7 @@ pub struct ForeignFn {
     pub fn_sig: FnSig,
 }
 
-
-
+/*
 #[derive(Debug)]
 pub struct Fn {
     pub is_unsafe: bool,
