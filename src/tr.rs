@@ -325,6 +325,7 @@ impl Translator {
         trans_list!(self, attrs, trans_attr_kind)
     }
 
+    #[inline]
     fn trans_attr_kind(&mut self, attr: &ast::Attribute) -> AttrKind {
         if attr.is_sugared_doc {
             AttrKind::Doc(self.trans_doc(attr))
@@ -389,6 +390,7 @@ impl Translator {
         trans_list!(self, nested_meta_items, trans_nested_meta_item)
     }
 
+    #[inline]
     fn trans_nested_meta_item(&mut self, nested_meta_item: &ast::NestedMetaItem) -> MetaItem {
         match nested_meta_item {
             ast::NestedMetaItem::Literal(ref lit) => {
@@ -453,12 +455,12 @@ impl Translator {
             ast::ItemKind::Static(ref ty, mutbl, ref expr) => {
                 ItemKind::Static(self.trans_static(mutbl, ident, ty, expr))
             }
+            ast::ItemKind::Struct(ref var, ref generics) => {
+                ItemKind::Struct(self.trans_struct(ident, generics, var))
+            }
             /*
             ast::ItemKind::ForeignMod(ref module)
             => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
-            ast::ItemKind::Struct(ref variant, ref generics) => {
-                ItemKind::Struct(self.trans_struct(ident, generics, variant))
-            }
             ast::ItemKind::Enum(ref enum_def, ref generics) => {
                 ItemKind::Enum(self.trans_enum(ident, generics, enum_def))
             }
@@ -582,6 +584,7 @@ impl Translator {
         trans_list!(self, trees, trans_use_tree)
     }
 
+    #[inline]
     fn trans_use_tree(&mut self, tree: &(ast::UseTree, ast::NodeId)) -> Use {
         self.trans_use(&tree.0)
     }
@@ -668,6 +671,7 @@ impl Translator {
         trans_list!(self, bounds, trans_type_param_bound)
     }
 
+    #[inline]
     fn trans_type_param_bound(&mut self, bound: &ast::GenericBound) -> TypeParamBound {
         match *bound {
             ast::GenericBound::Outlives(ref lifetime) => {
@@ -711,6 +715,7 @@ impl Translator {
         trans_list!(self, predicates, trans_where_clause)
     }
 
+    #[inline]
     fn trans_where_clause(&mut self, predicate: &ast::WherePredicate) -> WhereClause {
         match *predicate {
             ast::WherePredicate::RegionPredicate(ref region) => self.trans_where_lifetime(region),
@@ -767,6 +772,7 @@ impl Translator {
         trans_list!(self, segments, trans_path_segment)
     }
 
+    #[inline]
     fn trans_path_segment(&mut self, seg: &ast::PathSegment) -> PathSegment {
         PathSegment {
             name: ident_to_string(&seg.ident),
@@ -818,6 +824,7 @@ impl Translator {
         trans_list!(self, bindings, trans_type_binding)
     }
 
+    #[inline]
     fn trans_type_binding(&mut self, binding: &ast::AssocTyConstraint) -> TypeBinding {
         let loc = self.loc(&binding.span);
         let name = ident_to_string(&binding.ident);
@@ -860,6 +867,7 @@ impl Translator {
         trans_list!(self, types, trans_type)
     }
 
+    #[inline]
     fn trans_type(&mut self, ty: &ast::Ty) -> Type {
         let loc = self.loc(&ty.span);
 
@@ -968,6 +976,68 @@ impl Translator {
         }
     }
 
+    fn trans_struct(&mut self, ident: String, generics: &ast::Generics, var: &ast::VariantData) -> Struct {
+        Struct {
+            name: ident,
+            generics: self.trans_generics(generics),
+            body: self.trans_struct_body(var),
+        }
+    }
+
+    fn trans_struct_body(&mut self, var: &ast::VariantData) -> StructBody {
+        match *var {
+            ast::VariantData::Struct(ref fields, _) => {
+                StructBody::Struct(self.trans_struct_fields(fields))
+            }
+            ast::VariantData::Tuple(ref fields, _) => {
+                StructBody::Tuple(self.trans_tuple_fields(fields))
+            }
+            ast::VariantData::Unit(_) => StructBody::Unit,
+        }
+    }
+
+    fn trans_struct_fields(&mut self, fields: &Vec<ast::StructField>) -> Vec<StructField> {
+        trans_list!(self, fields, trans_struct_field)
+    }
+
+    #[inline]
+    fn trans_struct_field(&mut self, field: &ast::StructField) -> StructField {
+        let loc = self.loc(&field.span);
+        let attrs = self.trans_attrs(&field.attrs);
+        let vis = self.trans_vis(&field.vis);
+        let name = ident_to_string(&field.ident.unwrap());
+        let ty = self.trans_type(&field.ty);
+        self.set_loc(&loc);
+
+        StructField {
+            loc,
+            attrs,
+            vis,
+            name,
+            ty,
+        }
+    }
+
+    fn trans_tuple_fields(&mut self, fields: &Vec<ast::StructField>) -> Vec<TupleField> {
+        trans_list!(self, fields, trans_tuple_field)
+    }
+
+    #[inline]
+    fn trans_tuple_field(&mut self, field: &ast::StructField) -> TupleField {
+        let loc = self.loc(&field.span);
+        let attrs = self.trans_attrs(&field.attrs);
+        let vis = self.trans_vis(&field.vis);
+        let ty = self.trans_type(&field.ty);
+        self.set_loc(&loc);
+
+        TupleField {
+            loc,
+            attrs,
+            vis,
+            ty,
+        }
+    }
+
     /*
     #[inline]
     fn trans_bare_fn_type(&mut self, bare_fn: &ast::BareFnTy) -> BareFnType {
@@ -1033,67 +1103,6 @@ impl Translator {
         }
     }
 
-    fn trans_struct(&mut self, ident: String, generics: &ast::Generics,
-                    variant: &ast::VariantData)
-                    -> Struct {
-        Struct {
-            name: ident,
-            generics: self.trans_generics(generics),
-            body: self.trans_struct_body(variant),
-        }
-    }
-
-    fn trans_struct_body(&mut self, variant: &ast::VariantData) -> StructBody {
-        match *variant {
-            ast::VariantData::Struct(ref fields, _) => {
-                StructBody::Struct(self.trans_struct_fields(fields))
-            }
-            ast::VariantData::Tuple(ref fields, _) => {
-                StructBody::Tuple(self.trans_tuple_fields(fields))
-            }
-            ast::VariantData::Unit(_) => StructBody::Unit,
-        }
-    }
-
-    fn trans_struct_fields(&mut self, fields: &Vec<ast::StructField>) -> Vec<StructField> {
-        trans_list!(self, fields, trans_struct_field)
-    }
-
-    fn trans_struct_field(&mut self, field: &ast::StructField) -> StructField {
-        let loc = self.loc(&field.span);
-        let attrs = self.trans_attrs(&field.attrs);
-        let is_pub = is_pub(&field.vis);
-        let name = ident_to_string(&field.ident.unwrap());
-        let ty = self.trans_type(&field.ty);
-        self.set_loc(&loc);
-
-        StructField {
-            loc: loc,
-            attrs: attrs,
-            is_pub: is_pub,
-            name: name,
-            ty: ty,
-        }
-    }
-
-    fn trans_tuple_fields(&mut self, fields: &Vec<ast::StructField>) -> Vec<TupleField> {
-        trans_list!(self, fields, trans_tuple_field)
-    }
-
-    fn trans_tuple_field(&mut self, field: &ast::StructField) -> TupleField {
-        let loc = self.loc(&field.span);
-        let attrs = self.trans_attrs(&field.attrs);
-        let is_pub = is_pub(&field.vis);
-        let ty = self.trans_type(&field.ty);
-        self.set_loc(&loc);
-
-        TupleField {
-            loc: loc,
-            attrs: attrs,
-            is_pub: is_pub,
-            ty: ty,
-        }
-    }
 
     fn trans_enum(&mut self, ident: String, generics: &ast::Generics, enum_def: &ast::EnumDef)
                   -> Enum {

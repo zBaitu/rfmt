@@ -112,9 +112,9 @@ pub enum ItemKind {
     TypeAlias(TypeAlias),
     Const(Const),
     Static(Static),
+    Struct(Struct),
     /*
     ForeignMod(ForeignMod),
-    Struct(Struct),
     Enum(Enum),
     Fn(Fn),
     Trait(Trait),
@@ -399,6 +399,37 @@ pub struct Static {
     pub expr: Expr,
 }
 
+#[derive(Debug)]
+pub struct Struct {
+    pub name: String,
+    pub generics: Generics,
+    pub body: StructBody,
+}
+
+#[derive(Debug)]
+pub enum StructBody {
+    Struct(Vec<StructField>),
+    Tuple(Vec<TupleField>),
+    Unit,
+}
+
+#[derive(Debug)]
+pub struct StructField {
+    pub loc: Loc,
+    pub attrs: Vec<AttrKind>,
+    pub vis: Vis,
+    pub name: String,
+    pub ty: Type,
+}
+
+#[derive(Debug)]
+pub struct TupleField {
+    pub loc: Loc,
+    pub attrs: Vec<AttrKind>,
+    pub vis: Vis,
+    pub ty: Type,
+}
+
 /*
 #[derive(Debug)]
 pub struct ForeignMod {
@@ -434,36 +465,6 @@ pub struct ForeignFn {
     pub fn_sig: FnSig,
 }
 
-#[derive(Debug)]
-pub struct Struct {
-    pub name: String,
-    pub generics: Generics,
-    pub body: StructBody,
-}
-
-#[derive(Debug)]
-pub enum StructBody {
-    Struct(Vec<StructField>),
-    Tuple(Vec<TupleField>),
-    Unit,
-}
-
-#[derive(Debug)]
-pub struct StructField {
-    pub loc: Loc,
-    pub attrs: Vec<AttrKind>,
-    pub is_pub: bool,
-    pub name: String,
-    pub ty: Type,
-}
-
-#[derive(Debug)]
-pub struct TupleField {
-    pub loc: Loc,
-    pub attrs: Vec<AttrKind>,
-    pub is_pub: bool,
-    pub ty: Type,
-}
 
 #[derive(Debug)]
 pub struct Enum {
