@@ -114,9 +114,9 @@ pub enum ItemKind {
     Union(Union),
     Enum(Enum),
     ForeignMod(ForeignMod),
-    /*
     Fn(Fn),
     Trait(Trait),
+    /*
     ImplDefault(ImplDefault),
     Impl(Impl),
     Macro(MacroRaw),
@@ -385,7 +385,7 @@ pub struct BareFnType {
     pub lifetime_defs: Vec<LifetimeDef>,
     pub is_unsafe: bool,
     pub abi: String,
-    pub fn_sig: FnSig,
+    pub sig: FnSig,
 }
 
 #[derive(Debug)]
@@ -516,23 +516,36 @@ pub struct ForeignStatic {
 pub struct ForeignFn {
     pub name: String,
     pub generics: Generics,
-    pub fn_sig: FnSig,
+    pub sig: FnSig,
 }
 
-/*
 #[derive(Debug)]
-pub struct Fn {
+pub struct FnHeader {
     pub is_unsafe: bool,
+    pub is_async: bool,
     pub is_const: bool,
     pub abi: String,
+}
+
+#[derive(Debug)]
+pub struct Fn {
+    pub header: FnHeader,
     pub name: String,
     pub generics: Generics,
-    pub fn_sig: FnSig,
-    pub block: Block,
+    pub sig: FnSig,
+    //pub block: Block,
+}
+
+#[derive(Debug)]
+pub struct MethodSig {
+    pub header: FnHeader,
+    pub name: String,
+    pub sig: FnSig,
 }
 
 #[derive(Debug)]
 pub struct Trait {
+    pub is_auto: bool,
     pub is_unsafe: bool,
     pub name: String,
     pub generics: Generics,
@@ -544,6 +557,7 @@ pub struct Trait {
 pub struct TraitItem {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
+    pub generics: Generics,
     pub item: TraitItemKind,
 }
 
@@ -552,6 +566,7 @@ pub enum TraitItemKind {
     Const(ConstTraitItem),
     Type(TypeTraitItem),
     Method(MethodTraitItem),
+    // Macro(Macro),
 }
 
 #[derive(Debug)]
@@ -570,14 +585,11 @@ pub struct TypeTraitItem {
 
 #[derive(Debug)]
 pub struct MethodTraitItem {
-    pub is_unsafe: bool,
-    pub is_const: bool,
-    pub abi: String,
-    pub name: String,
-    pub method_sig: MethodSig,
-    pub block: Option<Block>,
+    pub sig: MethodSig,
+    //pub block: Option<Block>,
 }
 
+/*
 #[derive(Debug)]
 pub struct ImplDefault {
     pub is_unsafe: bool,

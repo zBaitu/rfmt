@@ -126,16 +126,29 @@ fn is_unsafe(safety: ast::Unsafety) -> bool {
 }
 
 #[inline]
-fn abi_to_string(abi: ast::Abi) -> String {
-    format!(r#""{:?}""#, abi)
+fn is_async(asyncness: ast::IsAsync) -> bool {
+    match asyncness {
+        ast::IsAsync::Async { .. } => true,
+        _ => false,
+    }
 }
 
-/*
 #[inline]
 fn is_const(constness: ast::Constness) -> bool {
     constness == ast::Constness::Const
 }
 
+#[inline]
+fn is_auto(autoness: ast::IsAuto) -> bool {
+    return autoness == ast::IsAuto::Yes;
+}
+
+#[inline]
+fn abi_to_string(abi: ast::Abi) -> String {
+    format!(r#""{:?}""#, abi)
+}
+
+/*
 #[inline]
 fn is_neg(polarity: ast::ImplPolarity) -> bool {
     polarity == ast::ImplPolarity::Negative
@@ -468,16 +481,13 @@ impl Translator {
                 ItemKind::Enum(self.trans_enum(ident, generics, enum_def))
             }
             ast::ItemKind::ForeignMod(ref module) => ItemKind::ForeignMod(self.trans_foreign_mod(module)),
+            ast::ItemKind::Fn(ref decl, ref header, ref generics, ref block) => {
+                ItemKind::Fn(self.trans_fn(header, ident, generics, decl, block))
+            }
+            ast::ItemKind::Trait(autoness, unsafety, ref generics, ref bounds, ref items) => {
+                ItemKind::Trait(self.trans_trait(autoness, unsafety, ident, generics, bounds, items))
+            }
             /*
-            ast::ItemKind::Fn(ref fn_decl, unsafety, constness, abi, ref generics, ref block)
-            => {
-                ItemKind::Fn(self.trans_fn(is_unsafe(unsafety), is_const(constness),
-                                           abi_to_string(abi), ident, generics, fn_decl, block))
-            }
-            ast::ItemKind::Trait(unsafety, ref generics, ref bounds, ref items) => {
-                ItemKind::Trait(self.trans_trait(is_unsafe(unsafety), ident, generics, bounds,
-                                                 items))
-            }
             ast::ItemKind::DefaultImpl(unsafety, ref trait_ref) => {
                 ItemKind::ImplDefault(self.trans_impl_default(is_unsafe(unsafety), trait_ref))
             }
@@ -886,6 +896,7 @@ impl Translator {
             ast::TyKind::Infer => TypeKind::Symbol("_"),
             ast::TyKind::Never => TypeKind::Symbol("!"),
             ast::TyKind::CVarArgs => TypeKind::Symbol("..."),
+            ast::TyKind::ImplicitSelf => TypeKind::Symbol("self"),
             ast::TyKind::Path(ref qself, ref path) => TypeKind::Path(Box::new(self.trans_path_type(qself, path))),
             ast::TyKind::Ptr(ref mut_type) => TypeKind::Ptr(Box::new(self.trans_ptr_type(mut_type))),
             ast::TyKind::Rptr(ref lifetime, ref mut_type) => {
@@ -1105,14 +1116,14 @@ impl Translator {
             lifetime_defs: self.trans_lifetime_defs(&bare_fn.generic_params),
             is_unsafe: is_unsafe(bare_fn.unsafety),
             abi: abi_to_string(bare_fn.abi),
-            fn_sig: self.trans_fn_sig(&bare_fn.decl),
+            sig: self.trans_fn_sig(&bare_fn.decl),
         }
     }
 
-    fn trans_fn_sig(&mut self, fn_decl: &ast::FnDecl) -> FnSig {
+    fn trans_fn_sig(&mut self, decl: &ast::FnDecl) -> FnSig {
         FnSig {
-            args: self.trans_args(&fn_decl.inputs),
-            ret: self.trans_return(&fn_decl.output),
+            args: self.trans_args(&decl.inputs),
+            ret: self.trans_return(&decl.output),
         }
     }
 
@@ -1170,8 +1181,8 @@ impl Translator {
             ast::ForeignItemKind::Static(ref ty, mutbl) => {
                 ForeignKind::Static(self.trans_foreign_static(mutbl, ident, ty))
             }
-            ast::ForeignItemKind::Fn(ref fn_decl, ref generics) => {
-                ForeignKind::Fn(self.trans_foreign_fn(ident, generics, fn_decl))
+            ast::ForeignItemKind::Fn(ref decl, ref generics) => {
+                ForeignKind::Fn(self.trans_foreign_fn(ident, generics, decl))
             }
             //ast::ForeignItemKind::Macro(_) => {}
             _ => unreachable!(),
@@ -1194,34 +1205,39 @@ impl Translator {
         }
     }
 
-    fn trans_foreign_fn(&mut self, ident: String, generics: &ast::Generics, fn_decl: &ast::FnDecl) -> ForeignFn {
+    fn trans_foreign_fn(&mut self, ident: String, generics: &ast::Generics, decl: &ast::FnDecl) -> ForeignFn {
         ForeignFn {
             name: ident,
             generics: self.trans_generics(generics),
-            fn_sig: self.trans_fn_sig(fn_decl),
+            sig: self.trans_fn_sig(decl),
         }
     }
 
-    /*
-    fn trans_fn(&mut self, is_unsafe: bool, is_const: bool, abi: String, ident: String,
-                generics: &ast::Generics, fn_decl: &ast::FnDecl, block: &ast::Block)
-                -> Fn {
+    fn trans_fn_header(&mut self, header: &ast::FnHeader) -> FnHeader {
+        FnHeader {
+            is_unsafe: is_unsafe(header.unsafety),
+            is_async: is_async(header.asyncness.node),
+            is_const: is_const(header.constness.node),
+            abi: abi_to_string(header.abi),
+        }
+    }
+
+    fn trans_fn(&mut self, header: &ast::FnHeader, ident: String, generics: &ast::Generics,
+                decl: &ast::FnDecl, block: &ast::Block) -> Fn {
         Fn {
-            is_unsafe: is_unsafe,
-            is_const: is_const,
-            abi: abi,
+            header: self.trans_fn_header(header),
             name: ident,
             generics: self.trans_generics(generics),
-            fn_sig: self.trans_fn_sig(fn_decl),
-            block: self.trans_block(block),
+            sig: self.trans_fn_sig(decl),
+            //block: self.trans_block(block),
         }
     }
 
-    fn trans_trait(&mut self, is_unsafe: bool, ident: String, generics: &ast::Generics,
-                   bounds: &ast::TyParamBounds, items: &Vec<ast::TraitItem>)
-                   -> Trait {
+    fn trans_trait(&mut self, autoness: ast::IsAuto, unsafety: ast::Unsafety, ident: String,
+                   generics: &ast::Generics, bounds: &ast::GenericBounds, items: &Vec<ast::TraitItem>) -> Trait {
         Trait {
-            is_unsafe: is_unsafe,
+            is_auto: is_auto(autoness),
+            is_unsafe: is_unsafe(unsafety),
             name: ident,
             generics: self.trans_generics(generics),
             bounds: self.trans_type_param_bounds(bounds),
@@ -1233,10 +1249,12 @@ impl Translator {
         trans_list!(self, items, trans_trait_item)
     }
 
+    #[inline]
     fn trans_trait_item(&mut self, item: &ast::TraitItem) -> TraitItem {
         let loc = self.loc(&item.span);
         let attrs = self.trans_attrs(&item.attrs);
         let ident = ident_to_string(&item.ident);
+        let generics = self.trans_generics(&item.generics);
         let item = match item.node {
             ast::TraitItemKind::Const(ref ty, ref expr) => {
                 TraitItemKind::Const(self.trans_const_trait_item(ident, ty, expr))
@@ -1244,21 +1262,22 @@ impl Translator {
             ast::TraitItemKind::Type(ref bounds, ref ty) => {
                 TraitItemKind::Type(self.trans_type_trait_item(ident, bounds, ty))
             }
-            ast::TraitItemKind::Method(ref method_sig, ref block) => {
-                TraitItemKind::Method(self.trans_method_trait_item(ident, method_sig, block))
+            ast::TraitItemKind::Method(ref sig, ref block) => {
+                TraitItemKind::Method(self.trans_method_trait_item(ident, sig, block))
             }
+            _ => unreachable!(),
         };
         self.set_loc(&loc);
 
         TraitItem {
-            loc: loc,
-            attrs: attrs,
-            item: item,
+            loc,
+            attrs,
+            generics,
+            item,
         }
     }
 
-    fn trans_const_trait_item(&mut self, ident: String, ty: &ast::Ty,
-                              expr: &Option<ast::P<ast::Expr>>)
+    fn trans_const_trait_item(&mut self, ident: String, ty: &ast::Ty, expr: &Option<ast::P<ast::Expr>>)
                               -> ConstTraitItem {
         ConstTraitItem {
             name: ident,
@@ -1267,8 +1286,7 @@ impl Translator {
         }
     }
 
-    fn trans_type_trait_item(&mut self, ident: String, bounds: &ast::TyParamBounds,
-                             ty: &Option<ast::P<ast::Ty>>)
+    fn trans_type_trait_item(&mut self, ident: String, bounds: &ast::GenericBounds, ty: &Option<ast::P<ast::Ty>>)
                              -> TypeTraitItem {
         TypeTraitItem {
             name: ident,
@@ -1277,19 +1295,23 @@ impl Translator {
         }
     }
 
-    fn trans_method_trait_item(&mut self, ident: String, method_sig: &ast::MethodSig,
+    fn trans_method_trait_item(&mut self, ident: String, sig: &ast::MethodSig,
                                block: &Option<ast::P<ast::Block>>)
                                -> MethodTraitItem {
         MethodTraitItem {
-            is_unsafe: is_unsafe(method_sig.unsafety),
-            is_const: is_const(method_sig.constness),
-            abi: abi_to_string(method_sig.abi),
-            name: ident,
-            method_sig: self.trans_method_sig(method_sig),
-            block: map_ref_mut(block, |block| self.trans_block(block)),
+            sig: self.trans_method_sig(ident, sig),
         }
     }
 
+    fn trans_method_sig(&mut self, ident: String, sig: &ast::MethodSig) -> MethodSig {
+        MethodSig {
+            header: self.trans_fn_header(&sig.header),
+            name: ident,
+            sig: self.trans_fn_sig(&sig.decl),
+        }
+    }
+
+    /*
     fn trans_impl_default(&mut self, is_unsafe: bool, trait_ref: &ast::TraitRef) -> ImplDefault {
         ImplDefault {
             is_unsafe: is_unsafe,
