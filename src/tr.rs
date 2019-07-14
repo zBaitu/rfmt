@@ -451,6 +451,9 @@ impl Translator {
             ast::ItemKind::ExternCrate(ref rename) => ItemKind::ExternCrate(self.trans_extren_crate(ident, rename)),
             ast::ItemKind::Use(ref tree) => ItemKind::Use(self.trans_use(tree)),
             ast::ItemKind::Ty(ref ty, ref generics) => ItemKind::TypeAlias(self.trans_type_alias(ident, generics, ty)),
+            ast::ItemKind::TraitAlias(ref generics, ref bounds) => {
+                ItemKind::TraitAlias(self.trans_trait_alias(ident, generics, bounds))
+            }
             ast::ItemKind::Const(ref ty, ref expr) => ItemKind::Const(self.trans_const(ident, ty, expr)),
             ast::ItemKind::Static(ref ty, mutbl, ref expr) => {
                 ItemKind::Static(self.trans_static(mutbl, ident, ty, expr))
@@ -589,12 +592,20 @@ impl Translator {
         self.trans_use(&tree.0)
     }
 
-    fn trans_type_alias(&mut self, ident: String, generics: &ast::Generics, ty: &ast::Ty)
-                        -> TypeAlias {
+    fn trans_type_alias(&mut self, ident: String, generics: &ast::Generics, ty: &ast::Ty) -> TypeAlias {
         TypeAlias {
             name: ident,
             generics: self.trans_generics(generics),
             ty: self.trans_type(ty),
+        }
+    }
+
+    fn trans_trait_alias(&mut self, ident: String, generics: &ast::Generics, bounds: &ast::GenericBounds)
+                         -> TraitAlias {
+        TraitAlias {
+            name: ident,
+            generics: self.trans_generics(generics),
+            bounds: self.trans_type_param_bounds(bounds),
         }
     }
 

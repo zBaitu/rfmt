@@ -107,6 +107,7 @@ pub enum ItemKind {
     ExternCrate(ExternCrate),
     Use(Use),
     TypeAlias(TypeAlias),
+    TraitAlias(TraitAlias),
     Const(Const),
     Static(Static),
     Struct(Struct),
@@ -143,6 +144,13 @@ pub struct TypeAlias {
     pub name: String,
     pub generics: Generics,
     pub ty: Type,
+}
+
+#[derive(Debug)]
+pub struct TraitAlias {
+    pub name: String,
+    pub generics: Generics,
+    pub bounds: Vec<TypeParamBound>,
 }
 
 #[derive(Debug)]
