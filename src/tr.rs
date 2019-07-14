@@ -177,6 +177,14 @@ fn is_inclusive(limit: ast::RangeLimits) -> bool {
 }
 
 #[inline]
+fn is_patten_inclusive(range_end: &ast::RangeEnd) -> bool {
+    match *range_end {
+        ast::RangeEnd::Included(_) => true,
+        _ => false,
+    }
+}
+
+#[inline]
 fn is_static(movability: ast::Movability) -> bool {
     movability == ast::Movability::Static
 }
@@ -186,15 +194,15 @@ fn is_move(capture: ast::CaptureBy) -> bool {
     capture == ast::CaptureBy::Value
 }
 
-/*
 #[inline]
-fn is_ref_mut(mode: ast::BindingMode) -> (bool, bool) {
-    match mode {
+fn is_ref_mut(binding: ast::BindingMode) -> (bool, bool) {
+    match binding {
         ast::BindingMode::ByRef(mutbl) => (true, is_mut(mutbl)),
         ast::BindingMode::ByValue(mutbl) => (false, is_mut(mutbl)),
     }
 }
 
+/*
 #[inline]
 fn is_macro_semi(style: &ast::MacStmtStyle) -> bool {
     match *style {
@@ -1476,157 +1484,131 @@ impl Translator {
     #[inline]
     fn trans_patten(&mut self, patten: &ast::P<ast::Pat>) -> Patten {
         let loc = self.loc(&patten.span);
-        /*
         let patten = match patten.node {
             ast::PatKind::Wild => PattenKind::Wildcard,
             ast::PatKind::Lit(ref expr) => PattenKind::Literal(self.trans_expr(expr)),
-            ast::PatKind::Range(ref start, ref end) => {
-                PattenKind::Range(self.trans_range_patten(start, end))
-            }
-            ast::PatKind::Ident(mode, ref ident, ref binding) => {
-                PattenKind::Ident(Box::new(self.trans_ident_patten(mode, ident, binding)))
+            ast::PatKind::Range(ref start, ref end, ref range_end) => {
+                PattenKind::Range(self.trans_range_patten(start, end, &range_end.node))
             }
             ast::PatKind::Ref(ref patten, mutbl) => {
-                PattenKind::Ref(Box::new(self.trans_ref_patten(is_mut(mutbl), patten)))
+                PattenKind::Ref(Box::new(self.trans_ref_patten(mutbl, patten)))
             }
-            ast::PatKind::QPath(ref qself, ref path) => {
-                PattenKind::Path(self.trans_path_patten(Some(qself), path))
+            ast::PatKind::Path(ref qself, ref path) => {
+                PattenKind::Path(self.trans_path_type(qself, path))
             }
-            ast::PatKind::Path(ref path) => {
-                PattenKind::Path(self.trans_path_patten(None, path))
+            ast::PatKind::Paren(ref patten) => {
+                PattenKind::Group(Box::new(self.trans_patten(patten)))
             }
-            ast::PatKind::TupleStruct(ref path, ref pats) => {
-                PattenKind::Enum(self.trans_enum_patten(path, pats))
+            ast::PatKind::Ident(binding, ref ident, ref patten) => {
+                PattenKind::Ident(Box::new(self.trans_ident_patten(binding, ident, patten)))
             }
             ast::PatKind::Struct(ref path, ref fields, etc) => {
                 PattenKind::Struct(Box::new(self.trans_struct_patten(path, fields, etc)))
             }
-            ast::PatKind::Vec(ref start, ref emit, ref end) => {
-                PattenKind::Vec(Box::new(self.trans_vec_patten(start, emit, end)))
+            ast::PatKind::TupleStruct(ref path, ref pats, omit_pos) => {
+                PattenKind::Enum(self.trans_enum_patten(path, pats, omit_pos))
             }
-            ast::PatKind::Tup(ref pats)
-            => PattenKind::Tuple(Box::new(self.trans_tuple_patten(pats))),
-            ast::PatKind::Box(ref patten) => PattenKind::Box(Box::new(self.trans_patten(patten))),
+            ast::PatKind::Tuple(ref pattens, omit_pos) => {
+                PattenKind::Tuple(Box::new(self.trans_tuple_patten(pattens, omit_pos)))
+            }
+            ast::PatKind::Slice(ref start, ref omit, ref end) => {
+                PattenKind::Slice(Box::new(self.trans_slice_patten(start, omit, end)))
+            }
+            /*
             ast::PatKind::Mac(ref mac) => PattenKind::Macro(self.trans_macro(mac)),
+            */
+            _ => {
+                d!(patten.node);
+                unreachable!()
+            }
         };
-        */
         self.set_loc(&loc);
 
         Patten {
             loc,
-            s: self.span_to_snippet(patten.span).unwrap(),
+            patten,
         }
     }
 
-    /*
-    #[inline]
-    fn trans_range_patten(&mut self, start: &ast::Expr, end: &ast::Expr) -> RangePatten {
+    fn trans_range_patten(&mut self, start: &ast::Expr, end: &ast::Expr, range_end: &ast::RangeEnd) -> RangePatten {
         RangePatten {
             start: self.trans_expr(start),
             end: self.trans_expr(end),
+            is_inclusive: is_patten_inclusive(range_end),
         }
     }
 
-    #[inline]
-    fn trans_ident_patten(&mut self, mode: ast::BindingMode, ident: &ast::SpannedIdent,
-                          binding: &Option<ast::P<ast::Pat>>)
-                          -> IdentPatten {
-        let (is_ref, is_mut) = is_ref_mut(mode);
-        IdentPatten {
-            is_ref: is_ref,
-            is_mut: is_mut,
-            name: self.trans_ident(ident),
-            binding: map_ref_mut(binding, |patten| self.trans_patten(patten)),
-        }
-    }
-
-    #[inline]
-    fn trans_ref_patten(&mut self, is_mut: bool, patten: &ast::P<ast::Pat>) -> RefPatten {
+    fn trans_ref_patten(&mut self, mutbl: ast::Mutability, patten: &ast::P<ast::Pat>) -> RefPatten {
         RefPatten {
-            is_mut: is_mut,
+            is_mut: is_mut(mutbl),
             patten: self.trans_patten(patten),
         }
     }
 
-    #[inline]
-    fn trans_path_patten(&mut self, qself: Option<&ast::QSelf>, path: &ast::Path) -> PathPatten {
-        PathPatten {
-            qself: map_ref_mut(&qself, |qself| self.trans_qself(qself)),
-            path: self.trans_path(path),
+    fn trans_ident_patten(&mut self, binding: ast::BindingMode, ident: &ast::Ident, patten: &Option<ast::P<ast::Pat>>)
+                          -> IdentPatten {
+        let (is_ref, is_mut) = is_ref_mut(binding);
+        IdentPatten {
+            is_ref,
+            is_mut,
+            name: ident_to_string(ident),
+            patten: map_ref_mut(patten, |patten| self.trans_patten(patten)),
         }
     }
 
-    #[inline]
-    fn trans_enum_patten(&mut self, path: &ast::Path, pats: &Option<Vec<ast::P<ast::Pat>>>)
-                         -> EnumPatten {
-        EnumPatten {
-            path: self.trans_path(path),
-            pats: map_ref_mut(pats, |pats| self.trans_pattens(pats)),
-        }
-    }
-
-    #[inline]
-    fn trans_struct_patten(&mut self, path: &ast::Path,
-                           fields: &Vec<ast::Spanned<ast::FieldPat>>,
-                           etc: bool)
+    fn trans_struct_patten(&mut self, path: &ast::Path, fields: &Vec<ast::Spanned<ast::FieldPat>>, omit: bool)
                            -> StructPatten {
         StructPatten {
             path: self.trans_path(path),
             fields: self.trans_struct_field_pattens(fields),
-            etc: etc,
+            omit,
         }
     }
 
-    #[inline]
-    fn trans_struct_field_pattens(&mut self, fields: &Vec<ast::Spanned<ast::FieldPat>>)
-                                  -> Vec<StructFieldPatten> {
+    fn trans_struct_field_pattens(&mut self, fields: &Vec<ast::Spanned<ast::FieldPat>>) -> Vec<StructFieldPatten> {
         trans_list!(self, fields, trans_struct_field_patten)
     }
 
     #[inline]
-    fn trans_struct_field_patten(&mut self, field: &ast::Spanned<ast::FieldPat>)
-                                 -> StructFieldPatten {
+    fn trans_struct_field_patten(&mut self, field: &ast::Spanned<ast::FieldPat>) -> StructFieldPatten {
         let loc = self.loc(&field.span);
         let name = ident_to_string(&field.node.ident);
-        let patten = self.trans_patten(&field.node.patten);
+        let patten = self.trans_patten(&field.node.pat);
         let shorthand = field.node.is_shorthand;
         self.set_loc(&loc);
 
         StructFieldPatten {
-            loc: loc,
-            name: name,
-            patten: patten,
-            shorthand: shorthand,
+            loc,
+            name,
+            patten,
+            shorthand,
         }
     }
 
-    #[inline]
-    fn trans_vec_patten(&mut self, start: &Vec<ast::P<ast::Pat>>,
-                        emit: &Option<ast::P<ast::Pat>>,
-                        end: &Vec<ast::P<ast::Pat>>)
-                        -> VecPatten {
-        VecPatten {
+    fn trans_enum_patten(&mut self, path: &ast::Path, pats: &Vec<ast::P<ast::Pat>>, omit_pos: Option<usize>)
+                         -> EnumPatten {
+        EnumPatten {
+            path: self.trans_path(path),
+            pattens: self.trans_pattens(pats),
+            omit_pos,
+        }
+    }
+
+    fn trans_tuple_patten(&mut self, pats: &Vec<ast::P<ast::Pat>>, omit_pos: Option<usize>) -> TuplePatten {
+        TuplePatten {
+            pattens: self.trans_pattens(pats),
+            omit_pos,
+        }
+    }
+
+    fn trans_slice_patten(&mut self, start: &Vec<ast::P<ast::Pat>>, omit: &Option<ast::P<ast::Pat>>,
+                          end: &Vec<ast::P<ast::Pat>>) -> SlicePatten {
+        SlicePatten {
             start: self.trans_pattens(start),
-            emit: map_ref_mut(emit, |patten| self.trans_patten(patten)),
+            omit: map_ref_mut(omit, |patten| self.trans_patten(patten)),
             end: self.trans_pattens(end),
         }
     }
-
-    #[inline]
-    fn trans_tuple_patten(&mut self, pats: &Vec<ast::P<ast::Pat>>) -> TuplePatten {
-        TuplePatten {
-            pats: self.trans_pattens(pats),
-        }
-    }
-
-    #[inline]
-    fn expr_to_stmt(&mut self, expr: Expr) -> Stmt {
-        Stmt {
-            loc: expr.loc,
-            stmt: StmtKind::Expr(expr, false),
-        }
-    }
-    */
 
     fn trans_exprs(&mut self, exprs: &[ast::P<ast::Expr>]) -> Vec<Expr> {
         trans_list!(self, exprs, trans_expr)
@@ -1930,18 +1912,18 @@ impl Translator {
     #[inline]
     fn trans_arm(&mut self, arm: &ast::Arm) -> Arm {
         let attrs = self.trans_attrs(&arm.attrs);
-        let pats = self.trans_pattens(&arm.pats);
+        let pattens = self.trans_pattens(&arm.pats);
         let guard = map_ref_mut(&arm.guard, |guard| self.trans_guard(guard));
         let body = self.trans_expr(&arm.body);
 
         Arm {
             loc: Loc {
-                start: pats[0].loc.start,
+                start: pattens[0].loc.start,
                 end: body.loc.end,
                 nl: false,
             },
             attrs,
-            pats,
+            pattens,
             guard,
             body,
         }
@@ -1962,7 +1944,6 @@ impl Translator {
     fn trans_method_call_expr(&mut self, path: &ast::PathSegment, args: &Vec<ast::P<ast::Expr>>) -> MethodCallExpr {
         MethodCallExpr {
             path: self.trans_path_segment(path),
-            //args: self.trans_exprs(&args[1..]),
             args: self.trans_exprs(args),
         }
     }

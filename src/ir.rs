@@ -664,39 +664,32 @@ pub struct Let {
 #[derive(Debug)]
 pub struct Patten {
     pub loc: Loc,
-    //pub patten: PattenKind,
-    pub s: String,
+    pub patten: PattenKind,
 }
 
-/*
 #[derive(Debug)]
 pub enum PattenKind {
     Wildcard,
     Literal(Expr),
     Range(RangePatten),
-    Ident(Box<IdentPatten>),
     Ref(Box<RefPatten>),
     Path(PathPatten),
-    Enum(EnumPatten),
+    Group(Box<Patten>),
+    Ident(Box<IdentPatten>),
     Struct(Box<StructPatten>),
-    Vec(Box<VecPatten>),
+    Enum(EnumPatten),
     Tuple(Box<TuplePatten>),
-    Box(Box<Patten>),
+    Slice(Box<SlicePatten>),
+    /*
     Macro(Macro),
+    */
 }
 
 #[derive(Debug)]
 pub struct RangePatten {
     pub start: Expr,
     pub end: Expr,
-}
-
-#[derive(Debug)]
-pub struct IdentPatten {
-    pub is_ref: bool,
-    pub is_mut: bool,
-    pub name: Chunk,
-    pub binding: Option<Patten>,
+    pub is_inclusive: bool,
 }
 
 #[derive(Debug)]
@@ -705,23 +698,21 @@ pub struct RefPatten {
     pub patten: Patten,
 }
 
-#[derive(Debug)]
-pub struct PathPatten {
-    pub qself: Option<QSelf>,
-    pub path: Path,
-}
+pub type PathPatten = PathType;
 
 #[derive(Debug)]
-pub struct EnumPatten {
-    pub path: Path,
-    pub pats: Option<Vec<Patten>>,
+pub struct IdentPatten {
+    pub is_ref: bool,
+    pub is_mut: bool,
+    pub name: String,
+    pub patten: Option<Patten>,
 }
 
 #[derive(Debug)]
 pub struct StructPatten {
     pub path: Path,
     pub fields: Vec<StructFieldPatten>,
-    pub etc: bool,
+    pub omit: bool,
 }
 
 #[derive(Debug)]
@@ -733,17 +724,24 @@ pub struct StructFieldPatten {
 }
 
 #[derive(Debug)]
-pub struct VecPatten {
-    pub start: Vec<Patten>,
-    pub emit: Option<Patten>,
-    pub end: Vec<Patten>,
+pub struct EnumPatten {
+    pub path: Path,
+    pub pattens: Vec<Patten>,
+    pub omit_pos: Option<usize>,
 }
 
 #[derive(Debug)]
 pub struct TuplePatten {
-    pub pats: Vec<Patten>,
+    pub pattens: Vec<Patten>,
+    pub omit_pos: Option<usize>,
 }
-*/
+
+#[derive(Debug)]
+pub struct SlicePatten {
+    pub start: Vec<Patten>,
+    pub omit: Option<Patten>,
+    pub end: Vec<Patten>,
+}
 
 #[derive(Debug)]
 pub struct Expr {
@@ -930,7 +928,7 @@ pub struct MatchExpr {
 pub struct Arm {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
-    pub pats: Vec<Patten>,
+    pub pattens: Vec<Patten>,
     pub guard: Option<Expr>,
     pub body: Expr,
 }
