@@ -176,12 +176,17 @@ fn is_inclusive(limit: ast::RangeLimits) -> bool {
     limit == ast::RangeLimits::Closed
 }
 
-/*
+#[inline]
+fn is_static(movability: ast::Movability) -> bool {
+    movability == ast::Movability::Static
+}
+
 #[inline]
 fn is_move(capture: ast::CaptureBy) -> bool {
     capture == ast::CaptureBy::Value
 }
 
+/*
 #[inline]
 fn is_ref_mut(mode: ast::BindingMode) -> (bool, bool) {
     match mode {
@@ -1433,14 +1438,6 @@ impl Translator {
     fn trans_stmt(&mut self, stmt: &ast::Stmt) -> Stmt {
         let loc = self.loc(&stmt.span);
         let stmt = match stmt.node {
-            /*
-            ast::StmtKind::Decl(ref decl, _) => StmtKind::Decl(self.trans_decl(decl)),
-            ast::StmtKind::Semi(ref expr, _) => StmtKind::Expr(self.trans_expr(expr), true),
-            ast::StmtKind::Expr(ref expr, _) => StmtKind::Expr(self.trans_expr(expr), false),
-            ast::StmtKind::Mac(ref mac, ref style, ref attrs) => {
-                StmtKind::Macro(self.trans_macro_stmt(attrs, mac), is_macro_semi(style))
-            }
-            */
             ast::StmtKind::Item(ref item) => StmtKind::Item(self.trans_item(item)),
             ast::StmtKind::Local(ref local) => StmtKind::Let(self.trans_let(local)),
             ast::StmtKind::Semi(ref expr) => StmtKind::Expr(self.trans_expr(expr), true),
@@ -1643,6 +1640,7 @@ impl Translator {
             ast::ExprKind::Path(ref qself, ref path) => ExprKind::Path(self.trans_path_type(qself, path)),
             ast::ExprKind::AddrOf(mutble, ref expr) => ExprKind::Ref(Box::new(self.trans_ref_expr(mutble, expr))),
             ast::ExprKind::Unary(op, ref expr) => ExprKind::UnaryOp(Box::new(self.trans_unary_expr(op, expr))),
+            ast::ExprKind::Try(ref expr) => ExprKind::Try(Box::new(self.trans_expr(expr))),
             ast::ExprKind::Binary(ref op, ref left, ref right) => {
                 ExprKind::ListOp(Box::new(self.trans_binary_expr(op, left, right)))
             }
@@ -1665,21 +1663,18 @@ impl Translator {
             ast::ExprKind::Range(ref start, ref end, limit) => {
                 ExprKind::Range(Box::new(self.trans_range_expr(start, end, limit)))
             }
-            /*
-            ast::ExprKind::Box(ref expr) => ExprKind::Box(Box::new(self.trans_box_expr(expr))),
-            ast::ExprKind::Block(ref block)
-            => ExprKind::Block(Box::new(self.trans_block(block))),
+            ast::ExprKind::Block(ref block, ref label) => ExprKind::Block(Box::new(self.trans_block_expr(block, label))),
             ast::ExprKind::If(ref expr, ref block, ref br) => {
                 ExprKind::If(Box::new(self.trans_if_expr(expr, block, br)))
             }
-            ast::ExprKind::IfLet(ref patten, ref expr, ref block, ref br) => {
-                ExprKind::IfLet(Box::new(self.trans_if_let_expr(patten, expr, block, br)))
+            ast::ExprKind::IfLet(ref pattens, ref expr, ref block, ref br) => {
+                ExprKind::IfLet(Box::new(self.trans_if_let_expr(pattens, expr, block, br)))
             }
             ast::ExprKind::While(ref expr, ref block, ref label) => {
                 ExprKind::While(Box::new(self.trans_while_expr(expr, block, label)))
             }
-            ast::ExprKind::WhileLet(ref patten, ref expr, ref block, ref label) => {
-                ExprKind::WhileLet(Box::new(self.trans_while_let_expr(patten, expr, block, label)))
+            ast::ExprKind::WhileLet(ref pattens, ref expr, ref block, ref label) => {
+                ExprKind::WhileLet(Box::new(self.trans_while_let_expr(pattens, expr, block, label)))
             }
             ast::ExprKind::ForLoop(ref patten, ref expr, ref block, ref label) => {
                 ExprKind::For(Box::new(self.trans_for_expr(patten, expr, block, label)))
@@ -1687,31 +1682,27 @@ impl Translator {
             ast::ExprKind::Loop(ref block, ref label) => {
                 ExprKind::Loop(Box::new(self.trans_loop_expr(block, label)))
             }
-            ast::ExprKind::Break(ref ident)
-            => ExprKind::Break(Box::new(self.trans_break_expr(ident))),
-            ast::ExprKind::Again(ref ident) => {
-                ExprKind::Continue(Box::new(self.trans_continue_expr(ident)))
-            }
+            ast::ExprKind::Break(ref label, ref expr) => ExprKind::Break(Box::new(self.trans_break_expr(label, expr))),
+            ast::ExprKind::Continue(ref label) => ExprKind::Continue(Box::new(self.trans_continue_expr(label))),
             ast::ExprKind::Match(ref expr, ref arms) => {
                 ExprKind::Match(Box::new(self.trans_match_expr(expr, arms)))
             }
             ast::ExprKind::Call(ref fn_name, ref args) => {
                 ExprKind::FnCall(Box::new(self.trans_fn_call_expr(fn_name, args)))
             }
-            ast::ExprKind::MethodCall(ref ident, ref types, ref args) => {
-                ExprKind::MethodCall(Box::new(self.trans_method_call_expr(ident, types, args)))
+            ast::ExprKind::MethodCall(ref path, ref args) => {
+                ExprKind::MethodCall(Box::new(self.trans_method_call_expr(path, args)))
             }
-            ast::ExprKind::Closure(capture, ref fn_decl, ref block) => {
-                ExprKind::Closure(Box::new(self.trans_closure_expr(capture, fn_decl, block)))
+            ast::ExprKind::Closure(capture, asyncness, movability, ref sig, ref expr, _) => {
+                ExprKind::Closure(Box::new(self.trans_closure_expr(capture, asyncness, movability, sig, expr)))
             }
-            ast::ExprKind::Ret(ref expr)
-            => ExprKind::Return(Box::new(self.trans_return_expr(expr))),
+            ast::ExprKind::Ret(ref expr) => ExprKind::Return(Box::new(self.trans_return_expr(expr))),
+            /*
             ast::ExprKind::Mac(ref mac) => ExprKind::Macro(self.trans_macro(mac)),
-            ast::ExprKind::Try(ref expr) => ExprKind::Try(Box::new(self.trans_expr(expr))),
             ast::ExprKind::InlineAsm(_) => unreachable!(),
             */
             _ => {
-                println!("{:#?}", expr.node);
+                d!(expr.node);
                 unreachable!()
             }
         };
@@ -1852,6 +1843,147 @@ impl Translator {
         }
     }
 
+    fn trans_block_expr(&mut self, block: &ast::Block, label: &Option<ast::Label>) -> BlockExpr {
+        BlockExpr {
+            label: map_ref_mut(label, |label| ident_to_string(&label.ident)),
+            block: self.trans_block(block),
+        }
+    }
+
+    fn trans_if_expr(&mut self, expr: &ast::Expr, block: &ast::Block, br: &Option<ast::P<ast::Expr>>) -> IfExpr {
+        IfExpr {
+            expr: self.trans_expr(expr),
+            block: self.trans_block(block),
+            br: map_ref_mut(br, |expr| self.trans_expr(expr)),
+        }
+    }
+
+    fn trans_if_let_expr(&mut self, pattens: &Vec<ast::P<ast::Pat>>, expr: &ast::Expr,
+                         block: &ast::Block, br: &Option<ast::P<ast::Expr>>) -> IfLetExpr {
+        IfLetExpr {
+            pattens: self.trans_pattens(pattens),
+            expr: self.trans_expr(expr),
+            block: self.trans_block(block),
+            br: map_ref_mut(br, |expr| self.trans_expr(expr)),
+        }
+    }
+
+    fn trans_while_expr(&mut self, expr: &ast::Expr, block: &ast::Block, label: &Option<ast::Label>) -> WhileExpr {
+        WhileExpr {
+            label: map_ref_mut(label, |label| ident_to_string(&label.ident)),
+            expr: self.trans_expr(expr),
+            block: self.trans_block(block),
+        }
+    }
+
+    fn trans_while_let_expr(&mut self, pattens: &Vec<ast::P<ast::Pat>>, expr: &ast::Expr,
+                            block: &ast::Block, label: &Option<ast::Label>) -> WhileLetExpr {
+        WhileLetExpr {
+            label: map_ref_mut(label, |label| ident_to_string(&label.ident)),
+            pattens: self.trans_pattens(pattens),
+            expr: self.trans_expr(expr),
+            block: self.trans_block(block),
+        }
+    }
+
+    fn trans_for_expr(&mut self, patten: &ast::P<ast::Pat>, expr: &ast::Expr, block: &ast::Block,
+                      label: &Option<ast::Label>) -> ForExpr {
+        ForExpr {
+            label: map_ref_mut(label, |label| ident_to_string(&label.ident)),
+            patten: self.trans_patten(patten),
+            expr: self.trans_expr(expr),
+            block: self.trans_block(block),
+        }
+    }
+
+    fn trans_loop_expr(&mut self, block: &ast::Block, label: &Option<ast::Label>) -> LoopExpr {
+        LoopExpr {
+            label: map_ref_mut(label, |label| ident_to_string(&label.ident)),
+            block: self.trans_block(block),
+        }
+    }
+
+    fn trans_break_expr(&mut self, label: &Option<ast::Label>, expr: &Option<ast::P<ast::Expr>>) -> BreakExpr {
+        BreakExpr {
+            label: map_ref_mut(label, |label| ident_to_string(&label.ident)),
+            expr: map_ref_mut(expr, |expr| self.trans_expr(expr)),
+        }
+    }
+
+    fn trans_continue_expr(&mut self, label: &Option<ast::Label>) -> ContinueExpr {
+        ContinueExpr {
+            label: map_ref_mut(label, |label| ident_to_string(&label.ident)),
+        }
+    }
+
+    fn trans_match_expr(&mut self, expr: &ast::Expr, arms: &Vec<ast::Arm>) -> MatchExpr {
+        MatchExpr {
+            expr: self.trans_expr(expr),
+            arms: self.trans_arms(arms),
+        }
+    }
+
+    fn trans_arms(&mut self, arms: &Vec<ast::Arm>) -> Vec<Arm> {
+        trans_list!(self, arms, trans_arm)
+    }
+
+    #[inline]
+    fn trans_arm(&mut self, arm: &ast::Arm) -> Arm {
+        let attrs = self.trans_attrs(&arm.attrs);
+        let pats = self.trans_pattens(&arm.pats);
+        let guard = map_ref_mut(&arm.guard, |guard| self.trans_guard(guard));
+        let body = self.trans_expr(&arm.body);
+
+        Arm {
+            loc: Loc {
+                start: pats[0].loc.start,
+                end: body.loc.end,
+                nl: false,
+            },
+            attrs,
+            pats,
+            guard,
+            body,
+        }
+    }
+
+    fn trans_guard(&mut self, guard: &ast::Guard) -> Expr {
+        let ast::Guard::If(ref expr) = *guard;
+        self.trans_expr(expr)
+    }
+
+    fn trans_fn_call_expr(&mut self, fn_name: &ast::Expr, args: &Vec<ast::P<ast::Expr>>) -> FnCallExpr {
+        FnCallExpr {
+            name: self.trans_expr(fn_name),
+            args: self.trans_exprs(args),
+        }
+    }
+
+    fn trans_method_call_expr(&mut self, path: &ast::PathSegment, args: &Vec<ast::P<ast::Expr>>) -> MethodCallExpr {
+        MethodCallExpr {
+            path: self.trans_path_segment(path),
+            //args: self.trans_exprs(&args[1..]),
+            args: self.trans_exprs(args),
+        }
+    }
+
+    fn trans_closure_expr(&mut self, capture: ast::CaptureBy, asyncness: ast::IsAsync, movability: ast::Movability,
+                          sig: &ast::FnDecl, expr: &ast::Expr) -> ClosureExpr {
+        ClosureExpr {
+            is_static: is_static(movability),
+            is_async: is_async(asyncness),
+            is_move: is_move(capture),
+            sig: self.trans_fn_sig(sig),
+            expr: self.trans_expr(expr),
+        }
+    }
+
+    fn trans_return_expr(&mut self, expr: &Option<ast::P<ast::Expr>>) -> ReturnExpr {
+        ReturnExpr {
+            ret: map_ref_mut(expr, |expr| self.trans_expr(expr)),
+        }
+    }
+
     /*
     #[inline]
     fn trans_method_ident(&mut self, ident: &ast::SpannedIdent) -> Chunk {
@@ -1870,167 +2002,6 @@ impl Translator {
         Chunk {
             loc: self.leaf_loc(&pos.span),
             s: pos.node.to_string(),
-        }
-    }
-
-    #[inline]
-    fn trans_box_expr(&mut self, expr: &ast::Expr) -> BoxExpr {
-        BoxExpr {
-            expr: self.trans_expr(expr),
-        }
-    }
-
-    #[inline]
-    fn trans_if_expr(&mut self, expr: &ast::Expr, block: &ast::Block,
-                     br: &Option<ast::P<ast::Expr>>)
-                     -> IfExpr {
-        IfExpr {
-            expr: self.trans_expr(expr),
-            block: self.trans_block(block),
-            br: map_ref_mut(br, |expr| self.trans_expr(expr)),
-        }
-    }
-
-    #[inline]
-    fn trans_if_let_expr(&mut self, patten: &ast::P<ast::Pat>, expr: &ast::Expr,
-                         block: &ast::Block,
-                         br: &Option<ast::P<ast::Expr>>)
-                         -> IfLetExpr {
-        IfLetExpr {
-            patten: self.trans_patten(patten),
-            expr: self.trans_expr(expr),
-            block: self.trans_block(block),
-            br: map_ref_mut(br, |expr| self.trans_expr(expr)),
-        }
-    }
-
-    #[inline]
-    fn trans_while_expr(&mut self, expr: &ast::Expr, block: &ast::Block,
-                        label: &Option<ast::Ident>)
-                        -> WhileExpr {
-        WhileExpr {
-            label: map_ref_mut(label, |ident| ident_to_string(ident)),
-            expr: self.trans_expr(expr),
-            block: self.trans_block(block),
-        }
-    }
-
-    #[inline]
-    fn trans_while_let_expr(&mut self, patten: &ast::P<ast::Pat>, expr: &ast::Expr,
-                            block: &ast::Block, label: &Option<ast::Ident>)
-                            -> WhileLetExpr {
-        WhileLetExpr {
-            label: map_ref_mut(label, |ident| ident_to_string(ident)),
-            patten: self.trans_patten(patten),
-            expr: self.trans_expr(expr),
-            block: self.trans_block(block),
-        }
-    }
-
-    #[inline]
-    fn trans_for_expr(&mut self, patten: &ast::P<ast::Pat>, expr: &ast::Expr, block: &ast::Block,
-                      label: &Option<ast::Ident>)
-                      -> ForExpr {
-        ForExpr {
-            label: map_ref_mut(label, |ident| ident_to_string(ident)),
-            patten: self.trans_patten(patten),
-            expr: self.trans_expr(expr),
-            block: self.trans_block(block),
-        }
-    }
-
-    #[inline]
-    fn trans_loop_expr(&mut self, block: &ast::Block, label: &Option<ast::Ident>) -> LoopExpr {
-        LoopExpr {
-            label: map_ref_mut(label, |ident| ident_to_string(ident)),
-            block: self.trans_block(block),
-        }
-    }
-
-    #[inline]
-    fn trans_break_expr(&mut self, ident: &Option<ast::SpannedIdent>) -> BreakExpr {
-        BreakExpr {
-            label: map_ref_mut(ident, |ident| self.trans_ident(ident)),
-        }
-    }
-
-    #[inline]
-    fn trans_continue_expr(&mut self, ident: &Option<ast::SpannedIdent>) -> ContinueExpr {
-        ContinueExpr {
-            label: map_ref_mut(ident, |ident| self.trans_ident(ident)),
-        }
-    }
-
-    #[inline]
-    fn trans_match_expr(&mut self, expr: &ast::Expr, arms: &Vec<ast::Arm>) -> MatchExpr {
-        MatchExpr {
-            expr: self.trans_expr(expr),
-            arms: self.trans_arms(arms),
-        }
-    }
-
-    #[inline]
-    fn trans_arms(&mut self, arms: &Vec<ast::Arm>) -> Vec<Arm> {
-        trans_list!(self, arms, trans_arm)
-    }
-
-    #[inline]
-    fn trans_arm(&mut self, arm: &ast::Arm) -> Arm {
-        let attrs = self.trans_attrs(&arm.attrs);
-        let pats = self.trans_pattens(&arm.pats);
-        let guard = map_ref_mut(&arm.guard, |expr| self.trans_expr(expr));
-        let body = self.trans_expr(&arm.body);
-
-        Arm {
-            loc: Loc {
-                start: pats[0].loc.start,
-                end: body.loc.end,
-                nl: false,
-            },
-            attrs: attrs,
-            pats: pats,
-            guard: guard,
-            body: body,
-        }
-    }
-
-    #[inline]
-    fn trans_fn_call_expr(&mut self, fn_name: &ast::Expr, args: &Vec<ast::P<ast::Expr>>)
-                          -> FnCallExpr {
-        FnCallExpr {
-            name: self.trans_expr(fn_name),
-            args: self.trans_exprs(args),
-        }
-    }
-
-    #[inline]
-    fn trans_method_call_expr(&mut self, ident: &ast::SpannedIdent,
-                              types: &Vec<ast::P<ast::Ty>>,
-                              args: &Vec<ast::P<ast::Expr>>)
-                              -> MethodCallExpr {
-        MethodCallExpr {
-            obj: self.trans_expr(&args[0]),
-            name: self.trans_method_ident(ident),
-            types: self.trans_types(types),
-            args: self.trans_exprs(&args[1..]),
-        }
-    }
-
-    #[inline]
-    fn trans_closure_expr(&mut self, capture: ast::CaptureBy, fn_decl: &ast::FnDecl,
-                          block: &ast::Block)
-                          -> ClosureExpr {
-        ClosureExpr {
-            moved: is_move(capture),
-            fn_sig: self.trans_fn_sig(fn_decl),
-            block: self.trans_block(block),
-        }
-    }
-
-    #[inline]
-    fn trans_return_expr(&mut self, expr: &Option<ast::P<ast::Expr>>) -> ReturnExpr {
-        ReturnExpr {
-            ret: map_ref_mut(expr, |expr| self.trans_expr(expr)),
         }
     }
 

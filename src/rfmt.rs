@@ -12,16 +12,6 @@ use crate::tr;
 
 const SEP: &str = "--------------------------------------------------------------------------------";
 
-macro_rules! p {
-    () => ({println!()});
-    ($arg:expr) => ({println!("{}", $arg)});
-    ($fmt:expr, $($arg:tt)*) => ({println!($fmt, $($arg)*)});
-    ($($arg:tt)+) => ({println!("{}", $($arg)+)});
-}
-
-macro_rules! d {
-    ($arg:expr) => ({println!("{:#?}", $arg)});
-}
 
 pub fn dump_ast(path: &PathBuf) {
     let src = fs::read_to_string(path).unwrap();
