@@ -471,7 +471,7 @@ pub struct FnSig {
 #[derive(Debug)]
 pub struct Arg {
     pub loc: Loc,
-    pub pat: Patten,
+    pub patten: Patten,
     pub ty: Type,
 }
 
@@ -532,7 +532,7 @@ pub struct Fn {
     pub name: String,
     pub generics: Generics,
     pub sig: FnSig,
-    //pub block: Block,
+    pub block: Block,
 }
 
 #[derive(Debug)]
@@ -585,7 +585,7 @@ pub struct TypeTraitItem {
 #[derive(Debug)]
 pub struct MethodTraitItem {
     pub sig: MethodSig,
-    //pub block: Option<Block>,
+    pub block: Option<Block>,
 }
 
 #[derive(Debug)]
@@ -626,10 +626,9 @@ pub struct TypeImplItem {
 #[derive(Debug)]
 pub struct MethodImplItem {
     pub sig: MethodSig,
-    //pub block: Block,
+    pub block: Block,
 }
 
-/*
 #[derive(Debug)]
 pub struct Block {
     pub loc: Loc,
@@ -645,37 +644,25 @@ pub struct Stmt {
 
 #[derive(Debug)]
 pub enum StmtKind {
-    Decl(Decl),
-    Expr(Expr, bool),
-    Macro(MacroStmt, bool),
-}
-
-#[derive(Debug)]
-pub struct Decl {
-    pub loc: Loc,
-    pub decl: DeclKind,
-}
-
-#[derive(Debug)]
-pub enum DeclKind {
-    Local(Local),
     Item(Item),
+    Let(Let),
+    Expr(Expr, bool),
+    //Macro(MacroStmt, bool),
 }
 
 #[derive(Debug)]
-pub struct Local {
+pub struct Let {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
-    pub pat: Patten,
+    pub patten: Patten,
     pub ty: Option<Type>,
     pub init: Option<Expr>,
 }
-*/
 
 #[derive(Debug)]
 pub struct Patten {
     pub loc: Loc,
-    //pub pat: PattenKind,
+    //pub patten: PattenKind,
     pub s: String,
 }
 
@@ -713,7 +700,7 @@ pub struct IdentPatten {
 #[derive(Debug)]
 pub struct RefPatten {
     pub is_mut: bool,
-    pub pat: Patten,
+    pub patten: Patten,
 }
 
 #[derive(Debug)]
@@ -739,7 +726,7 @@ pub struct StructPatten {
 pub struct StructFieldPatten {
     pub loc: Loc,
     pub name: String,
-    pub pat: Patten,
+    pub patten: Patten,
     pub shorthand: bool,
 }
 
@@ -885,7 +872,7 @@ pub struct IfExpr {
 
 #[derive(Debug)]
 pub struct IfLetExpr {
-    pub pat: Patten,
+    pub patten: Patten,
     pub expr: Expr,
     pub block: Block,
     pub br: Option<Expr>,
@@ -901,7 +888,7 @@ pub struct WhileExpr {
 #[derive(Debug)]
 pub struct WhileLetExpr {
     pub label: Option<String>,
-    pub pat: Patten,
+    pub patten: Patten,
     pub expr: Expr,
     pub block: Block,
 }
@@ -909,7 +896,7 @@ pub struct WhileLetExpr {
 #[derive(Debug)]
 pub struct ForExpr {
     pub label: Option<String>,
-    pub pat: Patten,
+    pub patten: Patten,
     pub expr: Expr,
     pub block: Block,
 }

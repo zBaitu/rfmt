@@ -158,7 +158,6 @@ fn is_default(defaultness: ast::Defaultness) -> bool {
     defaultness == ast::Defaultness::Default
 }
 
-/*
 #[inline]
 fn is_block_unsafe(rules: ast::BlockCheckMode) -> bool {
     match rules {
@@ -167,6 +166,7 @@ fn is_block_unsafe(rules: ast::BlockCheckMode) -> bool {
     }
 }
 
+/*
 #[inline]
 fn is_move(capture: ast::CaptureBy) -> bool {
     capture == ast::CaptureBy::Value
@@ -1128,10 +1128,10 @@ impl Translator {
 
     #[inline]
     fn trans_arg(&mut self, arg: &ast::Arg) -> Arg {
-        let pat = self.trans_patten(&arg.pat);
+        let patten = self.trans_patten(&arg.pat);
         Arg {
-            loc: pat.loc.clone(),
-            pat,
+            loc: patten.loc.clone(),
+            patten,
             ty: self.trans_type(&arg.ty),
         }
     }
@@ -1224,7 +1224,7 @@ impl Translator {
             name: ident,
             generics: self.trans_generics(generics),
             sig: self.trans_fn_sig(decl),
-            //block: self.trans_block(block),
+            block: self.trans_block(block),
         }
     }
 
@@ -1295,6 +1295,7 @@ impl Translator {
                                -> MethodTraitItem {
         MethodTraitItem {
             sig: self.trans_method_sig(ident, sig),
+            block: map_ref_mut(block, |block| self.trans_block(block)),
         }
     }
 
@@ -1369,7 +1370,7 @@ impl Translator {
                               -> MethodImplItem {
         MethodImplItem {
             sig: self.trans_method_sig(ident, sig),
-            //block: self.trans_block(block),
+            block: self.trans_block(block),
         }
     }
 
@@ -1379,7 +1380,7 @@ impl Translator {
             ast::SelfKind::Static => None,
             ast::SelfKind::Value(_) => {
                 let arg = &fn_sig.inputs[0];
-                let is_mut = match arg.pat.node {
+                let is_mut = match arg.patten.node {
                     ast::PatKind::Ident(mode, _, _) => {
                         let (_, is_mut) = is_ref_mut(mode);
                         is_mut
@@ -1410,20 +1411,17 @@ impl Translator {
             ast::SelfKind::Explicit(ref ty, _) => Some(Sf::Type(self.trans_type(ty))),
         }
     }
+    */
 
     fn trans_block(&mut self, block: &ast::Block) -> Block {
         let loc = self.loc(&block.span);
         let mut stmts = self.trans_stmts(&block.stmts);
-        if let Some(ref expr) = block.expr {
-            let expr = self.trans_expr(expr);
-            stmts.push(self.expr_to_stmt(expr));
-        }
         self.set_loc(&loc);
 
         Block {
-            loc: loc,
+            loc,
             is_unsafe: is_block_unsafe(block.rules),
-            stmts: stmts,
+            stmts,
         }
     }
 
@@ -1435,64 +1433,54 @@ impl Translator {
     fn trans_stmt(&mut self, stmt: &ast::Stmt) -> Stmt {
         let loc = self.loc(&stmt.span);
         let stmt = match stmt.node {
+            /*
             ast::StmtKind::Decl(ref decl, _) => StmtKind::Decl(self.trans_decl(decl)),
             ast::StmtKind::Semi(ref expr, _) => StmtKind::Expr(self.trans_expr(expr), true),
             ast::StmtKind::Expr(ref expr, _) => StmtKind::Expr(self.trans_expr(expr), false),
             ast::StmtKind::Mac(ref mac, ref style, ref attrs) => {
                 StmtKind::Macro(self.trans_macro_stmt(attrs, mac), is_macro_semi(style))
             }
+            */
+            ast::StmtKind::Item(ref item) => StmtKind::Item(self.trans_item(item)),
+            ast::StmtKind::Local(ref local) => StmtKind::Let(self.trans_let(local)),
+            ast::StmtKind::Semi(ref expr) => StmtKind::Expr(self.trans_expr(expr), true),
+            ast::StmtKind::Expr(ref expr) => StmtKind::Expr(self.trans_expr(expr), false),
+            _ => unreachable!(),
         };
         self.set_loc(&loc);
 
         Stmt {
-            loc: loc,
-            stmt: stmt,
+            loc,
+            stmt,
         }
     }
 
-    #[inline]
-    fn trans_decl(&mut self, decl: &ast::Decl) -> Decl {
-        let loc = self.loc(&decl.span);
-        let decl = match decl.node {
-            ast::DeclKind::Local(ref local) => DeclKind::Local(self.trans_local(local)),
-            ast::DeclKind::Item(ref item) => DeclKind::Item(self.trans_item(item)),
-        };
-        self.set_loc(&loc);
-
-        Decl {
-            loc: loc,
-            decl: decl,
-        }
-    }
-
-    #[inline]
-    fn trans_local(&mut self, local: &ast::Local) -> Local {
+    fn trans_let(&mut self, local: &ast::Local) -> Let {
         let loc = self.loc(&local.span);
         let attrs = self.trans_thin_attrs(&local.attrs);
-        let pat = self.trans_patten(&local.pat);
+        let patten = self.trans_patten(&local.pat);
         let ty = map_ref_mut(&local.ty, |ty| self.trans_type(ty));
         let init = map_ref_mut(&local.init, |expr| self.trans_expr(expr));
         self.set_loc(&loc);
 
-        Local {
-            loc: loc,
-            attrs: attrs,
-            pat: pat,
-            ty: ty,
-            init: init,
+        Let {
+            loc,
+            attrs,
+            patten,
+            ty,
+            init,
         }
     }
-    */
 
     fn trans_pattens(&mut self, pats: &Vec<ast::P<ast::Pat>>) -> Vec<Patten> {
         trans_list!(self, pats, trans_patten)
     }
 
     #[inline]
-    fn trans_patten(&mut self, pat: &ast::P<ast::Pat>) -> Patten {
-        let loc = self.loc(&pat.span);
+    fn trans_patten(&mut self, patten: &ast::P<ast::Pat>) -> Patten {
+        let loc = self.loc(&patten.span);
         /*
-        let pat = match pat.node {
+        let patten = match patten.node {
             ast::PatKind::Wild => PattenKind::Wildcard,
             ast::PatKind::Lit(ref expr) => PattenKind::Literal(self.trans_expr(expr)),
             ast::PatKind::Range(ref start, ref end) => {
@@ -1501,8 +1489,8 @@ impl Translator {
             ast::PatKind::Ident(mode, ref ident, ref binding) => {
                 PattenKind::Ident(Box::new(self.trans_ident_patten(mode, ident, binding)))
             }
-            ast::PatKind::Ref(ref pat, mutbl) => {
-                PattenKind::Ref(Box::new(self.trans_ref_patten(is_mut(mutbl), pat)))
+            ast::PatKind::Ref(ref patten, mutbl) => {
+                PattenKind::Ref(Box::new(self.trans_ref_patten(is_mut(mutbl), patten)))
             }
             ast::PatKind::QPath(ref qself, ref path) => {
                 PattenKind::Path(self.trans_path_patten(Some(qself), path))
@@ -1521,7 +1509,7 @@ impl Translator {
             }
             ast::PatKind::Tup(ref pats)
             => PattenKind::Tuple(Box::new(self.trans_tuple_patten(pats))),
-            ast::PatKind::Box(ref pat) => PattenKind::Box(Box::new(self.trans_patten(pat))),
+            ast::PatKind::Box(ref patten) => PattenKind::Box(Box::new(self.trans_patten(patten))),
             ast::PatKind::Mac(ref mac) => PattenKind::Macro(self.trans_macro(mac)),
         };
         */
@@ -1529,7 +1517,7 @@ impl Translator {
 
         Patten {
             loc,
-            s: self.span_to_snippet(pat.span).unwrap(),
+            s: self.span_to_snippet(patten.span).unwrap(),
         }
     }
 
@@ -1551,15 +1539,15 @@ impl Translator {
             is_ref: is_ref,
             is_mut: is_mut,
             name: self.trans_ident(ident),
-            binding: map_ref_mut(binding, |pat| self.trans_patten(pat)),
+            binding: map_ref_mut(binding, |patten| self.trans_patten(patten)),
         }
     }
 
     #[inline]
-    fn trans_ref_patten(&mut self, is_mut: bool, pat: &ast::P<ast::Pat>) -> RefPatten {
+    fn trans_ref_patten(&mut self, is_mut: bool, patten: &ast::P<ast::Pat>) -> RefPatten {
         RefPatten {
             is_mut: is_mut,
-            pat: self.trans_patten(pat),
+            patten: self.trans_patten(patten),
         }
     }
 
@@ -1603,14 +1591,14 @@ impl Translator {
                                  -> StructFieldPatten {
         let loc = self.loc(&field.span);
         let name = ident_to_string(&field.node.ident);
-        let pat = self.trans_patten(&field.node.pat);
+        let patten = self.trans_patten(&field.node.patten);
         let shorthand = field.node.is_shorthand;
         self.set_loc(&loc);
 
         StructFieldPatten {
             loc: loc,
             name: name,
-            pat: pat,
+            patten: patten,
             shorthand: shorthand,
         }
     }
@@ -1622,7 +1610,7 @@ impl Translator {
                         -> VecPatten {
         VecPatten {
             start: self.trans_pattens(start),
-            emit: map_ref_mut(emit, |pat| self.trans_patten(pat)),
+            emit: map_ref_mut(emit, |patten| self.trans_patten(patten)),
             end: self.trans_pattens(end),
         }
     }
@@ -1707,17 +1695,17 @@ impl Translator {
             ast::ExprKind::If(ref expr, ref block, ref br) => {
                 ExprKind::If(Box::new(self.trans_if_expr(expr, block, br)))
             }
-            ast::ExprKind::IfLet(ref pat, ref expr, ref block, ref br) => {
-                ExprKind::IfLet(Box::new(self.trans_if_let_expr(pat, expr, block, br)))
+            ast::ExprKind::IfLet(ref patten, ref expr, ref block, ref br) => {
+                ExprKind::IfLet(Box::new(self.trans_if_let_expr(patten, expr, block, br)))
             }
             ast::ExprKind::While(ref expr, ref block, ref label) => {
                 ExprKind::While(Box::new(self.trans_while_expr(expr, block, label)))
             }
-            ast::ExprKind::WhileLet(ref pat, ref expr, ref block, ref label) => {
-                ExprKind::WhileLet(Box::new(self.trans_while_let_expr(pat, expr, block, label)))
+            ast::ExprKind::WhileLet(ref patten, ref expr, ref block, ref label) => {
+                ExprKind::WhileLet(Box::new(self.trans_while_let_expr(patten, expr, block, label)))
             }
-            ast::ExprKind::ForLoop(ref pat, ref expr, ref block, ref label) => {
-                ExprKind::For(Box::new(self.trans_for_expr(pat, expr, block, label)))
+            ast::ExprKind::ForLoop(ref patten, ref expr, ref block, ref label) => {
+                ExprKind::For(Box::new(self.trans_for_expr(patten, expr, block, label)))
             }
             ast::ExprKind::Loop(ref block, ref label) => {
                 ExprKind::Loop(Box::new(self.trans_loop_expr(block, label)))
@@ -1969,12 +1957,12 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_if_let_expr(&mut self, pat: &ast::P<ast::Pat>, expr: &ast::Expr,
+    fn trans_if_let_expr(&mut self, patten: &ast::P<ast::Pat>, expr: &ast::Expr,
                          block: &ast::Block,
                          br: &Option<ast::P<ast::Expr>>)
                          -> IfLetExpr {
         IfLetExpr {
-            pat: self.trans_patten(pat),
+            patten: self.trans_patten(patten),
             expr: self.trans_expr(expr),
             block: self.trans_block(block),
             br: map_ref_mut(br, |expr| self.trans_expr(expr)),
@@ -1993,24 +1981,24 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_while_let_expr(&mut self, pat: &ast::P<ast::Pat>, expr: &ast::Expr,
+    fn trans_while_let_expr(&mut self, patten: &ast::P<ast::Pat>, expr: &ast::Expr,
                             block: &ast::Block, label: &Option<ast::Ident>)
                             -> WhileLetExpr {
         WhileLetExpr {
             label: map_ref_mut(label, |ident| ident_to_string(ident)),
-            pat: self.trans_patten(pat),
+            patten: self.trans_patten(patten),
             expr: self.trans_expr(expr),
             block: self.trans_block(block),
         }
     }
 
     #[inline]
-    fn trans_for_expr(&mut self, pat: &ast::P<ast::Pat>, expr: &ast::Expr, block: &ast::Block,
+    fn trans_for_expr(&mut self, patten: &ast::P<ast::Pat>, expr: &ast::Expr, block: &ast::Block,
                       label: &Option<ast::Ident>)
                       -> ForExpr {
         ForExpr {
             label: map_ref_mut(label, |ident| ident_to_string(ident)),
-            pat: self.trans_patten(pat),
+            patten: self.trans_patten(patten),
             expr: self.trans_expr(expr),
             block: self.trans_block(block),
         }
