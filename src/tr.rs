@@ -148,12 +148,17 @@ fn abi_to_string(abi: ast::Abi) -> String {
     format!(r#""{:?}""#, abi)
 }
 
-/*
 #[inline]
 fn is_neg(polarity: ast::ImplPolarity) -> bool {
     polarity == ast::ImplPolarity::Negative
 }
 
+#[inline]
+fn is_default(defaultness: ast::Defaultness) -> bool {
+    defaultness == ast::Defaultness::Default
+}
+
+/*
 #[inline]
 fn is_block_unsafe(rules: ast::BlockCheckMode) -> bool {
     match rules {
@@ -178,11 +183,6 @@ fn is_ref_mut(mode: ast::BindingMode) -> (bool, bool) {
 #[inline]
 fn is_halfopen(range_limit: ast::RangeLimits) -> bool {
     range_limit == ast::RangeLimits::HalfOpen
-}
-
-#[inline]
-fn is_default(defaultness: ast::Defaultness) -> bool {
-    defaultness == ast::Defaultness::Default
 }
 
 #[inline]
@@ -487,15 +487,10 @@ impl Translator {
             ast::ItemKind::Trait(autoness, unsafety, ref generics, ref bounds, ref items) => {
                 ItemKind::Trait(self.trans_trait(autoness, unsafety, ident, generics, bounds, items))
             }
+            ast::ItemKind::Impl(unsafety, polarity, defaultness, ref generics, ref trait_ref, ref ty, ref items) => {
+                ItemKind::Impl(self.trans_impl(unsafety, polarity, defaultness, generics, trait_ref, ty, items))
+            }
             /*
-            ast::ItemKind::DefaultImpl(unsafety, ref trait_ref) => {
-                ItemKind::ImplDefault(self.trans_impl_default(is_unsafe(unsafety), trait_ref))
-            }
-            ast::ItemKind::Impl(unsafety, polarity, ref generics, ref trait_ref, ref ty,
-                                ref items) => {
-                ItemKind::Impl(self.trans_impl(is_unsafe(unsafety), is_neg(polarity), generics,
-                                               trait_ref, ty, items))
-            }
             ast::ItemKind::Mac(ref mac) => ItemKind::Macro(self.trans_macro_raw(mac)),
             */
             _ => unreachable!(),
@@ -1311,20 +1306,13 @@ impl Translator {
         }
     }
 
-    /*
-    fn trans_impl_default(&mut self, is_unsafe: bool, trait_ref: &ast::TraitRef) -> ImplDefault {
-        ImplDefault {
-            is_unsafe: is_unsafe,
-            trait_ref: self.trans_trait_ref(trait_ref),
-        }
-    }
-
-    fn trans_impl(&mut self, is_unsafe: bool, is_neg: bool, generics: &ast::Generics,
-                  trait_ref: &Option<ast::TraitRef>, ty: &ast::Ty, items: &Vec<ast::ImplItem>)
+    fn trans_impl(&mut self, unsafety: ast::Unsafety, polarity: ast::ImplPolarity, defaultness: ast::Defaultness,
+                  generics: &ast::Generics, trait_ref: &Option<ast::TraitRef>, ty: &ast::Ty, items: &Vec<ast::ImplItem>)
                   -> Impl {
         Impl {
-            is_unsafe: is_unsafe,
-            is_neg: is_neg,
+            is_unsafe: is_unsafe(unsafety),
+            is_neg: is_neg(polarity),
+            is_default: is_default(defaultness),
             generics: self.trans_generics(generics),
             trait_ref: map_ref_mut(trait_ref, |trait_ref| self.trans_trait_ref(trait_ref)),
             ty: self.trans_type(ty),
@@ -1336,42 +1324,37 @@ impl Translator {
         trans_list!(self, items, trans_impl_item)
     }
 
+    #[inline]
     fn trans_impl_item(&mut self, item: &ast::ImplItem) -> ImplItem {
         let loc = self.loc(&item.span);
         let attrs = self.trans_attrs(&item.attrs);
-
-        let is_pub = is_pub(&item.vis);
+        let vis = self.trans_vis(&item.vis);
         let is_default = is_default(item.defaultness);
         let ident = ident_to_string(&item.ident);
         let item = match item.node {
             ast::ImplItemKind::Const(ref ty, ref expr) => {
-                ImplItemKind::Const(self.trans_const_impl_item(ident, ty, expr))
+                ImplItemKind::Const(self.trans_const(ident, ty, expr))
             }
             ast::ImplItemKind::Type(ref ty) => {
                 ImplItemKind::Type(self.trans_type_impl_item(ident, ty))
             }
+            ast::ImplItemKind::Existential(ref bounds) => {
+                ImplItemKind::Existential(self.trans_type_param_bounds(bounds))
+            }
             ast::ImplItemKind::Method(ref method_sig, ref block) => {
                 ImplItemKind::Method(self.trans_method_impl_item(ident, method_sig, block))
             }
-            ast::ImplItemKind::Macro(ref mac) => ImplItemKind::Macro(self.trans_macro(mac)),
+            //ast::ImplItemKind::Macro(ref mac) => ImplItemKind::Macro(self.trans_macro(mac)),
+            _ => unreachable!(),
         };
         self.set_loc(&loc);
 
         ImplItem {
-            loc: loc,
-            attrs: attrs,
-            is_pub: is_pub,
-            is_default: is_default,
-            item: item,
-        }
-    }
-
-    fn trans_const_impl_item(&mut self, ident: String, ty: &ast::Ty, expr: &ast::Expr)
-                             -> ConstImplItem {
-        ConstImplItem {
-            name: ident,
-            ty: self.trans_type(ty),
-            expr: self.trans_expr(expr),
+            loc,
+            attrs,
+            vis,
+            is_default,
+            item,
         }
     }
 
@@ -1382,28 +1365,15 @@ impl Translator {
         }
     }
 
-    fn trans_method_impl_item(&mut self, ident: String, method_sig: &ast::MethodSig,
-                              block: &ast::P<ast::Block>)
+    fn trans_method_impl_item(&mut self, ident: String, sig: &ast::MethodSig, block: &ast::P<ast::Block>)
                               -> MethodImplItem {
         MethodImplItem {
-            is_unsafe: is_unsafe(method_sig.unsafety),
-            is_const: is_const(method_sig.constness),
-            abi: abi_to_string(method_sig.abi),
-            name: ident,
-            method_sig: self.trans_method_sig(method_sig),
-            block: self.trans_block(block),
+            sig: self.trans_method_sig(ident, sig),
+            //block: self.trans_block(block),
         }
     }
 
-
-    fn trans_method_sig(&mut self, method_sig: &ast::MethodSig) -> MethodSig {
-        MethodSig {
-            generics: self.trans_generics(&method_sig.generics),
-            sf: self.trans_self(&method_sig.explicit_self.node, &method_sig.decl),
-            fn_sig: self.trans_fn_sig(&method_sig.decl),
-        }
-    }
-
+    /*
     fn trans_self(&mut self, self_kind: &ast::SelfKind, fn_sig: &ast::FnDecl) -> Option<Sf> {
         match *self_kind {
             ast::SelfKind::Static => None,

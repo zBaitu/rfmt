@@ -116,9 +116,8 @@ pub enum ItemKind {
     ForeignMod(ForeignMod),
     Fn(Fn),
     Trait(Trait),
-    /*
-    ImplDefault(ImplDefault),
     Impl(Impl),
+    /*
     Macro(MacroRaw),
     */
 }
@@ -589,17 +588,11 @@ pub struct MethodTraitItem {
     //pub block: Option<Block>,
 }
 
-/*
-#[derive(Debug)]
-pub struct ImplDefault {
-    pub is_unsafe: bool,
-    pub trait_ref: TraitRef,
-}
-
 #[derive(Debug)]
 pub struct Impl {
     pub is_unsafe: bool,
     pub is_neg: bool,
+    pub is_default: bool,
     pub generics: Generics,
     pub trait_ref: Option<TraitRef>,
     pub ty: Type,
@@ -610,24 +603,18 @@ pub struct Impl {
 pub struct ImplItem {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
-    pub is_pub: bool,
+    pub vis: Vis,
     pub is_default: bool,
     pub item: ImplItemKind,
 }
 
 #[derive(Debug)]
 pub enum ImplItemKind {
-    Const(ConstImplItem),
+    Const(Const),
     Type(TypeImplItem),
+    Existential(Vec<TypeParamBound>),
     Method(MethodImplItem),
-    Macro(Macro),
-}
-
-#[derive(Debug)]
-pub struct ConstImplItem {
-    pub name: String,
-    pub ty: Type,
-    pub expr: Expr,
+    //Macro(Macro),
 }
 
 #[derive(Debug)]
@@ -638,29 +625,11 @@ pub struct TypeImplItem {
 
 #[derive(Debug)]
 pub struct MethodImplItem {
-    pub is_unsafe: bool,
-    pub is_const: bool,
-    pub abi: String,
-    pub name: String,
-    pub method_sig: MethodSig,
-    pub block: Block,
+    pub sig: MethodSig,
+    //pub block: Block,
 }
 
-
-
-#[derive(Debug)]
-pub struct MethodSig {
-    pub generics: Generics,
-    pub sf: Option<Sf>,
-    pub fn_sig: FnSig,
-}
-
-#[derive(Debug)]
-pub enum Sf {
-    String(String),
-    Type(Type),
-}
-
+/*
 #[derive(Debug)]
 pub struct Block {
     pub loc: Loc,
