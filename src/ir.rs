@@ -610,12 +610,14 @@ pub struct ImplItem {
 
 #[derive(Debug)]
 pub enum ImplItemKind {
-    Const(Const),
+    Const(ConstImplItem),
     Type(TypeImplItem),
     Existential(Vec<TypeParamBound>),
     Method(MethodImplItem),
     //Macro(Macro),
 }
+
+pub type ConstImplItem = Const;
 
 #[derive(Debug)]
 pub struct TypeImplItem {
@@ -747,28 +749,27 @@ pub struct TuplePatten {
 pub struct Expr {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
-    //pub expr: ExprKind,
-    pub s: String,
+    pub expr: ExprKind,
 }
 
-/*
 #[derive(Debug)]
 pub enum ExprKind {
     Literal(Chunk),
     Path(PathExpr),
-    Unary(Box<UnaryExpr>),
     Ref(Box<RefExpr>),
-    List(Box<ListExpr>),
-    FixedSizeArray(Box<FixedSizeArrayExpr>),
-    Vec(Box<Vec<Expr>>),
+    UnaryOp(Box<UnaryOpExpr>),
+    ListOp(Box<ListOpExpr>),
+    Repeat(Box<RepeatExpr>),
+    Array(Box<Vec<Expr>>),
     Tuple(Box<Vec<Expr>>),
-    FieldAccess(Box<FieldAccessExpr>),
-    Struct(Box<StructExpr>),
     Index(Box<IndexExpr>),
-    Range(Box<RangeExpr>),
-    Box(Box<BoxExpr>),
-    Cast(Box<CastExpr>),
+    Struct(Box<StructExpr>),
+    Field(Box<FieldExpr>),
     Type(Box<TypeExpr>),
+    Cast(Box<CastExpr>),
+    Range(Box<RangeExpr>),
+    /*
+    Box(Box<BoxExpr>),
     Block(Box<Block>),
     If(Box<IfExpr>),
     IfLet(Box<IfLetExpr>),
@@ -785,15 +786,10 @@ pub enum ExprKind {
     Return(Box<ReturnExpr>),
     Try(Box<Expr>),
     Macro(Macro),
+    */
 }
 
 pub type PathExpr = PathType;
-
-#[derive(Debug)]
-pub struct UnaryExpr {
-    pub op: &'static str,
-    pub expr: Expr,
-}
 
 #[derive(Debug)]
 pub struct RefExpr {
@@ -802,21 +798,27 @@ pub struct RefExpr {
 }
 
 #[derive(Debug)]
-pub struct ListExpr {
-    pub exprs: Vec<Expr>,
-    pub sep: Chunk,
+pub struct UnaryOpExpr {
+    pub op: &'static str,
+    pub expr: Expr,
 }
 
 #[derive(Debug)]
-pub struct FixedSizeArrayExpr {
-    pub init: Expr,
+pub struct ListOpExpr {
+    pub op: Chunk,
+    pub exprs: Vec<Expr>,
+}
+
+#[derive(Debug)]
+pub struct RepeatExpr {
+    pub value: Expr,
     pub len: Expr,
 }
 
 #[derive(Debug)]
-pub struct FieldAccessExpr {
-    pub expr: Expr,
-    pub field: Chunk,
+pub struct IndexExpr {
+    pub obj: Expr,
+    pub index: Expr,
 }
 
 #[derive(Debug)]
@@ -829,26 +831,20 @@ pub struct StructExpr {
 #[derive(Debug)]
 pub struct StructFieldExpr {
     pub loc: Loc,
-    pub name: Chunk,
+    pub name: String,
     pub value: Expr,
 }
 
 #[derive(Debug)]
-pub struct IndexExpr {
-    pub obj: Expr,
-    pub index: Expr,
-}
-
-#[derive(Debug)]
-pub struct RangeExpr {
-    pub start: Option<Expr>,
-    pub end: Option<Expr>,
-    pub is_halfopen: bool,
-}
-
-#[derive(Debug)]
-pub struct BoxExpr {
+pub struct FieldExpr {
     pub expr: Expr,
+    pub field: String,
+}
+
+#[derive(Debug)]
+pub struct TypeExpr {
+    pub expr: Expr,
+    pub ty: Type,
 }
 
 #[derive(Debug)]
@@ -858,9 +854,16 @@ pub struct CastExpr {
 }
 
 #[derive(Debug)]
-pub struct TypeExpr {
+pub struct RangeExpr {
+    pub start: Option<Expr>,
+    pub end: Option<Expr>,
+    pub is_inclusive: bool,
+}
+
+/*
+#[derive(Debug)]
+pub struct BoxExpr {
     pub expr: Expr,
-    pub ty: Type,
 }
 
 #[derive(Debug)]

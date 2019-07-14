@@ -166,6 +166,16 @@ fn is_block_unsafe(rules: ast::BlockCheckMode) -> bool {
     }
 }
 
+#[inline]
+fn uop_to_string(op: ast::UnOp) -> &'static str {
+    ast::UnOp::to_string(op)
+}
+
+#[inline]
+fn is_inclusive(limit: ast::RangeLimits) -> bool {
+    limit == ast::RangeLimits::Closed
+}
+
 /*
 #[inline]
 fn is_move(capture: ast::CaptureBy) -> bool {
@@ -178,16 +188,6 @@ fn is_ref_mut(mode: ast::BindingMode) -> (bool, bool) {
         ast::BindingMode::ByRef(mutbl) => (true, is_mut(mutbl)),
         ast::BindingMode::ByValue(mutbl) => (false, is_mut(mutbl)),
     }
-}
-
-#[inline]
-fn is_halfopen(range_limit: ast::RangeLimits) -> bool {
-    range_limit == ast::RangeLimits::HalfOpen
-}
-
-#[inline]
-fn uop_to_string(op: ast::UnOp) -> &'static str {
-    ast::UnOp::to_string(op)
 }
 
 #[inline]
@@ -1415,7 +1415,7 @@ impl Translator {
 
     fn trans_block(&mut self, block: &ast::Block) -> Block {
         let loc = self.loc(&block.span);
-        let mut stmts = self.trans_stmts(&block.stmts);
+        let stmts = self.trans_stmts(&block.stmts);
         self.set_loc(&loc);
 
         Block {
@@ -1638,58 +1638,35 @@ impl Translator {
     fn trans_expr(&mut self, expr: &ast::Expr) -> Expr {
         let loc = self.loc(&expr.span);
         let attrs = self.trans_thin_attrs(&expr.attrs);
-        /*
         let expr = match expr.node {
             ast::ExprKind::Lit(ref lit) => ExprKind::Literal(self.trans_literal_expr(lit)),
-            ast::ExprKind::Path(ref qself, ref path)
-            => ExprKind::Path(self.trans_path_type(qself, path)),
-            ast::ExprKind::Unary(op, ref expr) => {
-                ExprKind::Unary(Box::new(self.trans_unary_expr(op, expr)))
-            }
-            ast::ExprKind::AddrOf(mutble, ref expr) => {
-                ExprKind::Ref(Box::new(self.trans_ref_expr(mutble, expr)))
-            }
+            ast::ExprKind::Path(ref qself, ref path) => ExprKind::Path(self.trans_path_type(qself, path)),
+            ast::ExprKind::AddrOf(mutble, ref expr) => ExprKind::Ref(Box::new(self.trans_ref_expr(mutble, expr))),
+            ast::ExprKind::Unary(op, ref expr) => ExprKind::UnaryOp(Box::new(self.trans_unary_expr(op, expr))),
             ast::ExprKind::Binary(ref op, ref left, ref right) => {
-                ExprKind::List(Box::new(self.trans_binary_expr(left, op, right)))
+                ExprKind::ListOp(Box::new(self.trans_binary_expr(op, left, right)))
             }
             ast::ExprKind::Assign(ref left, ref right) => {
-                ExprKind::List(Box::new(self.trans_assign_expr(left, right)))
+                ExprKind::ListOp(Box::new(self.trans_assign_expr(left, right)))
             }
             ast::ExprKind::AssignOp(ref op, ref left, ref right) => {
-                ExprKind::List(Box::new(self.trans_op_assign_expr(left, op, right)))
+                ExprKind::ListOp(Box::new(self.trans_op_assign_expr(op, left, right)))
             }
-            ast::ExprKind::InPlace(ref left, ref right) => {
-                ExprKind::List(Box::new(self.trans_in_place_expr(left, right)))
-            }
-            ast::ExprKind::Repeat(ref init, ref len) => {
-                ExprKind::FixedSizeArray(Box::new(self.trans_fixed_size_array_expr(init, len)))
-            }
-            ast::ExprKind::Vec(ref exprs) => ExprKind::Vec(Box::new(self.trans_exprs(exprs))),
+            ast::ExprKind::Repeat(ref expr, ref len) => ExprKind::Repeat(Box::new(self.trans_repeat_expr(expr, len))),
+            ast::ExprKind::Array(ref exprs) => ExprKind::Array(Box::new(self.trans_exprs(exprs))),
             ast::ExprKind::Tup(ref exprs) => ExprKind::Tuple(Box::new(self.trans_exprs(exprs))),
-            ast::ExprKind::Paren(ref expr)
-            => ExprKind::Tuple(Box::new(vec![self.trans_expr(expr)])),
-            ast::ExprKind::Field(ref expr, ref ident) => {
-                ExprKind::FieldAccess(Box::new(self.trans_struct_field_access_expr(expr, ident)))
-            }
-            ast::ExprKind::TupField(ref expr, ref pos) => {
-                ExprKind::FieldAccess(Box::new(self.trans_tuple_field_access_expr(expr, pos)))
-            }
+            ast::ExprKind::Index(ref obj, ref index) => ExprKind::Index(Box::new(self.trans_index_expr(obj, index))),
             ast::ExprKind::Struct(ref path, ref fields, ref base) => {
                 ExprKind::Struct(Box::new(self.trans_struct_expr(path, fields, base)))
             }
-            ast::ExprKind::Index(ref obj, ref index) => {
-                ExprKind::Index(Box::new(self.trans_index_expr(obj, index)))
-            }
+            ast::ExprKind::Field(ref expr, ref ident) => ExprKind::Field(Box::new(self.trans_field_expr(expr, ident))),
+            ast::ExprKind::Type(ref expr, ref ty) => ExprKind::Type(Box::new(self.trans_type_expr(expr, ty))),
+            ast::ExprKind::Cast(ref expr, ref ty) => ExprKind::Cast(Box::new(self.trans_cast_expr(expr, ty))),
             ast::ExprKind::Range(ref start, ref end, limit) => {
                 ExprKind::Range(Box::new(self.trans_range_expr(start, end, limit)))
             }
+            /*
             ast::ExprKind::Box(ref expr) => ExprKind::Box(Box::new(self.trans_box_expr(expr))),
-            ast::ExprKind::Cast(ref expr, ref ty) => {
-                ExprKind::Cast(Box::new(self.trans_cast_expr(expr, ty)))
-            }
-            ast::ExprKind::Type(ref expr, ref ty) => {
-                ExprKind::Type(Box::new(self.trans_type_expr(expr, ty)))
-            }
             ast::ExprKind::Block(ref block)
             => ExprKind::Block(Box::new(self.trans_block(block))),
             ast::ExprKind::If(ref expr, ref block, ref br) => {
@@ -1732,26 +1709,150 @@ impl Translator {
             ast::ExprKind::Mac(ref mac) => ExprKind::Macro(self.trans_macro(mac)),
             ast::ExprKind::Try(ref expr) => ExprKind::Try(Box::new(self.trans_expr(expr))),
             ast::ExprKind::InlineAsm(_) => unreachable!(),
+            */
+            _ => {
+                println!("{:#?}", expr.node);
+                unreachable!()
+            }
         };
-        */
         self.set_loc(&loc);
 
         Expr {
             loc,
             attrs,
-            s: self.span_to_snippet(expr.span).unwrap(),
+            expr,
+        }
+    }
+
+    fn trans_literal_expr(&mut self, lit: &ast::Lit) -> Chunk {
+        Chunk {
+            loc: self.leaf_loc(&lit.span),
+            s: self.literal_to_string(lit),
+        }
+    }
+
+    fn trans_ref_expr(&mut self, mutble: ast::Mutability, expr: &ast::Expr) -> RefExpr {
+        RefExpr {
+            is_mut: is_mut(mutble),
+            expr: self.trans_expr(expr),
+        }
+    }
+
+    fn trans_unary_expr(&mut self, op: ast::UnOp, expr: &ast::Expr) -> UnaryOpExpr {
+        UnaryOpExpr {
+            op: uop_to_string(op),
+            expr: self.trans_expr(expr),
+        }
+    }
+
+    fn trans_binary_expr(&mut self, op: &ast::BinOp, left: &ast::Expr, right: &ast::Expr) -> ListOpExpr {
+        ListOpExpr {
+            op: self.trans_bop(op),
+            exprs: vec![self.trans_expr(left), self.trans_expr(right)],
+        }
+    }
+
+    fn trans_bop(&mut self, op: &ast::BinOp) -> Chunk {
+        Chunk {
+            loc: self.leaf_loc(&op.span),
+            s: op.node.to_string().to_string(),
+        }
+    }
+
+    fn trans_assign_expr(&mut self, left: &ast::Expr, right: &ast::Expr) -> ListOpExpr {
+        ListOpExpr {
+            op: Chunk::new("="),
+            exprs: vec![self.trans_expr(left), self.trans_expr(right)],
+        }
+    }
+
+    fn trans_op_assign_expr(&mut self, op: &ast::BinOp, left: &ast::Expr, right: &ast::Expr) -> ListOpExpr {
+        ListOpExpr {
+            op: self.trans_bop_assign(op),
+            exprs: vec![self.trans_expr(left), self.trans_expr(right)],
+        }
+    }
+
+    fn trans_bop_assign(&mut self, op: &ast::BinOp) -> Chunk {
+        Chunk {
+            loc: self.leaf_loc(&op.span),
+            s: format!("{}=", op.node.to_string()),
+        }
+    }
+
+    fn trans_repeat_expr(&mut self, expr: &ast::Expr, len: &ast::AnonConst) -> RepeatExpr {
+        RepeatExpr {
+            value: self.trans_expr(expr),
+            len: self.trans_expr(&len.value),
+        }
+    }
+
+    #[inline]
+    fn trans_index_expr(&mut self, obj: &ast::Expr, index: &ast::Expr) -> IndexExpr {
+        IndexExpr {
+            obj: self.trans_expr(obj),
+            index: self.trans_expr(index),
+        }
+    }
+
+    fn trans_struct_expr(&mut self, path: &ast::Path, fields: &Vec<ast::Field>, base: &Option<ast::P<ast::Expr>>)
+                         -> StructExpr {
+        StructExpr {
+            path: self.trans_path(path),
+            fields: self.trans_struct_field_exprs(fields),
+            base: map_ref_mut(base, |expr| self.trans_expr(expr)),
+        }
+    }
+
+    fn trans_struct_field_exprs(&mut self, fields: &Vec<ast::Field>) -> Vec<StructFieldExpr> {
+        trans_list!(self, fields, trans_struct_field_expr)
+    }
+
+    #[inline]
+    fn trans_struct_field_expr(&mut self, field: &ast::Field) -> StructFieldExpr {
+        let loc = self.loc(&field.span);
+        let name = ident_to_string(&field.ident);
+        let value = self.trans_expr(&field.expr);
+        self.set_loc(&loc);
+
+        StructFieldExpr {
+            loc,
+            name,
+            value,
+        }
+    }
+
+    fn trans_field_expr(&mut self, expr: &ast::Expr, ident: &ast::Ident) -> FieldExpr {
+        FieldExpr {
+            expr: self.trans_expr(expr),
+            field: ident_to_string(ident),
+        }
+    }
+
+    fn trans_type_expr(&mut self, expr: &ast::Expr, ty: &ast::Ty) -> TypeExpr {
+        TypeExpr {
+            expr: self.trans_expr(expr),
+            ty: self.trans_type(ty),
+        }
+    }
+
+    fn trans_cast_expr(&mut self, expr: &ast::Expr, ty: &ast::Ty) -> CastExpr {
+        CastExpr {
+            expr: self.trans_expr(expr),
+            ty: self.trans_type(ty),
+        }
+    }
+
+    fn trans_range_expr(&mut self, start: &Option<ast::P<ast::Expr>>, end: &Option<ast::P<ast::Expr>>,
+                        limit: ast::RangeLimits) -> RangeExpr {
+        RangeExpr {
+            start: map_ref_mut(start, |expr| self.trans_expr(expr)),
+            end: map_ref_mut(end, |expr| self.trans_expr(expr)),
+            is_inclusive: is_inclusive(limit),
         }
     }
 
     /*
-    #[inline]
-    fn trans_ident(&mut self, ident: &ast::SpannedIdent) -> Chunk {
-        Chunk {
-            loc: self.leaf_loc(&ident.span),
-            s: ident_to_string(&ident.node),
-        }
-    }
-
     #[inline]
     fn trans_method_ident(&mut self, ident: &ast::SpannedIdent) -> Chunk {
         let s = ident_to_string(&ident.node);
@@ -1773,175 +1874,9 @@ impl Translator {
     }
 
     #[inline]
-    fn trans_literal_expr(&mut self, lit: &ast::Lit) -> Chunk {
-        Chunk {
-            loc: self.leaf_loc(&lit.span),
-            s: self.literal_to_string(lit),
-        }
-    }
-
-    #[inline]
-    fn trans_unary_expr(&mut self, op: ast::UnOp, expr: &ast::Expr) -> UnaryExpr {
-        UnaryExpr {
-            op: uop_to_string(op),
-            expr: self.trans_expr(expr),
-        }
-    }
-
-    #[inline]
-    fn trans_ref_expr(&mut self, mutble: ast::Mutability, expr: &ast::Expr) -> RefExpr {
-        RefExpr {
-            is_mut: is_mut(mutble),
-            expr: self.trans_expr(expr),
-        }
-    }
-
-    #[inline]
-    fn trans_bop(&mut self, op: &ast::BinOp) -> Chunk {
-        Chunk {
-            loc: self.leaf_loc(&op.span),
-            s: op.node.to_string().to_string(),
-        }
-    }
-
-    #[inline]
-    fn trans_bop_assign(&mut self, op: &ast::BinOp) -> Chunk {
-        Chunk {
-            loc: self.leaf_loc(&op.span),
-            s: format!("{}=", op.node.to_string()),
-        }
-    }
-
-    #[inline]
-    fn trans_binary_expr(&mut self, left: &ast::Expr, op: &ast::BinOp, right: &ast::Expr)
-                         -> ListExpr {
-        ListExpr {
-            exprs: vec![self.trans_expr(left), self.trans_expr(right)],
-            sep: self.trans_bop(op),
-        }
-    }
-
-    #[inline]
-    fn trans_assign_expr(&mut self, left: &ast::Expr, right: &ast::Expr) -> ListExpr {
-        ListExpr {
-            exprs: vec![self.trans_expr(left), self.trans_expr(right)],
-            sep: Chunk::new("="),
-        }
-    }
-
-    #[inline]
-    fn trans_op_assign_expr(&mut self, left: &ast::Expr, op: &ast::BinOp, right: &ast::Expr)
-                            -> ListExpr {
-        ListExpr {
-            exprs: vec![self.trans_expr(left), self.trans_expr(right)],
-            sep: self.trans_bop_assign(op),
-        }
-    }
-
-    #[inline]
-    fn trans_in_place_expr(&mut self, left: &ast::Expr, right: &ast::Expr) -> ListExpr {
-        ListExpr {
-            exprs: vec![self.trans_expr(left), self.trans_expr(right)],
-            sep: Chunk::new("<-"),
-        }
-    }
-
-    #[inline]
-    fn trans_fixed_size_array_expr(&mut self, init: &ast::Expr, len: &ast::Expr)
-                                   -> FixedSizeArrayExpr {
-        FixedSizeArrayExpr {
-            init: self.trans_expr(init),
-            len: self.trans_expr(len),
-        }
-    }
-
-    #[inline]
-    fn trans_struct_field_access_expr(&mut self, expr: &ast::Expr, ident: &ast::SpannedIdent)
-                                      -> FieldAccessExpr {
-        FieldAccessExpr {
-            expr: self.trans_expr(expr),
-            field: self.trans_ident(ident),
-        }
-    }
-
-    #[inline]
-    fn trans_tuple_field_access_expr(&mut self, expr: &ast::Expr, pos: &ast::Spanned<usize>)
-                                     -> FieldAccessExpr {
-        FieldAccessExpr {
-            expr: self.trans_expr(expr),
-            field: self.trans_pos(pos),
-        }
-    }
-
-    #[inline]
-    fn trans_struct_expr(&mut self, path: &ast::Path, fields: &Vec<ast::Field>,
-                         base: &Option<ast::P<ast::Expr>>)
-                         -> StructExpr {
-        StructExpr {
-            path: self.trans_path(path),
-            fields: self.trans_struct_field_exprs(fields),
-            base: map_ref_mut(base, |expr| self.trans_expr(expr)),
-        }
-    }
-
-    #[inline]
-    fn trans_struct_field_exprs(&mut self, fields: &Vec<ast::Field>) -> Vec<StructFieldExpr> {
-        trans_list!(self, fields, trans_struct_field_expr)
-    }
-
-    #[inline]
-    fn trans_struct_field_expr(&mut self, field: &ast::Field) -> StructFieldExpr {
-        let loc = self.loc(&field.span);
-        let name = self.trans_ident(&field.ident);
-        let value = self.trans_expr(&field.expr);
-        self.set_loc(&loc);
-
-        StructFieldExpr {
-            loc: loc,
-            name: name,
-            value: value,
-        }
-    }
-
-    #[inline]
-    fn trans_index_expr(&mut self, obj: &ast::Expr, index: &ast::Expr) -> IndexExpr {
-        IndexExpr {
-            obj: self.trans_expr(obj),
-            index: self.trans_expr(index),
-        }
-    }
-
-    #[inline]
-    fn trans_range_expr(&mut self, start: &Option<ast::P<ast::Expr>>,
-                        end: &Option<ast::P<ast::Expr>>, limit: ast::RangeLimits)
-                        -> RangeExpr {
-        RangeExpr {
-            start: map_ref_mut(start, |expr| self.trans_expr(expr)),
-            end: map_ref_mut(end, |expr| self.trans_expr(expr)),
-            is_halfopen: is_halfopen(limit),
-        }
-    }
-
-    #[inline]
     fn trans_box_expr(&mut self, expr: &ast::Expr) -> BoxExpr {
         BoxExpr {
             expr: self.trans_expr(expr),
-        }
-    }
-
-    #[inline]
-    fn trans_cast_expr(&mut self, expr: &ast::Expr, ty: &ast::Ty) -> CastExpr {
-        CastExpr {
-            expr: self.trans_expr(expr),
-            ty: self.trans_type(ty),
-        }
-    }
-
-    #[inline]
-    fn trans_type_expr(&mut self, expr: &ast::Expr, ty: &ast::Ty) -> TypeExpr {
-        TypeExpr {
-            expr: self.trans_expr(expr),
-            ty: self.trans_type(ty),
         }
     }
 
