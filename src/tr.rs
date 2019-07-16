@@ -221,27 +221,27 @@ fn macro_end(token: &ast::TokenTree) -> u32 {
 }
 
 #[inline]
-fn is_macro_semi(style: &ast::MacStmtStyle) -> bool {
-    match *style {
-        ast::MacStmtStyle::Semicolon => true,
-        _ => false,
-    }
-}
-
-#[inline]
-fn token_to_macro_expr_sep(token: &ast::TokenKind) -> Option<MacroExprSep> {
+fn token_to_macro_sep(token: &ast::TokenKind) -> MacroSep {
     let (is_sep, s) = match token {
         ast::TokenKind::Comma => (true, ","),
         ast::TokenKind::Semi => (true, ";"),
         ast::TokenKind::FatArrow => (true, " =>"),
         ast::TokenKind::DotDotDot => (false, "..."),
-        _ => return None,
+        _ => unreachable!(),
     };
 
-    Some(MacroExprSep {
+    MacroSep {
         is_sep,
         s,
-    })
+    }
+}
+
+#[inline]
+fn is_macro_semi(style: &ast::MacStmtStyle) -> bool {
+    match *style {
+        ast::MacStmtStyle::Semicolon => true,
+        _ => false,
+    }
 }
 
 #[inline]
@@ -520,9 +520,7 @@ impl Translator {
                 ItemKind::Impl(self.trans_impl(unsafety, polarity, defaultness, generics, trait_ref, ty, items))
             }
             ast::ItemKind::MacroDef(ref mac_def) => ItemKind::MacroDef(self.trans_macro_def(ident, mac_def)),
-            /*
-            ast::ItemKind::Mac(ref mac) => ItemKind::Macro(self.trans_macro_raw(mac)),
-            */
+            ast::ItemKind::Mac(ref mac) => ItemKind::Macro(self.trans_macro(mac)),
             _ => {
                 d!(item.node);
                 unreachable!()
@@ -1998,10 +1996,6 @@ impl Translator {
         }
     }
 
-    fn macro_def_style(&self, item: &ast::Item) -> MacroStyle {
-        self.macro_style(item.span)
-    }
-
     fn macro_style(&self, span: ast::Span) -> MacroStyle {
         let s = self.span_to_snippet(span).unwrap();
         let paren_pos = s.find('(').unwrap_or(usize::max_value());
@@ -2018,13 +2012,6 @@ impl Translator {
     }
 
     /*
-
-    fn trans_macro(&mut self, mac: &ast::Mac) -> Macro {
-        match self.trans_macro_expr(mac) {
-            Some(macro_expr) => Macro::Expr(macro_expr),
-            None => Macro::Raw(self.trans_macro_raw(mac)),
-        }
-    }
     fn trans_macro_stmt(&mut self, attrs: &ast::ThinAttributes, mac: &ast::Mac) -> MacroStmt {
         let loc = self.loc(&mac.span);
         let attrs = self.trans_thin_attrs(attrs);
@@ -2037,39 +2024,28 @@ impl Translator {
             mac: mac,
         }
     }
+    */
 
     fn trans_macro(&mut self, mac: &ast::Mac) -> Macro {
-        match self.trans_macro_expr(mac) {
-            Some(macro_expr) => Macro::Expr(macro_expr),
-            None => Macro::Raw(self.trans_macro_raw(mac)),
-        }
-    }
-
-    fn trans_macro_expr(&mut self, mac: &ast::Mac) -> Option<MacroExpr> {
-        let macro_exprs = self.trans_macro_exprs(&mac.node.tts);
-        if macro_exprs.is_none() {
-            return None;
-        }
-
-        let (exprs, seps) = macro_exprs.unwrap();
+        let (exprs, seps) = self.trans_macro_exprs(&mac.node.tts);
         let name = path_to_string(&mac.node.path);
         let style = self.macro_style(mac.span);
         let exprs = self.trans_exprs(&exprs);
-        Some(MacroExpr {
-            name: name,
-            style: style,
-            exprs: exprs,
-            seps: seps,
-        })
-    }
-    */
 
-    fn trans_macro_exprs(&self, ts: &ast::TokenStream) -> Option<(Vec<ast::P<ast::Expr>>, Vec<MacroExprSep>)> {
+        Macro {
+            name,
+            style,
+            exprs,
+            seps,
+        }
+    }
+
+    fn trans_macro_exprs(&self, ts: &ast::TokenStream) -> (Vec<ast::P<ast::Expr>>, Vec<MacroSep>) {
         let mut exprs = Vec::new();
         let mut seps = Vec::new();
 
         if ts.is_empty() {
-            return Some((exprs, seps));
+            return (exprs, seps);
         }
 
         let mut parser = ast::parse::stream_to_parser(&self.sess, ts.clone(), None);
@@ -2078,16 +2054,13 @@ impl Translator {
                 Ok(expr) => expr,
                 Err(mut e) => {
                     e.cancel();
-                    return None;
+                    panic!()
                 }
             });
 
             match parser.token.kind {
                 ast::TokenKind::Eof => break,
-                ref other => seps.push(match token_to_macro_expr_sep(other) {
-                    Some(sep) => sep,
-                    None => return None,
-                }),
+                ref other => seps.push(token_to_macro_sep(other)),
             }
 
             parser.bump();
@@ -2096,7 +2069,7 @@ impl Translator {
             }
         }
         d!(exprs);
-        Some((exprs, seps))
+        (exprs, seps)
     }
 
 
