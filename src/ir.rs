@@ -117,6 +117,7 @@ pub enum ItemKind {
     Fn(Fn),
     Trait(Trait),
     Impl(Impl),
+    MacroDef(MacroDef),
     /*
     Macro(MacroRaw),
     */
@@ -959,18 +960,10 @@ pub struct ReturnExpr {
     pub ret: Option<Expr>,
 }
 
-/*
 #[derive(Debug)]
-pub enum MacroStyle {
-    Paren,
-    Bracket,
-    Brace,
-}
-
-#[derive(Debug)]
-pub struct MacroRaw {
-    pub style: MacroStyle,
-    pub s: Chunk,
+pub struct MacroDef {
+    pub name: String,
+    pub def: String,
 }
 
 #[derive(Debug)]
@@ -982,14 +975,14 @@ pub struct MacroStmt {
 
 #[derive(Debug)]
 pub enum Macro {
-    Raw(MacroRaw),
     Expr(MacroExpr),
 }
 
 #[derive(Debug)]
-pub struct MacroExprSep {
-    pub is_sep: bool,
-    pub s: &'static str,
+pub enum MacroStyle {
+    Paren,
+    Bracket,
+    Brace,
 }
 
 #[derive(Debug)]
@@ -999,4 +992,9 @@ pub struct MacroExpr {
     pub exprs: Vec<Expr>,
     pub seps: Vec<MacroExprSep>,
 }
-*/
+
+#[derive(Debug)]
+pub struct MacroExprSep {
+    pub is_sep: bool,
+    pub s: &'static str,
+}

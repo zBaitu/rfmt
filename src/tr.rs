@@ -202,7 +202,24 @@ fn is_ref_mut(binding: ast::BindingMode) -> (bool, bool) {
     }
 }
 
-/*
+#[inline]
+fn macro_start(token: &ast::TokenTree) -> u32 {
+    let span = match token {
+        ast::TokenTree::Token(ref token) => token.span,
+        ast::TokenTree::Delimited(ref span, ..) => span.open,
+    };
+    span.lo().0
+}
+
+#[inline]
+fn macro_end(token: &ast::TokenTree) -> u32 {
+    let span = match token {
+        ast::TokenTree::Token(ref token) => token.span,
+        ast::TokenTree::Delimited(ref span, ..) => span.close,
+    };
+    span.hi().0
+}
+
 #[inline]
 fn is_macro_semi(style: &ast::MacStmtStyle) -> bool {
     match *style {
@@ -212,21 +229,20 @@ fn is_macro_semi(style: &ast::MacStmtStyle) -> bool {
 }
 
 #[inline]
-fn token_to_macro_expr_sep(token: &ast::Token) -> Option<MacroExprSep> {
-    let (is_sep, s) = match *token {
-        ast::Token::Comma => (true, ","),
-        ast::Token::Semi => (true, ";"),
-        ast::Token::FatArrow => (true, " =>"),
-        ast::Token::DotDotDot => (false, "..."),
+fn token_to_macro_expr_sep(token: &ast::TokenKind) -> Option<MacroExprSep> {
+    let (is_sep, s) = match token {
+        ast::TokenKind::Comma => (true, ","),
+        ast::TokenKind::Semi => (true, ";"),
+        ast::TokenKind::FatArrow => (true, " =>"),
+        ast::TokenKind::DotDotDot => (false, "..."),
         _ => return None,
     };
 
     Some(MacroExprSep {
-        is_sep: is_sep,
-        s: s,
+        is_sep,
+        s,
     })
 }
-*/
 
 #[inline]
 fn map_ref_mut<T, F, R>(opt: &Option<T>, mut f: F) -> Option<R> where F: FnMut(&T) -> R {
@@ -503,10 +519,14 @@ impl Translator {
             ast::ItemKind::Impl(unsafety, polarity, defaultness, ref generics, ref trait_ref, ref ty, ref items) => {
                 ItemKind::Impl(self.trans_impl(unsafety, polarity, defaultness, generics, trait_ref, ty, items))
             }
+            ast::ItemKind::MacroDef(ref mac_def) => ItemKind::MacroDef(self.trans_macro_def(ident, mac_def)),
             /*
             ast::ItemKind::Mac(ref mac) => ItemKind::Macro(self.trans_macro_raw(mac)),
             */
-            _ => unreachable!(),
+            _ => {
+                d!(item.node);
+                unreachable!()
+            }
         };
 
         self.set_loc(&loc);
@@ -1635,6 +1655,7 @@ impl Translator {
             ast::ExprKind::Repeat(ref expr, ref len) => ExprKind::Repeat(Box::new(self.trans_repeat_expr(expr, len))),
             ast::ExprKind::Array(ref exprs) => ExprKind::Array(Box::new(self.trans_exprs(exprs))),
             ast::ExprKind::Tup(ref exprs) => ExprKind::Tuple(Box::new(self.trans_exprs(exprs))),
+            ast::ExprKind::Paren(ref expr) => ExprKind::Tuple(Box::new(vec![self.trans_expr(expr)])),
             ast::ExprKind::Index(ref obj, ref index) => ExprKind::Index(Box::new(self.trans_index_expr(obj, index))),
             ast::ExprKind::Struct(ref path, ref fields, ref base) => {
                 ExprKind::Struct(Box::new(self.trans_struct_expr(path, fields, base)))
@@ -1965,8 +1986,121 @@ impl Translator {
         }
     }
 
+    fn trans_macro_def(&mut self, ident: String, mac_def: &ast::MacroDef) -> MacroDef {
+        let tokens = mac_def.tokens.0.as_ref().unwrap();
+        let start = &tokens.first().unwrap().0;
+        let end = &tokens.last().unwrap().0;
+        let span = span(macro_start(start), macro_end(end));
+
+        MacroDef {
+            name: ident,
+            def: self.span_to_snippet(span).unwrap(),
+        }
+    }
+
+    fn macro_def_style(&self, item: &ast::Item) -> MacroStyle {
+        self.macro_style(item.span)
+    }
+
+    fn macro_style(&self, span: ast::Span) -> MacroStyle {
+        let s = self.span_to_snippet(span).unwrap();
+        let paren_pos = s.find('(').unwrap_or(usize::max_value());
+        let bracket_pos = s.find('[').unwrap_or(usize::max_value());
+        let brace_pos = s.find('{').unwrap_or(usize::max_value());
+
+        if paren_pos < bracket_pos && paren_pos < brace_pos {
+            MacroStyle::Paren
+        } else if bracket_pos < brace_pos {
+            MacroStyle::Bracket
+        } else {
+            MacroStyle::Brace
+        }
+    }
+
     /*
-    #[inline]
+
+    fn trans_macro(&mut self, mac: &ast::Mac) -> Macro {
+        match self.trans_macro_expr(mac) {
+            Some(macro_expr) => Macro::Expr(macro_expr),
+            None => Macro::Raw(self.trans_macro_raw(mac)),
+        }
+    }
+    fn trans_macro_stmt(&mut self, attrs: &ast::ThinAttributes, mac: &ast::Mac) -> MacroStmt {
+        let loc = self.loc(&mac.span);
+        let attrs = self.trans_thin_attrs(attrs);
+        let mac = self.trans_macro(mac);
+        self.set_loc(&loc);
+
+        MacroStmt {
+            loc: loc,
+            attrs: attrs,
+            mac: mac,
+        }
+    }
+
+    fn trans_macro(&mut self, mac: &ast::Mac) -> Macro {
+        match self.trans_macro_expr(mac) {
+            Some(macro_expr) => Macro::Expr(macro_expr),
+            None => Macro::Raw(self.trans_macro_raw(mac)),
+        }
+    }
+
+    fn trans_macro_expr(&mut self, mac: &ast::Mac) -> Option<MacroExpr> {
+        let macro_exprs = self.trans_macro_exprs(&mac.node.tts);
+        if macro_exprs.is_none() {
+            return None;
+        }
+
+        let (exprs, seps) = macro_exprs.unwrap();
+        let name = path_to_string(&mac.node.path);
+        let style = self.macro_style(mac.span);
+        let exprs = self.trans_exprs(&exprs);
+        Some(MacroExpr {
+            name: name,
+            style: style,
+            exprs: exprs,
+            seps: seps,
+        })
+    }
+    */
+
+    fn trans_macro_exprs(&self, ts: &ast::TokenStream) -> Option<(Vec<ast::P<ast::Expr>>, Vec<MacroExprSep>)> {
+        let mut exprs = Vec::new();
+        let mut seps = Vec::new();
+
+        if ts.is_empty() {
+            return Some((exprs, seps));
+        }
+
+        let mut parser = ast::parse::stream_to_parser(&self.sess, ts.clone(), None);
+        loop {
+            exprs.push(match parser.parse_expr() {
+                Ok(expr) => expr,
+                Err(mut e) => {
+                    e.cancel();
+                    return None;
+                }
+            });
+
+            match parser.token.kind {
+                ast::TokenKind::Eof => break,
+                ref other => seps.push(match token_to_macro_expr_sep(other) {
+                    Some(sep) => sep,
+                    None => return None,
+                }),
+            }
+
+            parser.bump();
+            if parser.token.kind == ast::parse::token::TokenKind::Eof {
+                break;
+            }
+        }
+        d!(exprs);
+        Some((exprs, seps))
+    }
+
+
+    /*
     fn trans_method_ident(&mut self, ident: &ast::SpannedIdent) -> Chunk {
         let s = ident_to_string(&ident.node);
         let mut span = ident.span;
@@ -1983,111 +2117,6 @@ impl Translator {
         Chunk {
             loc: self.leaf_loc(&pos.span),
             s: pos.node.to_string(),
-        }
-    }
-
-    #[inline]
-    fn trans_macro_raw(&mut self, mac: &ast::Mac) -> MacroRaw {
-        MacroRaw {
-            style: self.macro_style(mac),
-            s: Chunk {
-                loc: self.leaf_loc(&mac.span),
-                s: self.span_to_snippet(mac.span).unwrap(),
-            },
-        }
-    }
-
-    #[inline]
-    fn trans_macro_stmt(&mut self, attrs: &ast::ThinAttributes, mac: &ast::Mac) -> MacroStmt {
-        let loc = self.loc(&mac.span);
-        let attrs = self.trans_thin_attrs(attrs);
-        let mac = self.trans_macro(mac);
-        self.set_loc(&loc);
-
-        MacroStmt {
-            loc: loc,
-            attrs: attrs,
-            mac: mac,
-        }
-    }
-
-    #[inline]
-    fn trans_macro(&mut self, mac: &ast::Mac) -> Macro {
-        match self.trans_macro_expr(mac) {
-            Some(macro_expr) => Macro::Expr(macro_expr),
-            None => Macro::Raw(self.trans_macro_raw(mac)),
-        }
-    }
-
-    #[inline]
-    fn trans_macro_expr(&mut self, mac: &ast::Mac) -> Option<MacroExpr> {
-        let macro_exprs = self.trans_macro_exprs(&mac);
-        if macro_exprs.is_none() {
-            return None;
-        }
-
-        let (exprs, seps) = macro_exprs.unwrap();
-        let name = path_to_string(&mac.node.path);
-        let style = self.macro_style(&mac);
-        let exprs = self.trans_exprs(&exprs);
-        Some(MacroExpr {
-            name: name,
-            style: style,
-            exprs: exprs,
-            seps: seps,
-        })
-    }
-
-    #[inline]
-    fn trans_macro_exprs(&self, mac: &ast::Mac)
-                         -> Option<(Vec<ast::P<ast::Expr>>, Vec<MacroExprSep>)> {
-        let mut exprs = Vec::new();
-        let mut seps = Vec::new();
-
-        if mac.node.tts.is_empty() {
-            return Some((exprs, seps));
-        }
-
-        let mut parser
-                = ast::parse::tts_to_parser(&self.sess, mac.node.tts.clone(), Vec::new());
-        loop {
-            exprs.push(match parser.parse_expr() {
-                Ok(expr) => expr,
-                Err(mut e) => {
-                    e.cancel();
-                    return None;
-                }
-            });
-
-            match parser.token {
-                ast::Token::Eof => break,
-                ref other => seps.push(match token_to_macro_expr_sep(other) {
-                    Some(sep) => sep,
-                    None => return None,
-                }),
-            }
-
-            parser.bump();
-            if parser.token == ast::parse::token::Token::Eof {
-                return None;
-            }
-        }
-        Some((exprs, seps))
-    }
-
-    #[inline]
-    fn macro_style(&self, mac: &ast::Mac) -> MacroStyle {
-        let s = self.span_to_snippet(mac.span).unwrap();
-        let paren_pos = s.find('(').unwrap_or(usize::max_value());
-        let bracket_pos = s.find('[').unwrap_or(usize::max_value());
-        let brace_pos = s.find('{').unwrap_or(usize::max_value());
-
-        if paren_pos < bracket_pos && paren_pos < brace_pos {
-            MacroStyle::Paren
-        } else if bracket_pos < brace_pos {
-            MacroStyle::Bracket
-        } else {
-            MacroStyle::Brace
         }
     }
     */

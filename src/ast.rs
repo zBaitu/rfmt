@@ -1,5 +1,6 @@
 pub use rustc_target::spec::abi::Abi;
 pub use syntax::ast::*;
+pub use syntax::parse;
 pub use syntax::parse::lexer::comments::*;
 pub use syntax::parse::token::{self, Token, TokenKind};
 pub use syntax::ptr::*;
