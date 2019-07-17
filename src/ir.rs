@@ -108,6 +108,7 @@ pub enum ItemKind {
     Use(Use),
     TypeAlias(TypeAlias),
     TraitAlias(TraitAlias),
+    Existential(Existential),
     Const(Const),
     Static(Static),
     Struct(Struct),
@@ -146,6 +147,13 @@ pub struct TypeAlias {
 
 #[derive(Debug)]
 pub struct TraitAlias {
+    pub name: String,
+    pub generics: Generics,
+    pub bounds: Vec<TypeParamBound>,
+}
+
+#[derive(Debug)]
+pub struct Existential {
     pub name: String,
     pub generics: Generics,
     pub bounds: Vec<TypeParamBound>,
@@ -497,6 +505,7 @@ pub enum ForeignKind {
     Type(ForeignType),
     Static(ForeignStatic),
     Fn(ForeignFn),
+    Macro(Macro),
 }
 
 pub type ForeignType = String;

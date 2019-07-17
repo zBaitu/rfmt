@@ -179,7 +179,7 @@ fn is_inclusive(limit: ast::RangeLimits) -> bool {
 #[inline]
 fn is_patten_inclusive(range_end: &ast::RangeEnd) -> bool {
     match *range_end {
-        ast::RangeEnd::Included(_) => true,
+        ast::RangeEnd::Included(..) => true,
         _ => false,
     }
 }
@@ -496,6 +496,9 @@ impl Translator {
             ast::ItemKind::TraitAlias(ref generics, ref bounds) => {
                 ItemKind::TraitAlias(self.trans_trait_alias(ident, generics, bounds))
             }
+            ast::ItemKind::Existential(ref bounds, ref generics) => {
+                ItemKind::Existential(self.trans_existential(ident, generics, bounds))
+            }
             ast::ItemKind::Const(ref ty, ref expr) => ItemKind::Const(self.trans_const(ident, ty, expr)),
             ast::ItemKind::Static(ref ty, mutbl, ref expr) => {
                 ItemKind::Static(self.trans_static(mutbl, ident, ty, expr))
@@ -521,10 +524,7 @@ impl Translator {
             }
             ast::ItemKind::MacroDef(ref mac_def) => ItemKind::MacroDef(self.trans_macro_def(ident, mac_def)),
             ast::ItemKind::Mac(ref mac) => ItemKind::Macro(self.trans_macro(mac)),
-            _ => {
-                d!(item.node);
-                unreachable!()
-            }
+            ast::ItemKind::GlobalAsm(..) => unimplemented!(),
         };
 
         self.set_loc(&loc);
@@ -639,6 +639,15 @@ impl Translator {
     fn trans_trait_alias(&mut self, ident: String, generics: &ast::Generics, bounds: &ast::GenericBounds)
                          -> TraitAlias {
         TraitAlias {
+            name: ident,
+            generics: self.trans_generics(generics),
+            bounds: self.trans_type_param_bounds(bounds),
+        }
+    }
+
+    fn trans_existential(&mut self, ident: String, generics: &ast::Generics, bounds: &ast::GenericBounds)
+                         -> Existential {
+        Existential {
             name: ident,
             generics: self.trans_generics(generics),
             bounds: self.trans_type_param_bounds(bounds),
@@ -767,7 +776,7 @@ impl Translator {
         match *predicate {
             ast::WherePredicate::RegionPredicate(ref region) => self.trans_where_lifetime(region),
             ast::WherePredicate::BoundPredicate(ref bound) => self.trans_where_bound(bound),
-            _ => unreachable!(),
+            ast::WherePredicate::EqPredicate(..) => unimplemented!(),
         }
     }
 
@@ -942,10 +951,8 @@ impl Translator {
                 TypeKind::BareFn(Box::new(self.trans_bare_fn_type(bare_fn)))
             }
             ast::TyKind::Mac(ref mac) => TypeKind::Macro(self.trans_macro(mac)),
-            _ => {
-                println!("{:#?}", ty.node);
-                unreachable!()
-            }
+            ast::TyKind::Typeof(..) => unimplemented!(),
+            ast::TyKind::Err => unreachable!(),
         };
 
         self.set_loc(&loc);
@@ -1038,7 +1045,7 @@ impl Translator {
             ast::VariantData::Tuple(ref fields, _) => {
                 StructBody::Tuple(self.trans_tuple_fields(fields))
             }
-            ast::VariantData::Unit(_) => StructBody::Unit,
+            ast::VariantData::Unit(..) => StructBody::Unit,
         }
     }
 
@@ -1167,7 +1174,7 @@ impl Translator {
 
     fn trans_return(&mut self, output: &ast::FunctionRetTy) -> Return {
         let (nl, ret) = match *output {
-            ast::FunctionRetTy::Default(_) => (false, None),
+            ast::FunctionRetTy::Default(..) => (false, None),
             ast::FunctionRetTy::Ty(ref ty) => (self.is_return_nl(ty.span.lo().0), Some(self.trans_type(ty))),
         };
 
@@ -1208,8 +1215,7 @@ impl Translator {
             ast::ForeignItemKind::Fn(ref decl, ref generics) => {
                 ForeignKind::Fn(self.trans_foreign_fn(ident, generics, decl))
             }
-            //ast::ForeignItemKind::Macro(_) => {}
-            _ => unreachable!(),
+            ast::ForeignItemKind::Macro(ref mac) => ForeignKind::Macro(self.trans_macro(mac))
         };
         self.set_loc(&loc);
 
@@ -1652,13 +1658,13 @@ impl Translator {
             }
             ast::ExprKind::Ret(ref expr) => ExprKind::Return(Box::new(self.trans_return_expr(expr))),
             ast::ExprKind::Mac(ref mac) => ExprKind::Macro(self.trans_macro(mac)),
-            /*
-            ast::ExprKind::InlineAsm(_) => unreachable!(),
-            */
-            _ => {
-                d!(expr.node);
-                unreachable!()
-            }
+            ast::ExprKind::InlineAsm(..) => unimplemented!(),
+            ast::ExprKind::Box(..) => unreachable!(),
+            ast::ExprKind::Async(..) => unimplemented!(),
+            ast::ExprKind::Await(..) => unimplemented!(),
+            ast::ExprKind::TryBlock(..) => unimplemented!(),
+            ast::ExprKind::Yield(..) => unimplemented!(),
+            ast::ExprKind::Err => unreachable!(),
         };
         self.set_loc(&loc);
 
