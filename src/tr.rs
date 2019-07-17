@@ -941,9 +941,7 @@ impl Translator {
             ast::TyKind::BareFn(ref bare_fn) => {
                 TypeKind::BareFn(Box::new(self.trans_bare_fn_type(bare_fn)))
             }
-            /*
-            ast::TyKind::Mac(ref mac) => TypeKind::Macro(Box::new(self.trans_macro(mac))),
-            */
+            ast::TyKind::Mac(ref mac) => TypeKind::Macro(self.trans_macro(mac)),
             _ => {
                 println!("{:#?}", ty.node);
                 unreachable!()
@@ -1291,7 +1289,7 @@ impl Translator {
             ast::TraitItemKind::Method(ref sig, ref block) => {
                 TraitItemKind::Method(self.trans_method_trait_item(ident, sig, block))
             }
-            _ => unreachable!(),
+            ast::TraitItemKind::Macro(ref mac) => TraitItemKind::Macro(self.trans_macro(mac))
         };
         self.set_loc(&loc);
 
@@ -1376,8 +1374,7 @@ impl Translator {
             ast::ImplItemKind::Method(ref method_sig, ref block) => {
                 ImplItemKind::Method(self.trans_method_impl_item(ident, method_sig, block))
             }
-            //ast::ImplItemKind::Macro(ref mac) => ImplItemKind::Macro(self.trans_macro(mac)),
-            _ => unreachable!(),
+            ast::ImplItemKind::Macro(ref mac) => ImplItemKind::Macro(self.trans_macro(mac)),
         };
         self.set_loc(&loc);
 
@@ -1405,45 +1402,6 @@ impl Translator {
         }
     }
 
-    /*
-    fn trans_self(&mut self, self_kind: &ast::SelfKind, fn_sig: &ast::FnDecl) -> Option<Sf> {
-        match *self_kind {
-            ast::SelfKind::Static => None,
-            ast::SelfKind::Value(_) => {
-                let arg = &fn_sig.inputs[0];
-                let is_mut = match arg.patten.node {
-                    ast::PatKind::Ident(mode, _, _) => {
-                        let (_, is_mut) = is_ref_mut(mode);
-                        is_mut
-                    }
-                    _ => unreachable!(),
-                };
-                let sf = if is_mut {
-                    "mut self"
-                } else {
-                    "self"
-                }.to_string();
-                Some(Sf::String(sf))
-            }
-            ast::SelfKind::Region(lifetime, mutbl, _) => {
-                let mut s = String::new();
-                s.push_str("&");
-                if let Some(ref lifetime) = lifetime {
-                    let lifetime = self.trans_lifetime(lifetime);
-                    s.push_str(&lifetime.s);
-                    s.push_str(" ");
-                }
-                if is_mut(mutbl) {
-                    s.push_str("mut ");
-                }
-                s.push_str("self");
-                Some(Sf::String(s))
-            }
-            ast::SelfKind::Explicit(ref ty, _) => Some(Sf::Type(self.trans_type(ty))),
-        }
-    }
-    */
-
     fn trans_block(&mut self, block: &ast::Block) -> Block {
         let loc = self.loc(&block.span);
         let stmts = self.trans_stmts(&block.stmts);
@@ -1468,7 +1426,7 @@ impl Translator {
             ast::StmtKind::Local(ref local) => StmtKind::Let(self.trans_let(local)),
             ast::StmtKind::Semi(ref expr) => StmtKind::Expr(self.trans_expr(expr), true),
             ast::StmtKind::Expr(ref expr) => StmtKind::Expr(self.trans_expr(expr), false),
-            _ => unreachable!(),
+            ast::StmtKind::Mac(ref p) => StmtKind::Macro(self.trans_macro_stmt(&p.2, &p.0, &p.1)),
         };
         self.set_loc(&loc);
 
@@ -1532,13 +1490,8 @@ impl Translator {
             ast::PatKind::Slice(ref start, ref omit, ref end) => {
                 PattenKind::Slice(Box::new(self.trans_slice_patten(start, omit, end)))
             }
-            /*
             ast::PatKind::Mac(ref mac) => PattenKind::Macro(self.trans_macro(mac)),
-            */
-            _ => {
-                d!(patten.node);
-                unreachable!()
-            }
+            ast::PatKind::Box(..) => unreachable!(),
         };
         self.set_loc(&loc);
 
@@ -1698,8 +1651,8 @@ impl Translator {
                 ExprKind::Closure(Box::new(self.trans_closure_expr(capture, asyncness, movability, sig, expr)))
             }
             ast::ExprKind::Ret(ref expr) => ExprKind::Return(Box::new(self.trans_return_expr(expr))),
-            /*
             ast::ExprKind::Mac(ref mac) => ExprKind::Macro(self.trans_macro(mac)),
+            /*
             ast::ExprKind::InlineAsm(_) => unreachable!(),
             */
             _ => {
@@ -2011,20 +1964,21 @@ impl Translator {
         }
     }
 
-    /*
-    fn trans_macro_stmt(&mut self, attrs: &ast::ThinAttributes, mac: &ast::Mac) -> MacroStmt {
+    fn trans_macro_stmt(&mut self, attrs: &ThinVec<ast::Attribute>, mac: &ast::Mac, style: &ast::MacStmtStyle)
+                        -> MacroStmt {
         let loc = self.loc(&mac.span);
         let attrs = self.trans_thin_attrs(attrs);
         let mac = self.trans_macro(mac);
+        let is_semi = is_macro_semi(style);
         self.set_loc(&loc);
 
         MacroStmt {
-            loc: loc,
-            attrs: attrs,
-            mac: mac,
+            loc,
+            attrs,
+            mac,
+            is_semi,
         }
     }
-    */
 
     fn trans_macro(&mut self, mac: &ast::Mac) -> Macro {
         let (exprs, seps) = self.trans_macro_exprs(&mac.node.tts);
@@ -2071,28 +2025,6 @@ impl Translator {
         d!(exprs);
         (exprs, seps)
     }
-
-
-    /*
-    fn trans_method_ident(&mut self, ident: &ast::SpannedIdent) -> Chunk {
-        let s = ident_to_string(&ident.node);
-        let mut span = ident.span;
-        span.hi = ast::BytePos(span.lo.0 + s.len() as u32);
-
-        Chunk {
-            loc: self.leaf_loc(&span),
-            s: s,
-        }
-    }
-
-    #[inline]
-    fn trans_pos(&mut self, pos: &ast::Spanned<usize>) -> Chunk {
-        Chunk {
-            loc: self.leaf_loc(&pos.span),
-            s: pos.node.to_string(),
-        }
-    }
-    */
 
     #[inline]
     fn loc(&mut self, sp: &ast::Span) -> Loc {

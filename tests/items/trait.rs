@@ -10,4 +10,5 @@ pub trait Trait {
     fn f(&self);
     fn f(&'a self);
     fn f(self: Iterator);
+    a!(true);
 }

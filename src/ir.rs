@@ -331,9 +331,7 @@ pub enum TypeKind {
     Array(Box<ArrayType>),
     Trait(Box<TraitType>),
     BareFn(Box<BareFnType>),
-    /*
-    Macro(Box<Macro>),
-    */
+    Macro(Macro),
 }
 
 #[derive(Debug)]
@@ -564,7 +562,7 @@ pub enum TraitItemKind {
     Const(ConstTraitItem),
     Type(TypeTraitItem),
     Method(MethodTraitItem),
-    // Macro(Macro),
+    Macro(Macro),
 }
 
 #[derive(Debug)]
@@ -613,7 +611,7 @@ pub enum ImplItemKind {
     Type(TypeImplItem),
     Existential(Vec<TypeParamBound>),
     Method(MethodImplItem),
-    //Macro(Macro),
+    Macro(Macro),
 }
 
 pub type ConstImplItem = Const;
@@ -648,7 +646,7 @@ pub enum StmtKind {
     Item(Item),
     Let(Let),
     Expr(Expr, bool),
-    //Macro(MacroStmt, bool),
+    Macro(MacroStmt),
 }
 
 #[derive(Debug)]
@@ -679,9 +677,7 @@ pub enum PattenKind {
     Enum(EnumPatten),
     Tuple(Box<TuplePatten>),
     Slice(Box<SlicePatten>),
-    /*
     Macro(Macro),
-    */
 }
 
 #[derive(Debug)]
@@ -780,9 +776,7 @@ pub enum ExprKind {
     MethodCall(Box<MethodCallExpr>),
     Closure(Box<ClosureExpr>),
     Return(Box<ReturnExpr>),
-    /*
     Macro(Macro),
-    */
 }
 
 pub type PathExpr = PathType;
@@ -969,6 +963,7 @@ pub struct MacroStmt {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
     pub mac: Macro,
+    pub is_semi: bool,
 }
 
 #[derive(Debug)]
