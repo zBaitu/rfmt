@@ -1,21 +1,14 @@
-use ir::*;
-use rfmt;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt::{self, Debug, Display};
+
+use ir::*;
 use ts::*;
 
-pub struct Result {
-    pub s: String,
-    pub exceed_lines: BTreeSet<u32>,
-    pub trailing_ws_lines: BTreeSet<u32>,
-}
+use crate::ir;
+use crate::rfmt;
+use crate::ts;
 
-pub fn fmt(krate: Crate, leading_cmnts: HashMap<Pos, Vec<String>>,
-           trailing_cmnts: HashMap<Pos, String>)
-           -> rfmt::Result {
-    Formatter::new(leading_cmnts, trailing_cmnts).fmt_crate(krate)
-}
-
+/*
 macro_rules! select_str {
     ($fn_name:ident, $flag:ident, $true_value:expr, $false_value:expr) => (
         #[inline]
@@ -952,6 +945,11 @@ macro_rules! fmt_items {
         }
     });
 }
+*/
+
+pub fn fmt(krate: Crate, leading_cmnts: HashMap<Pos, Vec<String>>, trailing_cmnts: HashMap<Pos, String>) -> TsResult {
+    Formatter::new(leading_cmnts, trailing_cmnts).fmt_crate(krate)
+}
 
 struct Formatter {
     ts: Typesetter,
@@ -965,13 +963,12 @@ struct Formatter {
 }
 
 impl Formatter {
-    fn new(leading_cmnts: HashMap<Pos, Vec<String>>, trailing_cmnts: HashMap<Pos, String>)
-           -> Formatter {
+    fn new(leading_cmnts: HashMap<Pos, Vec<String>>, trailing_cmnts: HashMap<Pos, String>) -> Formatter {
         Formatter {
             ts: Typesetter::new(),
 
-            leading_cmnts: leading_cmnts,
-            trailing_cmnts: trailing_cmnts,
+            leading_cmnts,
+            trailing_cmnts,
 
             after_indent: false,
             after_wrap: false,
@@ -979,14 +976,17 @@ impl Formatter {
         }
     }
 
-    fn fmt_crate(mut self, krate: Crate) -> rfmt::Result {
+    fn fmt_crate(mut self, krate: Crate) -> TsResult {
+        /*
         self.try_fmt_leading_comments(&krate.loc);
         self.fmt_attrs(&krate.attrs);
         self.fmt_mod(&krate.module);
         self.fmt_left_comments(&krate.module.loc);
+        */
         self.ts.result()
     }
 
+    /*
     #[inline]
     fn clear_flag(&mut self) {
         self.after_indent = false;
@@ -2592,4 +2592,5 @@ impl Formatter {
         }
         self.insert_unmark_align(close);
     }
+    */
 }

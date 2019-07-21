@@ -253,6 +253,12 @@ fn map_ref_mut<T, F, R>(opt: &Option<T>, mut f: F) -> Option<R> where F: FnMut(&
 }
 
 
+macro_rules! trans_list {
+    ($sf: ident, $list: ident, $trans_single: ident) => ({
+        $list.iter().map(|ref e| $sf.$trans_single(e)).collect()
+    });
+}
+
 pub struct TrResult {
     pub krate: Crate,
     pub leading_cmnts: HashMap<Pos, Vec<String>>,
@@ -270,12 +276,6 @@ struct Translator {
     last_loc: Loc,
     leading_cmnts: HashMap<Pos, Vec<String>>,
     trailing_cmnts: HashMap<Pos, String>,
-}
-
-macro_rules! trans_list {
-    ($sf: ident, $list: ident, $trans_single: ident) => ({
-        $list.iter().map(|ref e| $sf.$trans_single(e)).collect()
-    });
 }
 
 impl Translator {
@@ -2028,7 +2028,6 @@ impl Translator {
                 break;
             }
         }
-        d!(exprs);
         (exprs, seps)
     }
 

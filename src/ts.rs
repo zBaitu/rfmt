@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 use std::fmt::{self, Debug};
 
-use rfmt;
+use crate::rfmt;
 
 const NL: char = '\n';
 
@@ -22,6 +22,12 @@ pub struct Typesetter {
     trailing_ws_lines: BTreeSet<u32>,
 
     s: String,
+}
+
+pub struct TsResult {
+    pub s: String,
+    pub exceed_lines: BTreeSet<u32>,
+    pub trailing_ws_lines: BTreeSet<u32>,
 }
 
 impl Debug for Typesetter {
@@ -98,8 +104,8 @@ impl Typesetter {
         }
     }
 
-    pub fn result(self) -> rfmt::Result {
-        rfmt::Result {
+    pub fn result(self) -> TsResult {
+        TsResult {
             s: self.s,
             exceed_lines: self.exceed_lines,
             trailing_ws_lines: self.trailing_ws_lines,

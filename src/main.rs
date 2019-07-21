@@ -18,6 +18,8 @@ mod ast;
 mod ir;
 mod rfmt;
 mod tr;
+mod ft;
+mod ts;
 
 #[derive(Debug, StructOpt)]
 pub struct Opt {
@@ -48,7 +50,7 @@ pub struct Opt {
 fn main() {
     let opt = Opt::from_args();
     if opt.input.is_none() {
-        rfmt::fmt_from_stdin();
+        rfmt::fmt_from_stdin(opt);
     } else if opt.ast {
         rfmt::dump_ast(&opt.input.unwrap());
     } else {
