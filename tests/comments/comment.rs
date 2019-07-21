@@ -1,6 +1,7 @@
 /// aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 /// bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 
+// aaaaa
 mod a {
     /* ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc */
     struct a {

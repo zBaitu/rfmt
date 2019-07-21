@@ -5,6 +5,7 @@ use ir::*;
 use ts::*;
 
 use crate::ir;
+use crate::need_wrap;
 use crate::rfmt;
 use crate::ts;
 
@@ -93,26 +94,6 @@ fn ident_patten_head(is_ref: bool, is_mut: bool) -> String {
     head
 }
 
-macro_rules! display_lists {
-    ($f:expr, $open:expr, $sep:expr, $close:expr, $($lists:expr),+) => ({
-        write!($f, $open)?;
-
-        let mut first = true;
-        $(for e in $lists {
-            if !first {
-                write!($f, "{}", $sep)?;
-            }
-            Display::fmt(e, $f)?;
-            first = false;
-        })+
-
-        write!($f, $close)
-    });
-
-    ($f:expr, $sep:expr, $($lists:expr),+) => ({
-       display_lists!($f, "", $sep, "", $($lists)+)
-    });
-}
 
 impl Display for Chunk {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -129,25 +110,7 @@ impl Display for Chunk {
     }
 }
 
-impl Display for Attr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "#")?;
-        if self.is_inner {
-            write!(f, "!")?;
-        }
-        write!(f, "[{}]", self.item)
-    }
-}
 
-impl Display for MetaItem {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        Display::fmt(&self.name, f)?;
-        if let Some(ref items) = self.items {
-            display_lists!(f, "(", ", ", ")", &**items)?;
-        }
-        Ok(())
-    }
-}
 
 impl Display for ExternCrate {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -802,14 +765,6 @@ macro_rules! fmt_item_group {
     });
 }
 
-macro_rules! maybe_nl {
-    ($sf:expr, $e:ident) => ({
-        if $e.loc.nl {
-            $sf.wrap();
-        }
-    });
-}
-
 macro_rules! maybe_wrap {
     ($sf:expr, $sep:expr, $wrap_sep:expr, $e:expr) => ({
         if !need_wrap!($sf.ts, $sep, &$e.to_string()) {
@@ -846,42 +801,6 @@ macro_rules! maybe_nl_indent {
     });
 }
 
-macro_rules! insert_sep {
-    ($sf:expr, $sep:expr, $e:expr) => ({
-        $sf.raw_insert($sep);
-        if !$e.loc.nl && !need_wrap!($sf.ts, " ", &$e.to_string()) {
-            $sf.raw_insert(" ");
-            false
-        } else {
-            $sf.wrap();
-            true
-        }
-    });
-}
-
-macro_rules! fmt_comma_lists {
-    ($sf:expr, $open:expr, $close:expr, $($list:expr, $fmt:ident),+) => ({
-        let mut is_wrap = false;
-        $sf.insert_mark_align($open);
-
-        let mut first = true;
-        $(for e in $list {
-            if !first {
-                is_wrap |= insert_sep!($sf, ",", e);
-            }
-
-            $sf.$fmt(e);
-            first = false;
-        })+
-
-        $sf.insert_unmark_align($close);
-        is_wrap
-    });
-
-    ($sf:expr, $($list:expr, $fmt:ident),+) => ({
-        fmt_comma_lists!($sf, "", "", $($list, $fmt)+);
-    });
-}
 
 macro_rules! fmt_lists {
     ($sf:expr, $sep:expr, $wrap_sep:expr, $($list:expr, $act:ident),+) => ({
@@ -947,6 +866,92 @@ macro_rules! fmt_items {
 }
 */
 
+macro_rules! maybe_nl {
+    ($sf:expr, $e:ident) => ({
+        if $e.loc.nl {
+            $sf.wrap();
+        }
+    });
+}
+
+macro_rules! insert_sep {
+    ($sf:expr, $sep:expr, $e:expr) => ({
+        $sf.raw_insert($sep);
+        if !$e.loc.nl && !need_wrap!($sf.ts, " ", &$e.to_string()) {
+            $sf.raw_insert(" ");
+            false
+        } else {
+            $sf.wrap();
+            true
+        }
+    });
+}
+
+macro_rules! fmt_comma_lists {
+    ($sf:expr, $open:expr, $close:expr, $($list:expr, $fmt:ident),+) => ({
+        let mut is_wrap = false;
+        $sf.insert_mark_align($open);
+
+        let mut first = true;
+        $(for e in $list {
+            if !first {
+                is_wrap |= insert_sep!($sf, ",", e);
+            }
+
+            $sf.$fmt(e);
+            first = false;
+        })+
+
+        $sf.insert_unmark_align($close);
+        is_wrap
+    });
+
+    ($sf:expr, $($list:expr, $fmt:ident),+) => ({
+        fmt_comma_lists!($sf, "", "", $($list, $fmt)+);
+    });
+}
+
+macro_rules! display_lists {
+    ($f:expr, $open:expr, $sep:expr, $close:expr, $($lists:expr),+) => ({
+        write!($f, $open)?;
+
+        let mut first = true;
+        $(for e in $lists {
+            if !first {
+                write!($f, "{}", $sep)?;
+            }
+            Display::fmt(e, $f)?;
+            first = false;
+        })+
+
+        write!($f, $close)
+    });
+
+    ($f:expr, $sep:expr, $($lists:expr),+) => ({
+       display_lists!($f, "", $sep, "", $($lists)+)
+    });
+}
+
+impl Display for Attr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "#")?;
+        if self.is_inner {
+            write!(f, "!")?;
+        }
+        write!(f, "[{}]", self.item)
+    }
+}
+
+impl Display for MetaItem {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        Display::fmt(&self.name, f)?;
+        if let Some(ref items) = self.items {
+            display_lists!(f, "(", ", ", ")", &**items)?;
+        }
+        Ok(())
+    }
+}
+
 pub fn fmt(krate: Crate, leading_cmnts: HashMap<Pos, Vec<String>>, trailing_cmnts: HashMap<Pos, String>) -> TsResult {
     Formatter::new(leading_cmnts, trailing_cmnts).fmt_crate(krate)
 }
@@ -977,86 +982,13 @@ impl Formatter {
     }
 
     fn fmt_crate(mut self, krate: Crate) -> TsResult {
-        /*
         self.try_fmt_leading_comments(&krate.loc);
         self.fmt_attrs(&krate.attrs);
+        /*
         self.fmt_mod(&krate.module);
-        self.fmt_left_comments(&krate.module.loc);
         */
+        self.fmt_left_comments(&krate.module.loc);
         self.ts.result()
-    }
-
-    /*
-    #[inline]
-    fn clear_flag(&mut self) {
-        self.after_indent = false;
-        self.after_wrap = false;
-    }
-
-    #[inline]
-    fn raw_insert(&mut self, s: &str) {
-        if !s.is_empty() {
-            self.ts.raw_insert(s);
-            self.clear_flag();
-        }
-    }
-
-    #[inline]
-    fn insert(&mut self, s: &str) {
-        if !s.is_empty() {
-            self.ts.insert(s);
-            self.clear_flag();
-        }
-    }
-
-    #[inline]
-    fn wrap(&mut self) {
-        if !self.after_indent && !self.after_wrap {
-            self.ts.wrap();
-            self.after_wrap = true;
-        }
-    }
-
-    #[inline]
-    fn nl(&mut self) {
-        self.ts.nl();
-        self.clear_flag();
-    }
-
-    #[inline]
-    fn nl_indent(&mut self) {
-        if !self.after_indent {
-            self.ts.nl_indent();
-            self.after_indent = true;
-        }
-    }
-
-    #[inline]
-    fn indent(&mut self) {
-        self.ts.indent();
-    }
-
-    #[inline]
-    fn outdent(&mut self) {
-        self.ts.outdent();
-    }
-
-    #[inline]
-    fn insert_indent(&mut self) {
-        self.ts.insert_indent();
-        self.after_indent = true;
-    }
-
-    #[inline]
-    fn insert_mark_align(&mut self, s: &str) {
-        self.ts.insert_mark_align(s);
-        self.clear_flag();
-    }
-
-    #[inline]
-    fn insert_unmark_align(&mut self, s: &str) {
-        self.ts.insert_unmark_align(s);
-        self.clear_flag();
     }
 
     #[inline]
@@ -1083,19 +1015,6 @@ impl Formatter {
     }
 
     #[inline]
-    fn fmt_left_comments(&mut self, loc: &Loc) {
-        let poses: Vec<_> = self.leading_cmnts.keys().cloned().collect();
-        for pos in poses {
-            for cmnt in &self.leading_cmnts.remove(&pos).unwrap() {
-                if pos > loc.end {
-                    self.raw_insert(cmnt);
-                    self.nl();
-                }
-            }
-        }
-    }
-
-    #[inline]
     fn has_trailing_comment(&self, loc: &Loc) -> bool {
         self.trailing_cmnts.contains_key(&loc.end)
     }
@@ -1115,21 +1034,15 @@ impl Formatter {
     }
 
     #[inline]
-    fn fmt_chunk(&mut self, chunk: &Chunk) {
-        maybe_nl!(self, chunk);
-        self.fmt_long_str(&chunk.s);
-    }
-
-    #[inline]
-    fn fmt_long_str(&mut self, s: &str) {
-        let mut first = true;
-        for line in s.split('\n') {
-            if !first {
-                self.nl();
+    fn fmt_left_comments(&mut self, loc: &Loc) {
+        let poses: Vec<_> = self.leading_cmnts.keys().cloned().collect();
+        for pos in poses {
+            for cmnt in &self.leading_cmnts.remove(&pos).unwrap() {
+                if pos > loc.end {
+                    self.raw_insert(cmnt);
+                    self.nl();
+                }
             }
-
-            self.insert(line);
-            first = false;
         }
     }
 
@@ -1170,9 +1083,27 @@ impl Formatter {
     }
 
     #[inline]
+    fn fmt_chunk(&mut self, chunk: &Chunk) {
+        maybe_nl!(self, chunk);
+        self.fmt_long_str(&chunk.s);
+    }
+
+    #[inline]
+    fn fmt_long_str(&mut self, s: &str) {
+        let mut first = true;
+        for line in s.split('\n') {
+            if !first {
+                self.nl();
+            }
+
+            self.insert(line);
+            first = false;
+        }
+    }
+
+    #[inline]
     fn fmt_attr_group(&mut self, attr_group: &Vec<&Attr>) {
-        let sorted_attrs: BTreeMap<_, _>
-                = attr_group.into_iter().map(|e| (e.to_string(), *e)).collect();
+        let sorted_attrs: BTreeMap<_, _> = attr_group.into_iter().map(|e| (e.to_string(), *e)).collect();
         for attr in sorted_attrs.values() {
             self.insert_indent();
             self.fmt_attr(attr);
@@ -1203,9 +1134,31 @@ impl Formatter {
         self.fmt_long_str(&item.name);
 
         if let Some(ref items) = item.items {
-            self.fmt_meta_items(&**items);
+            self.fmt_meta_items(items);
         }
     }
+
+    /*
+
+    #[inline]
+    fn nl_indent(&mut self) {
+        if !self.after_indent {
+            self.ts.nl_indent();
+            self.after_indent = true;
+        }
+    }
+
+    #[inline]
+    fn indent(&mut self) {
+        self.ts.indent();
+    }
+
+    #[inline]
+    fn outdent(&mut self) {
+        self.ts.outdent();
+    }
+
+
 
     fn fmt_mod(&mut self, module: &Mod) {
         self.fmt_group_items(&module.items);
@@ -2593,4 +2546,58 @@ impl Formatter {
         self.insert_unmark_align(close);
     }
     */
+
+    #[inline]
+    fn clear_flag(&mut self) {
+        self.after_indent = false;
+        self.after_wrap = false;
+    }
+
+    #[inline]
+    fn insert_indent(&mut self) {
+        self.ts.insert_indent();
+        self.after_indent = true;
+    }
+
+    #[inline]
+    fn raw_insert(&mut self, s: &str) {
+        if !s.is_empty() {
+            self.ts.raw_insert(s);
+            self.clear_flag();
+        }
+    }
+
+    #[inline]
+    fn insert(&mut self, s: &str) {
+        if !s.is_empty() {
+            self.ts.insert(s);
+            self.clear_flag();
+        }
+    }
+
+    #[inline]
+    fn nl(&mut self) {
+        self.ts.nl();
+        self.clear_flag();
+    }
+
+    #[inline]
+    fn wrap(&mut self) {
+        if !self.after_indent && !self.after_wrap {
+            self.ts.wrap();
+            self.after_wrap = true;
+        }
+    }
+
+    #[inline]
+    fn insert_mark_align(&mut self, s: &str) {
+        self.ts.insert_mark_align(s);
+        self.clear_flag();
+    }
+
+    #[inline]
+    fn insert_unmark_align(&mut self, s: &str) {
+        self.ts.insert_unmark_align(s);
+        self.clear_flag();
+    }
 }

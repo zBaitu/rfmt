@@ -1,4 +1,5 @@
 #![allow(unused_variables)]
+#![crate_type = "lib"]
 
 fn main() {
 // General metadata applied to the enclosing module or crate.

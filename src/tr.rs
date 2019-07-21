@@ -252,7 +252,6 @@ fn map_ref_mut<T, F, R>(opt: &Option<T>, mut f: F) -> Option<R> where F: FnMut(&
     }
 }
 
-
 macro_rules! trans_list {
     ($sf: ident, $list: ident, $trans_single: ident) => ({
         $list.iter().map(|ref e| $sf.$trans_single(e)).collect()
@@ -2068,13 +2067,17 @@ impl Translator {
             return false;
         }
 
+        let mut not_nl = false;
         let start = linefeed.unwrap() + 1;
         for ch in snippet[start..].chars() {
             if !ch.is_whitespace() {
                 return false;
             }
+            if ch != '\n' {
+                not_nl = true;
+            }
         }
-        true
+        not_nl
     }
 
     #[inline]

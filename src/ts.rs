@@ -5,41 +5,12 @@ use crate::rfmt;
 
 const NL: char = '\n';
 
-const MAX_WIDTH: usize = 95;
-const EXCEED_WIDTH: usize = 100;
+const MAX_WIDTH: usize = 115;
+const EXCEED_WIDTH: usize = 120;
 const MAX_ALIGN_COL: usize = 50;
 
 const INDENT: &'static str = "    ";
 const WRAP_INDENT: &'static str = "        ";
-
-#[derive(Default)]
-pub struct Typesetter {
-    line: u32,
-    col: usize,
-    indent: String,
-    align_stack: Vec<usize>,
-    exceed_lines: BTreeSet<u32>,
-    trailing_ws_lines: BTreeSet<u32>,
-
-    s: String,
-}
-
-pub struct TsResult {
-    pub s: String,
-    pub exceed_lines: BTreeSet<u32>,
-    pub trailing_ws_lines: BTreeSet<u32>,
-}
-
-impl Debug for Typesetter {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "pos: ({}, {})\n", self.line, self.col)?;
-        write!(f, "indent: \"{}\"\n", self.indent)?;
-        write!(f, "align stack: ")?;
-        Debug::fmt(&self.align_stack, f)?;
-        write!(f, "\nexceed lines: ")?;
-        Debug::fmt(&self.exceed_lines, f)
-    }
-}
 
 #[macro_export]
 macro_rules! need_wrap {
@@ -52,6 +23,17 @@ macro_rules! need_wrap {
 macro_rules! need_nl_indent {
     ($ts:expr, $($s:expr),+) => ({
         $ts.need_nl_indent(&[$($s),+])
+    });
+}
+
+macro_rules! raw_insert {
+    ($sf:expr, $s:expr) => ({
+        $sf.s.push_str($s);
+
+        $sf.col += $s.len();
+        if $sf.col > EXCEED_WIDTH {
+            $sf.exceed_lines.insert($sf.line);
+        }
     });
 }
 
@@ -85,15 +67,33 @@ macro_rules! minus_nf {
     })
 }
 
-macro_rules! raw_insert {
-    ($sf:expr, $s:expr) => ({
-        $sf.s.push_str($s);
+#[derive(Default)]
+pub struct Typesetter {
+    line: u32,
+    col: usize,
+    indent: String,
+    align_stack: Vec<usize>,
+    exceed_lines: BTreeSet<u32>,
+    trailing_ws_lines: BTreeSet<u32>,
 
-        $sf.col += $s.len();
-        if $sf.col > EXCEED_WIDTH {
-            $sf.exceed_lines.insert($sf.line);
-        }
-    });
+    s: String,
+}
+
+pub struct TsResult {
+    pub s: String,
+    pub exceed_lines: BTreeSet<u32>,
+    pub trailing_ws_lines: BTreeSet<u32>,
+}
+
+impl Debug for Typesetter {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "pos: ({}, {})\n", self.line, self.col)?;
+        write!(f, "indent: \"{}\"\n", self.indent)?;
+        write!(f, "align stack: ")?;
+        Debug::fmt(&self.align_stack, f)?;
+        write!(f, "\nexceed lines: ")?;
+        Debug::fmt(&self.exceed_lines, f)
+    }
 }
 
 impl Typesetter {
@@ -127,27 +127,19 @@ impl Typesetter {
     }
 
     #[inline]
-    pub fn need_wrap(&self, list: &[&str]) -> bool {
-        let (prefix_len, len) = list_len_info(list);
-        self.need_wrap_len(prefix_len, len)
+    pub fn indent(&mut self) {
+        self.indent.push_str(INDENT);
     }
 
     #[inline]
-    pub fn need_nl_indent(&self, list: &[&str]) -> bool {
-        let (prefix_len, len) = list_len_info(list);
-        self.need_nl_indent_len(prefix_len, len)
+    pub fn outdent(&mut self) {
+        let len = self.indent.len();
+        self.indent.truncate(len - INDENT.len());
     }
 
     #[inline]
-    pub fn wrap(&mut self) {
-        self.nl();
-
-        if self.should_align() {
-            self.insert_align();
-        } else {
-            self.insert_indent();
-            self.insert_wrap_indent();
-        }
+    pub fn insert_indent(&mut self) {
+        raw_insert!(self, &self.indent);
     }
 
     #[inline]
@@ -170,19 +162,32 @@ impl Typesetter {
     }
 
     #[inline]
-    pub fn indent(&mut self) {
-        self.indent.push_str(INDENT);
+    pub fn need_wrap(&self, list: &[&str]) -> bool {
+        let (prefix_len, len) = list_len_info(list);
+        self.need_wrap_len(prefix_len, len)
     }
 
     #[inline]
-    pub fn outdent(&mut self) {
-        let len = self.indent.len();
-        self.indent.truncate(len - INDENT.len());
+    fn need_wrap_len(&self, prefix_len: usize, len: usize) -> bool {
+        (minus_nf!(self.left(), prefix_len) <= 0) || (len > self.left() && len <= self.nl_left())
     }
 
     #[inline]
-    pub fn insert_indent(&mut self) {
-        raw_insert!(self, &self.indent);
+    pub fn need_nl_indent(&self, list: &[&str]) -> bool {
+        let (prefix_len, len) = list_len_info(list);
+        self.need_nl_indent_len(prefix_len, len)
+    }
+
+    #[inline]
+    pub fn wrap(&mut self) {
+        self.nl();
+
+        if self.should_align() {
+            self.insert_align();
+        } else {
+            self.insert_indent();
+            self.insert_wrap_indent();
+        }
     }
 
     #[inline]
@@ -195,12 +200,6 @@ impl Typesetter {
     pub fn insert_unmark_align(&mut self, s: &str) {
         self.raw_insert(s);
         self.unmark_align();
-    }
-
-    #[inline]
-    fn need_wrap_len(&self, prefix_len: usize, len: usize) -> bool {
-        (minus_nf!(self.left(), prefix_len) <= 0)
-                || (len > self.left() && len <= self.nl_left())
     }
 
     #[inline]

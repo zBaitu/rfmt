@@ -1,0 +1,2 @@
+// aaaaa
+mod a {}
