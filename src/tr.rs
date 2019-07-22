@@ -2062,22 +2062,22 @@ impl Translator {
         }
 
         let snippet = snippet.unwrap();
-        let linefeed = snippet.find('\n');
+        let linefeed = snippet.rfind('\n');
         if linefeed.is_none() {
             return false;
         }
 
-        let mut not_nl = false;
+        let mut nl = false;
         let start = linefeed.unwrap() + 1;
         for ch in snippet[start..].chars() {
             if !ch.is_whitespace() {
                 return false;
             }
             if ch != '\n' {
-                not_nl = true;
+                nl = true
             }
         }
-        not_nl
+        nl
     }
 
     #[inline]

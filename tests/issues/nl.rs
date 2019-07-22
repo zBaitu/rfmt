@@ -1,9 +1,11 @@
 #![test]
 
 
-#![allow(unused_variables)]
+#![allow(
+    unused_variables)]
 
 #![crate_type = "lib"]
 
-#![allow(aaa(
-        bbb))]
+#![allow(
+    aaa(
+    bbb))]
