@@ -385,7 +385,8 @@ impl Translator {
     fn trans_attr(&mut self, attr: &ast::Attribute) -> Attr {
         let loc = self.loc(&attr.span);
         let is_inner = is_inner(attr.style);
-        let item = self.trans_meta_item(&attr.meta().unwrap());
+        let span_forward = if is_inner { 2 } else { 1 };
+        let item = self.trans_meta_item(&attr.meta().unwrap(), span_forward);
         self.set_loc(&loc);
 
         Attr {
@@ -395,12 +396,13 @@ impl Translator {
         }
     }
 
-    fn trans_meta_item(&mut self, meta_item: &ast::MetaItem) -> MetaItem {
+    fn trans_meta_item(&mut self, meta_item: &ast::MetaItem, span_forward: u32) -> MetaItem {
         let name = path_to_string(&meta_item.path);
+        let span = span(meta_item.span.lo().0 + span_forward, meta_item.span.hi().0);
         match meta_item.node {
             ast::MetaItemKind::Word => {
                 MetaItem {
-                    loc: self.leaf_loc(&meta_item.span),
+                    loc: self.leaf_loc(&span),
                     name,
                     items: None,
                 }
@@ -408,13 +410,13 @@ impl Translator {
             ast::MetaItemKind::NameValue(ref lit) => {
                 let s = format!("{} = {}", name, self.literal_to_string(lit));
                 MetaItem {
-                    loc: self.leaf_loc(&meta_item.span),
+                    loc: self.leaf_loc(&span),
                     name: s,
                     items: None,
                 }
             }
             ast::MetaItemKind::List(ref meta_items) => {
-                let loc = self.loc(&meta_item.span);
+                let loc = self.loc(&span);
                 let items = self.trans_nested_meta_items(meta_items);
                 self.set_loc(&loc);
 
@@ -442,7 +444,7 @@ impl Translator {
                 }
             }
             ast::NestedMetaItem::MetaItem(ref meta_iten) => {
-                self.trans_meta_item(meta_iten)
+                self.trans_meta_item(meta_iten, 0)
             }
         }
     }
@@ -2062,22 +2064,18 @@ impl Translator {
         }
 
         let snippet = snippet.unwrap();
-        let linefeed = snippet.rfind('\n');
-        if linefeed.is_none() {
+        let nl = snippet.rfind('\n');
+        if nl.is_none() {
             return false;
         }
 
-        let mut nl = false;
-        let start = linefeed.unwrap() + 1;
+        let start = nl.unwrap() + 1;
         for ch in snippet[start..].chars() {
             if !ch.is_whitespace() {
                 return false;
             }
-            if ch != '\n' {
-                nl = true
-            }
         }
-        nl
+        true
     }
 
     #[inline]
