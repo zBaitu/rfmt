@@ -109,15 +109,6 @@ impl Display for Chunk {
     }
 }
 
-
-
-
-impl Display for ModDecl {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "mod {}", self.name)
-    }
-}
-
 impl Display for LifetimeDef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.lifetime)?;
@@ -752,38 +743,7 @@ macro_rules! fmt_lists {
     });
 }
 
-macro_rules! fmt_block {
-    ($sf:expr, $items: expr, $block:expr, $fmt:ident) => ({
-        if $items.is_empty() {
-            if $sf.block_non_sep {
-                $sf.raw_insert("{}");
-                $sf.block_non_sep = false;
-            } else {
-                $sf.raw_insert(" {}");
-            }
-            return;
-        }
 
-        if $sf.block_non_sep {
-            $sf.raw_insert("{");
-            $sf.block_non_sep = false;
-        } else {
-            $sf.raw_insert(" {");
-        }
-        $sf.indent();
-        $sf.nl();
-
-        $sf.$fmt($block);
-
-        $sf.outdent();
-        $sf.insert_indent();
-        $sf.raw_insert("}");
-    });
-
-    ($sf:expr, $items:expr, $fmt:ident) => ({
-        fmt_block!($sf, $items, $items, $fmt);
-    })
-}
 
 macro_rules! fmt_items {
     ($sf:ident, $items:expr, $fmt_item:ident) => ({
@@ -902,16 +862,46 @@ macro_rules! fmt_item_group {
             $sf.fmt_attrs(e.2);
 
             $sf.insert_indent();
-            if !e.1.is_empty() {
-                $sf.raw_insert(e.1);
-                $sf.raw_insert(" ");
-            }
+            $sf.fmt_vis(e.1);
             $sf.$fmt_item(e.3);
 
             $sf.try_fmt_trailing_comment(e.0);
             $sf.nl();
         }
     });
+}
+
+macro_rules! fmt_block {
+    ($sf:expr, $items: expr, $block:expr, $fmt:ident) => ({
+        if $items.is_empty() {
+            if $sf.block_non_sep {
+                $sf.raw_insert("{}");
+                $sf.block_non_sep = false;
+            } else {
+                $sf.raw_insert(" {}");
+            }
+            return;
+        }
+
+        if $sf.block_non_sep {
+            $sf.raw_insert("{");
+            $sf.block_non_sep = false;
+        } else {
+            $sf.raw_insert(" {");
+        }
+        $sf.indent();
+        $sf.nl();
+
+        $sf.$fmt($block);
+
+        $sf.outdent();
+        $sf.insert_indent();
+        $sf.raw_insert("}");
+    });
+
+    ($sf:expr, $items:expr, $fmt:ident) => ({
+        fmt_block!($sf, $items, $items, $fmt);
+    })
 }
 
 impl Display for Attr {
@@ -965,6 +955,12 @@ fn fmt_use_trees(f: &mut fmt::Formatter, trees: &Option<Vec<UseTree>>) -> fmt::R
         write!(f, "{}", trees[0])
     } else {
         display_lists!(f, "{{", ", ", "}}", trees)
+    }
+}
+
+impl Display for ModDecl {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "mod {}", self.name)
     }
 }
 
@@ -1154,13 +1150,13 @@ impl Formatter {
 
     fn fmt_mod(&mut self, module: &Mod) {
         self.fmt_group_items(&module.items);
-        //self.fmt_items(&module.items);
+        self.fmt_items(&module.items);
     }
 
     fn fmt_group_items(&mut self, items: &Vec<Item>) {
         self.fmt_extern_crate_items(items);
         self.fmt_use_items(items);
-        //self.fmt_mod_decl_items(items);
+        self.fmt_mod_decl_items(items);
     }
 
     fn fmt_extern_crate_items(&mut self, items: &Vec<Item>) {
@@ -1200,29 +1196,6 @@ impl Formatter {
         }
     }
 
-    /*
-
-    #[inline]
-    fn nl_indent(&mut self) {
-        if !self.after_indent {
-            self.ts.nl_indent();
-            self.after_indent = true;
-        }
-    }
-
-    #[inline]
-    fn indent(&mut self) {
-        self.ts.indent();
-    }
-
-    #[inline]
-    fn outdent(&mut self) {
-        self.ts.outdent();
-    }
-
-
-
-
     fn fmt_mod_decl_items(&mut self, items: &Vec<Item>) {
         fmt_item_groups!(self, items, ItemKind::ModDecl, &ModDecl, fmt_mod_decl);
     }
@@ -1244,15 +1217,14 @@ impl Formatter {
         self.try_fmt_leading_comments(&item.loc);
         self.fmt_attrs(&item.attrs);
         self.insert_indent();
+        self.fmt_vis(&item.vis);
 
-        if item.is_pub {
-            self.raw_insert("pub ");
-        }
         match item.item {
             ItemKind::ExternCrate(ref item) => self.fmt_extern_crate(item),
             ItemKind::Use(ref item) => self.fmt_use(item),
             ItemKind::ModDecl(ref item) => self.fmt_mod_decl(item),
             ItemKind::Mod(ref item) => self.fmt_sub_mod(item),
+            /*
             ItemKind::TypeAlias(ref item) => self.fmt_type_alias(item),
             ItemKind::ForeignMod(ref item) => self.fmt_foreign_mod(item),
             ItemKind::Const(ref item) => self.fmt_const(item),
@@ -1264,6 +1236,8 @@ impl Formatter {
             ItemKind::ImplDefault(ref item) => self.fmt_impl_default(item),
             ItemKind::Impl(ref item) => self.fmt_impl(item),
             ItemKind::Macro(ref item) => self.fmt_macro_raw(item),
+            */
+            _ => {}
         }
 
         self.try_fmt_trailing_comment(&item.loc);
@@ -1275,6 +1249,7 @@ impl Formatter {
         fmt_block!(self, item.items, item, fmt_mod);
     }
 
+    /*
     fn fmt_type_alias(&mut self, item: &TypeAlias) {
         self.insert(&format!("type {}", &item.name));
 
@@ -2620,5 +2595,31 @@ impl Formatter {
     fn insert_unmark_align(&mut self, s: &str) {
         self.ts.insert_unmark_align(s);
         self.clear_flag();
+    }
+
+    #[inline]
+    fn nl_indent(&mut self) {
+        if !self.after_indent {
+            self.ts.nl_indent();
+            self.after_indent = true;
+        }
+    }
+
+    #[inline]
+    fn indent(&mut self) {
+        self.ts.indent();
+    }
+
+    #[inline]
+    fn outdent(&mut self) {
+        self.ts.outdent();
+    }
+
+    #[inline]
+    fn fmt_vis(&mut self, vis: &Vis) {
+        if !vis.is_empty() {
+            self.raw_insert(vis);
+            self.raw_insert(" ");
+        }
     }
 }

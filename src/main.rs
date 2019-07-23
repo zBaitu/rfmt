@@ -2,18 +2,6 @@ use std::path::PathBuf;
 
 use structopt::StructOpt;
 
-macro_rules! p {
-    () => ({println!()});
-    ($arg:expr) => ({println!("{}", $arg)});
-    ($fmt:expr, $($arg:tt)*) => ({println!($fmt, $($arg)*)});
-    ($($arg:tt)+) => ({println!("{}", $($arg)+)});
-}
-
-macro_rules! d {
-    ($arg:expr) => ({println!("{:#?}", $arg)});
-}
-
-
 mod ast;
 mod ir;
 mod rfmt;
@@ -45,7 +33,6 @@ pub struct Opt {
     #[structopt(parse(from_os_str))]
     input: Option<PathBuf>,
 }
-
 
 fn main() {
     let opt = Opt::from_args();
