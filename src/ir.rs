@@ -135,7 +135,14 @@ pub struct ExternCrate {
 #[derive(Debug)]
 pub struct Use {
     pub path: String,
-    pub trees: Option<Vec<Use>>,
+    pub trees: Option<Vec<UseTree>>,
+}
+
+#[derive(Debug)]
+pub struct UseTree {
+    pub loc: Loc,
+    pub path: String,
+    pub trees: Option<Vec<UseTree>>,
 }
 
 #[derive(Debug)]

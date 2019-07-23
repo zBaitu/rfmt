@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
@@ -577,24 +576,33 @@ impl Translator {
     }
 
     fn trans_use(&mut self, tree: &ast::UseTree) -> Use {
-        let (path, trees) = match tree.kind {
+        let use_tree = self.trans_use_tree(tree);
+        Use {
+            path: use_tree.path,
+            trees: use_tree.trees,
+        }
+    }
+
+    #[inline]
+    fn trans_use_tree(&mut self, tree: &ast::UseTree) -> UseTree {
+        let (loc, path, trees) = match tree.kind {
             ast::UseTreeKind::Simple(rename, ..) => {
-                self.leaf_loc(&tree.span);
+                let loc = self.leaf_loc(&tree.span);
                 let mut path = path_to_string(&tree.prefix);
                 if let Some(ref rename) = rename {
                     path = format!("{} as {}", path, ident_to_string(rename));
                 }
-                (path, None)
+                (loc, path, None)
             }
             ast::UseTreeKind::Glob => {
-                self.leaf_loc(&tree.span);
+                let loc = self.leaf_loc(&tree.span);
                 let mut path = String::new();
                 if !tree.prefix.segments.is_empty() {
                     path.push_str(&path_to_string(&tree.prefix));
                     path.push_str("::");
                 }
                 path.push_str("*");
-                (path, None)
+                (loc, path, None)
             }
             ast::UseTreeKind::Nested(ref trees) => {
                 let loc = self.loc(&tree.span);
@@ -610,23 +618,19 @@ impl Translator {
                         a.path.cmp(&b.path)
                     }
                 });
-                (path, Some(trees))
+                (loc, path, Some(trees))
             }
         };
 
-        Use {
+        UseTree {
+            loc,
             path,
             trees,
         }
     }
 
-    fn trans_use_trees(&mut self, trees: &Vec<(ast::UseTree, ast::NodeId)>) -> Vec<Use> {
-        trans_list!(self, trees, trans_use_tree)
-    }
-
-    #[inline]
-    fn trans_use_tree(&mut self, tree: &(ast::UseTree, ast::NodeId)) -> Use {
-        self.trans_use(&tree.0)
+    fn trans_use_trees(&mut self, trees: &Vec<(ast::UseTree, ast::NodeId)>) -> Vec<UseTree> {
+        trees.iter().map(|ref e| self.trans_use_tree(&e.0)).collect()
     }
 
     fn trans_type_alias(&mut self, ident: String, generics: &ast::Generics, ty: &ast::Ty) -> TypeAlias {

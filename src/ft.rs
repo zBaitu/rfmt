@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::{self, Debug, Display};
 
 use ir::*;
@@ -6,7 +6,6 @@ use ts::*;
 
 use crate::ir;
 use crate::need_wrap;
-use crate::rfmt;
 use crate::ts;
 
 /*
@@ -112,27 +111,6 @@ impl Display for Chunk {
 
 
 
-impl Display for ExternCrate {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "extern crate {}", self.name)
-    }
-}
-
-impl Display for Use {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "use {}", self.base)?;
-
-        if !self.names.is_empty() {
-            write!(f, "::")?;
-            if self.names.len() == 1 {
-                write!(f, "{}", self.names[0])?
-            } else {
-                display_lists!(f, "{{", ", ", "}}", &self.names)?;
-            }
-        }
-        Ok(())
-    }
-}
 
 impl Display for ModDecl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -719,51 +697,8 @@ impl Display for MacroExpr {
     }
 }
 
-macro_rules! fmt_item_groups {
-    ($sf:expr, $items:expr, $item_kind:path, $item_type:ty, $fmt_item:ident) => ({
-        let mut group: Vec<(&Loc, bool, &Vec<AttrKind>, $item_type)> = Vec::new();
 
-        for item in $items {
-            match item.item {
-                $item_kind(ref e) => {
-                    if $sf.has_leading_comments(&item.loc) {
-                        fmt_item_group!($sf, &group, $item_type, $fmt_item);
-                        group.clear();
 
-                        $sf.fmt_leading_comments(&item.loc);
-                    }
-                    group.push((&item.loc, item.is_pub, &item.attrs, e));
-                }
-                _ => {
-                    fmt_item_group!($sf, &group, $item_type, $fmt_item);
-                    group.clear();
-                }
-            }
-        }
-
-        fmt_item_group!($sf, &group, $item_type, $fmt_item);
-    });
-}
-
-macro_rules! fmt_item_group {
-    ($sf:expr, $group:expr, $ty:ty, $fmt_item:ident) => ({
-        let map: BTreeMap<String, (&Loc, bool, &Vec<AttrKind>, $ty)>
-                = $group.into_iter().map(|e| (e.3.to_string(), *e)).collect();
-
-        for (_, e) in map {
-            $sf.fmt_attrs(e.2);
-
-            $sf.insert_indent();
-            if e.1 {
-                $sf.raw_insert("pub ");
-            }
-            $sf.$fmt_item(e.3);
-
-            $sf.try_fmt_trailing_comment(e.0);
-            $sf.nl();
-        }
-    });
-}
 
 macro_rules! maybe_wrap {
     ($sf:expr, $sep:expr, $wrap_sep:expr, $e:expr) => ({
@@ -932,6 +867,53 @@ macro_rules! display_lists {
     });
 }
 
+macro_rules! fmt_item_groups {
+    ($sf:expr, $items:expr, $item_kind:path, $item_type:ty, $fmt_item:ident) => ({
+        let mut group: Vec<(&Loc, &String, &Vec<AttrKind>, $item_type)> = Vec::new();
+
+        for item in $items {
+            match item.item {
+                $item_kind(ref e) => {
+                    if $sf.has_leading_comments(&item.loc) {
+                        fmt_item_group!($sf, &group, $item_type, $fmt_item);
+                        group.clear();
+
+                        $sf.fmt_leading_comments(&item.loc);
+                    }
+                    group.push((&item.loc, &item.vis, &item.attrs, e));
+                }
+                _ => {
+                    fmt_item_group!($sf, &group, $item_type, $fmt_item);
+                    group.clear();
+                }
+            }
+        }
+
+        fmt_item_group!($sf, &group, $item_type, $fmt_item);
+    });
+}
+
+macro_rules! fmt_item_group {
+    ($sf:expr, $group:expr, $ty:ty, $fmt_item:ident) => ({
+        let map: BTreeMap<String, (&Loc, &String, &Vec<AttrKind>, $ty)>
+                = $group.into_iter().map(|e| (e.3.to_string(), *e)).collect();
+
+        for (_, e) in map {
+            $sf.fmt_attrs(e.2);
+
+            $sf.insert_indent();
+            if !e.1.is_empty() {
+                $sf.raw_insert(e.1);
+                $sf.raw_insert(" ");
+            }
+            $sf.$fmt_item(e.3);
+
+            $sf.try_fmt_trailing_comment(e.0);
+            $sf.nl();
+        }
+    });
+}
+
 impl Display for Attr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "#")?;
@@ -949,6 +931,40 @@ impl Display for MetaItem {
             display_lists!(f, "(", ", ", ")", &**items)?;
         }
         Ok(())
+    }
+}
+
+impl Display for ExternCrate {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "extern crate {}", self.name)
+    }
+}
+
+impl Display for Use {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "use {}", self.path)?;
+        fmt_use_trees(f, &self.trees)
+    }
+}
+
+impl Display for UseTree {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.path)?;
+        fmt_use_trees(f, &self.trees)
+    }
+}
+
+fn fmt_use_trees(f: &mut fmt::Formatter, trees: &Option<Vec<UseTree>>) -> fmt::Result {
+    if trees.is_none() {
+        return Ok(());
+    }
+
+    let trees: &Vec<UseTree> = &trees.as_ref().unwrap();
+    write!(f, "::")?;
+    if trees.len() == 1 {
+        write!(f, "{}", trees[0])
+    } else {
+        display_lists!(f, "{{", ", ", "}}", trees)
     }
 }
 
@@ -984,9 +1000,7 @@ impl Formatter {
     fn fmt_crate(mut self, krate: Crate) -> TsResult {
         self.try_fmt_leading_comments(&krate.loc);
         self.fmt_attrs(&krate.attrs);
-        /*
         self.fmt_mod(&krate.module);
-        */
         self.fmt_left_comments(&krate.module.loc);
         self.ts.result()
     }
@@ -1138,6 +1152,54 @@ impl Formatter {
         }
     }
 
+    fn fmt_mod(&mut self, module: &Mod) {
+        self.fmt_group_items(&module.items);
+        //self.fmt_items(&module.items);
+    }
+
+    fn fmt_group_items(&mut self, items: &Vec<Item>) {
+        self.fmt_extern_crate_items(items);
+        self.fmt_use_items(items);
+        //self.fmt_mod_decl_items(items);
+    }
+
+    fn fmt_extern_crate_items(&mut self, items: &Vec<Item>) {
+        fmt_item_groups!(self, items, ItemKind::ExternCrate, &ExternCrate, fmt_extern_crate);
+    }
+
+    fn fmt_extern_crate(&mut self, item: &ExternCrate) {
+        self.insert(&format!("extern crate {};", &item.name));
+    }
+
+    fn fmt_use_items(&mut self, items: &Vec<Item>) {
+        fmt_item_groups!(self, items, ItemKind::Use, &Use, fmt_use);
+    }
+
+    fn fmt_use(&mut self, item: &Use) {
+        self.insert(&format!("use {}", &item.path));
+        self.fmt_use_trees(&item.trees);
+        self.raw_insert(";");
+    }
+
+    fn fmt_use_tree(&mut self, item: &UseTree) {
+        self.insert(&format!("{}", &item.path));
+        self.fmt_use_trees(&item.trees);
+    }
+
+    fn fmt_use_trees(&mut self, trees: &Option<Vec<UseTree>>) {
+        if trees.is_none() {
+            return;
+        }
+
+        self.insert("::");
+        let trees: &Vec<UseTree> = trees.as_ref().unwrap();
+        if trees.len() == 1 {
+            self.fmt_use_tree(&trees[0]);
+        } else {
+            fmt_comma_lists!(self, "{", "}", trees, fmt_use_tree);
+        }
+    }
+
     /*
 
     #[inline]
@@ -1160,47 +1222,6 @@ impl Formatter {
 
 
 
-    fn fmt_mod(&mut self, module: &Mod) {
-        self.fmt_group_items(&module.items);
-        self.fmt_items(&module.items);
-    }
-
-    fn fmt_group_items(&mut self, items: &Vec<Item>) {
-        self.fmt_extern_crate_items(items);
-        self.fmt_use_items(items);
-        self.fmt_mod_decl_items(items);
-    }
-
-    fn fmt_extern_crate_items(&mut self, items: &Vec<Item>) {
-        fmt_item_groups!(self, items, ItemKind::ExternCrate, &ExternCrate, fmt_extern_crate);
-    }
-
-    fn fmt_extern_crate(&mut self, item: &ExternCrate) {
-        self.insert(&format!("extern crate {};", &item.name));
-    }
-
-    fn fmt_use_items(&mut self, items: &Vec<Item>) {
-        fmt_item_groups!(self, items, ItemKind::Use, &Use, fmt_use);
-    }
-
-    fn fmt_use(&mut self, item: &Use) {
-        self.insert(&format!("use {}", &item.base));
-        self.fmt_use_names(&item.names);
-        self.raw_insert(";");
-    }
-
-    fn fmt_use_names(&mut self, names: &Vec<Chunk>) {
-        if names.is_empty() {
-            return;
-        }
-
-        self.insert("::");
-        if names.len() == 1 {
-            self.fmt_chunk(&names[0]);
-        } else {
-            fmt_comma_lists!(self, "{", "}", names, fmt_chunk);
-        }
-    }
 
     fn fmt_mod_decl_items(&mut self, items: &Vec<Item>) {
         fmt_item_groups!(self, items, ItemKind::ModDecl, &ModDecl, fmt_mod_decl);

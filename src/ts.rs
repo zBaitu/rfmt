@@ -1,8 +1,6 @@
 use std::collections::BTreeSet;
 use std::fmt::{self, Debug};
 
-use crate::rfmt;
-
 const NL: char = '\n';
 
 const MAX_WIDTH: usize = 115;
