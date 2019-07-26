@@ -4,8 +4,8 @@ use std::fmt::{self, Debug, Display};
 use ir::*;
 use ts::*;
 
+use crate::{need_nl_indent, need_wrap};
 use crate::ir;
-use crate::need_wrap;
 use crate::ts;
 
 /*
@@ -94,204 +94,6 @@ fn ident_patten_head(is_ref: bool, is_mut: bool) -> String {
 }
 
 
-impl Display for Chunk {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut first = true;
-        for line in self.s.split('\n') {
-            if !first {
-                write!(f, "\n")?;
-            }
-
-            write!(f, "{}", line)?;
-            first = false;
-        }
-        Ok(())
-    }
-}
-
-impl Display for LifetimeDef {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.lifetime)?;
-        if !self.bounds.is_empty() {
-            write!(f, ": ")?;
-            display_lists!(f, " + ", &self.bounds)?
-        }
-        Ok(())
-    }
-}
-
-impl Display for TypeParam {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.name)?;
-
-        if !self.bounds.is_empty() {
-            write!(f, ": ")?;
-            display_type_param_bounds(f, &self.bounds)?;
-        }
-
-        if let Some(ref ty) = self.default {
-            write!(f, " = {}", ty)?;
-        }
-
-        Ok(())
-    }
-}
-
-#[inline]
-fn display_type_param_bounds(f: &mut fmt::Formatter, bounds: &Vec<TypeParamBound>)
-                             -> fmt::Result {
-    display_lists!(f, " + ", bounds)
-}
-
-impl Display for TypeParamBound {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            TypeParamBound::Lifetime(ref bound) => Display::fmt(bound, f),
-            TypeParamBound::PolyTraitRef(ref bound) => Display::fmt(bound, f),
-        }
-    }
-}
-
-impl Display for PolyTraitRef {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        display_for_liftime_defs(f, &self.lifetime_defs)?;
-        Display::fmt(&self.trait_ref, f)
-    }
-}
-
-#[inline]
-fn display_for_liftime_defs(f: &mut fmt::Formatter, lifetime_defs: &Vec<LifetimeDef>)
-                            -> fmt::Result {
-    if !lifetime_defs.is_empty() {
-        display_lists!(f, "for<", ", ", "> ", lifetime_defs)?;
-    }
-    Ok(())
-}
-
-impl Display for Where {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        display_lists!(f, ", ", &self.clauses)
-    }
-}
-
-impl Display for WhereClause {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.clause {
-            WhereKind::LifetimeDef(ref wh) => Display::fmt(wh, f),
-            WhereKind::Bound(ref wh) => Display::fmt(wh, f),
-        }
-    }
-}
-
-impl Display for WhereBound {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        display_for_liftime_defs(f, &self.lifetime_defs)?;
-        write!(f, "{}: ", &self.ty)?;
-        display_type_param_bounds(f, &self.bounds)
-    }
-}
-
-impl Display for Path {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.global {
-            write!(f, "::")?;
-        }
-        display_path_segments(f, &self.segs)
-    }
-}
-
-#[inline]
-fn display_path_segments(f: &mut fmt::Formatter, segs: &[PathSegment]) -> fmt::Result {
-    display_lists!(f, "", "::", "", segs)
-}
-
-impl Display for PathSegment {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", self.name, self.param)
-    }
-}
-
-impl Display for PathParam {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            PathParam::Angle(ref param) => Display::fmt(param, f),
-            PathParam::Paren(ref param) => Display::fmt(param, f),
-        }
-    }
-}
-
-impl Display for AngleParam {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if !self.is_empty() {
-            display_lists!(f, "<", ", ", ">", &self.lifetimes, &self.types, &self.bindings)?;
-        }
-        Ok(())
-    }
-}
-
-impl Display for TypeBinding {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} = {}", self.name, self.ty)
-    }
-}
-
-impl Display for ParenParam {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        display_paren_param_inputs(f, &self.inputs)?;
-        if let Some(ref output) = self.output {
-            write!(f, " -> {}", output)?;
-        }
-        Ok(())
-    }
-}
-
-#[inline]
-fn display_paren_param_inputs(f: &mut fmt::Formatter, inputs: &Vec<Type>) -> fmt::Result {
-    display_lists!(f, "(", ", ", ")", inputs)
-}
-
-#[inline]
-fn display_qself(f: &mut fmt::Formatter, qself: &QSelf, path: &Path) -> fmt::Result {
-    write!(f, "<{}", qself.ty)?;
-    if qself.pos > 0 {
-        write!(f, " as ")?;
-        if path.global {
-            write!(f, "::")?;
-        }
-        display_path_segments(f, &path.segs[0..qself.pos])?;
-    }
-    write!(f, ">")?;
-
-    write!(f, "::")?;
-    display_path_segments(f, &path.segs[qself.pos..])
-}
-
-impl Display for Type {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.ty {
-            TypeKind::Path(ref ty) => Display::fmt(ty, f),
-            TypeKind::Ptr(ref ty) => Display::fmt(ty, f),
-            TypeKind::Ref(ref ty) => Display::fmt(ty, f),
-            TypeKind::Array(ref ty) => Display::fmt(ty, f),
-            TypeKind::FixedSizeArray(ref ty) => Display::fmt(ty, f),
-            TypeKind::Tuple(ref ty) => Display::fmt(ty, f),
-            TypeKind::BareFn(ref ty) => Display::fmt(ty, f),
-            TypeKind::Sum(ref ty) => Display::fmt(ty, f),
-            TypeKind::PolyTraitRef(ref ty) => Display::fmt(ty, f),
-            TypeKind::Macro(ref ty) => Debug::fmt(ty, f),
-            TypeKind::Infer => write!(f, "_"),
-        }
-    }
-}
-
-impl Display for PathType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.qself {
-            Some(ref qself) => display_qself(f, qself, &self.path),
-            None => Display::fmt(&self.path, f),
-        }
-    }
-}
 
 impl Display for PtrType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -691,6 +493,34 @@ impl Display for MacroExpr {
 
 
 
+
+
+
+
+macro_rules! fmt_items {
+    ($sf:ident, $items:expr, $fmt_item:ident) => ({
+        for item in $items {
+            $sf.try_fmt_leading_comments(&item.loc);
+            $sf.fmt_attrs(&item.attrs);
+            $sf.insert_indent();
+
+            $sf.$fmt_item(item);
+
+            $sf.try_fmt_trailing_comment(&item.loc);
+            $sf.nl();
+        }
+    });
+}
+*/
+
+macro_rules! maybe_nl {
+    ($sf:expr, $e:ident) => ({
+        if $e.loc.nl {
+            $sf.wrap();
+        }
+    });
+}
+
 macro_rules! maybe_wrap {
     ($sf:expr, $sep:expr, $wrap_sep:expr, $e:expr) => ({
         if !need_wrap!($sf.ts, $sep, &$e.to_string()) {
@@ -727,48 +557,6 @@ macro_rules! maybe_nl_indent {
     });
 }
 
-
-macro_rules! fmt_lists {
-    ($sf:expr, $sep:expr, $wrap_sep:expr, $($list:expr, $act:ident),+) => ({
-        let mut first = true;
-        $(for e in $list {
-            if !first {
-                maybe_wrap!($sf, $sep, $wrap_sep, e, $act);
-            } else {
-                $sf.$act(e);
-            }
-
-            first = false;
-        })+
-    });
-}
-
-
-
-macro_rules! fmt_items {
-    ($sf:ident, $items:expr, $fmt_item:ident) => ({
-        for item in $items {
-            $sf.try_fmt_leading_comments(&item.loc);
-            $sf.fmt_attrs(&item.attrs);
-            $sf.insert_indent();
-
-            $sf.$fmt_item(item);
-
-            $sf.try_fmt_trailing_comment(&item.loc);
-            $sf.nl();
-        }
-    });
-}
-*/
-
-macro_rules! maybe_nl {
-    ($sf:expr, $e:ident) => ({
-        if $e.loc.nl {
-            $sf.wrap();
-        }
-    });
-}
-
 macro_rules! insert_sep {
     ($sf:expr, $sep:expr, $e:expr) => ({
         $sf.raw_insert($sep);
@@ -779,6 +567,27 @@ macro_rules! insert_sep {
             $sf.wrap();
             true
         }
+    });
+}
+
+macro_rules! display_lists {
+    ($f:expr, $open:expr, $sep:expr, $close:expr, $($lists:expr),+) => ({
+        write!($f, $open)?;
+
+        let mut first = true;
+        $(for e in $lists {
+            if !first {
+                write!($f, "{}", $sep)?;
+            }
+            Display::fmt(e, $f)?;
+            first = false;
+        })+
+
+        write!($f, $close)
+    });
+
+    ($f:expr, $sep:expr, $($lists:expr),+) => ({
+       display_lists!($f, "", $sep, "", $($lists)+)
     });
 }
 
@@ -803,27 +612,6 @@ macro_rules! fmt_comma_lists {
 
     ($sf:expr, $($list:expr, $fmt:ident),+) => ({
         fmt_comma_lists!($sf, "", "", $($list, $fmt)+);
-    });
-}
-
-macro_rules! display_lists {
-    ($f:expr, $open:expr, $sep:expr, $close:expr, $($lists:expr),+) => ({
-        write!($f, $open)?;
-
-        let mut first = true;
-        $(for e in $lists {
-            if !first {
-                write!($f, "{}", $sep)?;
-            }
-            Display::fmt(e, $f)?;
-            first = false;
-        })+
-
-        write!($f, $close)
-    });
-
-    ($f:expr, $sep:expr, $($lists:expr),+) => ({
-       display_lists!($f, "", $sep, "", $($lists)+)
     });
 }
 
@@ -904,6 +692,21 @@ macro_rules! fmt_block {
     })
 }
 
+macro_rules! fmt_lists {
+    ($sf:expr, $sep:expr, $wrap_sep:expr, $($list:expr, $act:ident),+) => ({
+        let mut first = true;
+        $(for e in $list {
+            if !first {
+                maybe_wrap!($sf, $sep, $wrap_sep, e, $act);
+            } else {
+                $sf.$act(e);
+            }
+
+            first = false;
+        })+
+    });
+}
+
 impl Display for Attr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "#")?;
@@ -962,6 +765,207 @@ impl Display for ModDecl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "mod {}", self.name)
     }
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.ty {
+            TypeKind::Symbol(ref ty) => Display::fmt(ty, f),
+            TypeKind::Path(ref ty) => Display::fmt(ty, f),
+            /*
+            TypeKind::Ptr(ref ty) => Display::fmt(ty, f),
+            TypeKind::Ref(ref ty) => Display::fmt(ty, f),
+            TypeKind::Array(ref ty) => Display::fmt(ty, f),
+            TypeKind::FixedSizeArray(ref ty) => Display::fmt(ty, f),
+            TypeKind::Tuple(ref ty) => Display::fmt(ty, f),
+            TypeKind::BareFn(ref ty) => Display::fmt(ty, f),
+            TypeKind::Sum(ref ty) => Display::fmt(ty, f),
+            TypeKind::PolyTraitRef(ref ty) => Display::fmt(ty, f),
+            TypeKind::Macro(ref ty) => Debug::fmt(ty, f),
+            TypeKind::Infer => write!(f, "_"),
+            */
+            _ => unreachable!()
+        }
+    }
+}
+
+impl Display for Chunk {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut first = true;
+        for line in self.s.split('\n') {
+            if !first {
+                write!(f, "\n")?;
+            }
+
+            write!(f, "{}", line)?;
+            first = false;
+        }
+        Ok(())
+    }
+}
+
+impl Display for LifetimeDef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.lifetime)?;
+        if !self.bounds.is_empty() {
+            write!(f, ": ")?;
+            display_lists!(f, " + ", &self.bounds)?
+        }
+        Ok(())
+    }
+}
+
+impl Display for TypeParam {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.name)?;
+
+        if !self.bounds.is_empty() {
+            write!(f, ": ")?;
+            display_type_param_bounds(f, &self.bounds)?;
+        }
+
+        if let Some(ref ty) = self.default {
+            write!(f, " = {}", ty)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl Display for PathType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.qself {
+            Some(ref qself) => display_qself(f, qself, &self.path),
+            None => Display::fmt(&self.path, f),
+        }
+    }
+}
+
+#[inline]
+fn display_type_param_bounds(f: &mut fmt::Formatter, bounds: &Vec<TypeParamBound>) -> fmt::Result {
+    display_lists!(f, " + ", bounds)
+}
+
+impl Display for TypeParamBound {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            TypeParamBound::Lifetime(ref bound) => Display::fmt(bound, f),
+            TypeParamBound::PolyTraitRef(ref bound) => Display::fmt(bound, f),
+        }
+    }
+}
+
+impl Display for PolyTraitRef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_for_liftime_defs(f, &self.lifetime_defs)?;
+        Display::fmt(&self.trait_ref, f)
+    }
+}
+
+#[inline]
+fn display_for_liftime_defs(f: &mut fmt::Formatter, lifetime_defs: &Vec<LifetimeDef>) -> fmt::Result {
+    if !lifetime_defs.is_empty() {
+        display_lists!(f, "for<", ", ", "> ", lifetime_defs)?;
+    }
+    Ok(())
+}
+
+impl Display for Where {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_lists!(f, ", ", &self.clauses)
+    }
+}
+
+impl Display for WhereClause {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.clause {
+            WhereKind::LifetimeDef(ref wh) => Display::fmt(wh, f),
+            WhereKind::Bound(ref wh) => Display::fmt(wh, f),
+        }
+    }
+}
+
+impl Display for WhereBound {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_for_liftime_defs(f, &self.lifetime_defs)?;
+        write!(f, "{}: ", &self.ty)?;
+        display_type_param_bounds(f, &self.bounds)
+    }
+}
+
+impl Display for Path {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_path_segments(f, &self.segments)
+    }
+}
+
+#[inline]
+fn display_path_segments(f: &mut fmt::Formatter, segments: &[PathSegment]) -> fmt::Result {
+    display_lists!(f, "", "::", "", segments)
+}
+
+impl Display for PathSegment {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", self.name, self.param)
+    }
+}
+
+impl Display for PathParam {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            PathParam::Angle(ref param) => Display::fmt(param, f),
+            PathParam::Paren(ref param) => Display::fmt(param, f),
+        }
+    }
+}
+
+impl Display for AngleParam {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if !self.is_empty() {
+            display_lists!(f, "<", ", ", ">", &self.lifetimes, &self.types, &self.bindings)?;
+        }
+        Ok(())
+    }
+}
+
+impl Display for TypeBinding {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.binding {
+            TypeBindingKind::Eq(ref ty) => write!(f, "{}={}", self.name, ty),
+            TypeBindingKind::Bound(ref bounds) => {
+                write!(f, "{}: ", self.name)?;
+                display_lists!(f, "+", bounds)
+            }
+        }
+    }
+}
+
+impl Display for ParenParam {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_paren_param_inputs(f, &self.inputs)?;
+        if let Some(ref output) = self.output {
+            write!(f, " -> {}", output)?;
+        }
+        Ok(())
+    }
+}
+
+#[inline]
+fn display_paren_param_inputs(f: &mut fmt::Formatter, inputs: &Vec<Type>) -> fmt::Result {
+    display_lists!(f, "(", ", ", ")", inputs)
+}
+
+#[inline]
+fn display_qself(f: &mut fmt::Formatter, qself: &QSelf, path: &Path) -> fmt::Result {
+    write!(f, "<{}", qself.ty)?;
+    if qself.pos > 0 {
+        write!(f, " as ")?;
+        display_path_segments(f, &path.segments[0..qself.pos])?;
+    }
+    write!(f, ">")?;
+
+    write!(f, "::")?;
+    display_path_segments(f, &path.segments[qself.pos..])
 }
 
 pub fn fmt(krate: Crate, leading_cmnts: HashMap<Pos, Vec<String>>, trailing_cmnts: HashMap<Pos, String>) -> TsResult {
@@ -1224,8 +1228,8 @@ impl Formatter {
             ItemKind::Use(ref item) => self.fmt_use(item),
             ItemKind::ModDecl(ref item) => self.fmt_mod_decl(item),
             ItemKind::Mod(ref item) => self.fmt_sub_mod(item),
-            /*
             ItemKind::TypeAlias(ref item) => self.fmt_type_alias(item),
+            /*
             ItemKind::ForeignMod(ref item) => self.fmt_foreign_mod(item),
             ItemKind::Const(ref item) => self.fmt_const(item),
             ItemKind::Static(ref item) => self.fmt_static(item),
@@ -1249,7 +1253,6 @@ impl Formatter {
         fmt_block!(self, item.items, item, fmt_mod);
     }
 
-    /*
     fn fmt_type_alias(&mut self, item: &TypeAlias) {
         self.insert(&format!("type {}", &item.name));
 
@@ -1302,9 +1305,7 @@ impl Formatter {
     fn fmt_type_param_bound(&mut self, bound: &TypeParamBound) {
         match *bound {
             TypeParamBound::Lifetime(ref lifetime) => self.fmt_lifetime(lifetime),
-            TypeParamBound::PolyTraitRef(ref poly_trait_ref) => {
-                self.fmt_poly_trait_ref(poly_trait_ref)
-            }
+            TypeParamBound::PolyTraitRef(ref poly_trait_ref) => self.fmt_poly_trait_ref(poly_trait_ref),
         }
     }
 
@@ -1351,15 +1352,12 @@ impl Formatter {
 
     fn fmt_path(&mut self, path: &Path, from_expr: bool) {
         maybe_nl!(self, path);
-        if path.global {
-            self.insert("::");
-        }
-        self.fmt_path_segments(&path.segs, from_expr);
+        self.fmt_path_segments(&path.segments, from_expr);
     }
 
-    fn fmt_path_segments(&mut self, segs: &[PathSegment], from_expr: bool) {
+    fn fmt_path_segments(&mut self, segments: &[PathSegment], from_expr: bool) {
         let mut first = true;
-        for seg in segs {
+        for seg in segments {
             if !first {
                 maybe_wrap!(self, "::", "::", seg);
             }
@@ -1395,8 +1393,17 @@ impl Formatter {
         maybe_nl!(self, binding);
         maybe_wrap!(self, binding);
 
-        self.insert(&format!("{} = ", binding.name));
-        self.fmt_type(&binding.ty);
+        self.insert(&binding.name);
+        match binding.binding {
+            TypeBindingKind::Eq(ref ty) => {
+                self.raw_insert("=");
+                self.fmt_type(ty);
+            }
+            TypeBindingKind::Bound(ref bounds) => {
+                self.raw_insert(": ");
+                fmt_lists!(self, "+", "+", bounds, fmt_type_param_bound);
+            }
+        }
     }
 
     fn fmt_paren_param(&mut self, param: &ParenParam) {
@@ -1411,21 +1418,20 @@ impl Formatter {
         self.fmt_type(&qself.ty);
         if qself.pos > 0 {
             self.raw_insert(" as ");
-            if path.global {
-                self.insert("::");
-            }
-            self.fmt_path_segments(&path.segs[0..qself.pos], from_expr);
+            self.fmt_path_segments(&path.segments[0..qself.pos], from_expr);
         }
         self.insert_unmark_align(">");
 
         self.insert("::");
-        self.fmt_path_segments(&path.segs[qself.pos..], from_expr);
+        self.fmt_path_segments(&path.segments[qself.pos..], from_expr);
     }
 
     fn fmt_type(&mut self, ty: &Type) {
         maybe_nl!(self, ty);
         match ty.ty {
+            TypeKind::Symbol(ref ty) => self.fmt_symbol_type(ty),
             TypeKind::Path(ref ty) => self.fmt_path_type(ty, false),
+            /*
             TypeKind::Ptr(ref ty) => self.fmt_ptr_type(ty),
             TypeKind::Ref(ref ty) => self.fmt_ref_type(ty),
             TypeKind::Array(ref ty) => self.fmt_array_type(ty),
@@ -1436,7 +1442,14 @@ impl Formatter {
             TypeKind::PolyTraitRef(ref ty) => self.fmt_poly_trait_ref_type(ty),
             TypeKind::Macro(ref ty) => self.fmt_macro(ty),
             TypeKind::Infer => self.fmt_infer_type(),
+            */
+            _ => {}
         }
+    }
+
+    #[inline]
+    fn fmt_symbol_type(&mut self, ty: &str) {
+        self.raw_insert(ty)
     }
 
     #[inline]
@@ -1450,6 +1463,7 @@ impl Formatter {
         }
     }
 
+    /*
     #[inline]
     fn fmt_ptr_type(&mut self, ty: &PtrType) {
         let head = ptr_head(ty.is_mut);

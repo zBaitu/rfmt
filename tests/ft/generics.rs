@@ -1,4 +1,4 @@
-type a<T> = Option<T>;
+type a<T> =     Option< T >;
 
 type a<'a, 'b,
 'c: 'a + 'b, 
