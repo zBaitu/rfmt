@@ -1053,7 +1053,6 @@ impl Formatter {
         }
     }
 
-    #[inline]
     fn fmt_attrs(&mut self, attrs: &Vec<AttrKind>) {
         let mut attr_group: Vec<&Attr> = Vec::new();
 
@@ -1108,7 +1107,6 @@ impl Formatter {
         }
     }
 
-    #[inline]
     fn fmt_attr_group(&mut self, attr_group: &Vec<&Attr>) {
         let sorted_attrs: BTreeMap<_, _> = attr_group.into_iter().map(|e| (e.to_string(), *e)).collect();
         for attr in sorted_attrs.values() {
@@ -1130,7 +1128,6 @@ impl Formatter {
         self.raw_insert("]");
     }
 
-    #[inline]
     fn fmt_meta_items(&mut self, items: &Vec<MetaItem>) {
         fmt_comma_lists!(self, "(", ")", items, fmt_meta_item);
     }
@@ -1222,6 +1219,7 @@ impl Formatter {
             ItemKind::ModDecl(ref item) => self.fmt_mod_decl(item),
             ItemKind::Mod(ref item) => self.fmt_sub_mod(item),
             ItemKind::TypeAlias(ref item) => self.fmt_type_alias(item),
+            ItemKind::TraitAlias(ref item) => self.fmt_trait_alias(item),
             /*
             ItemKind::ForeignMod(ref item) => self.fmt_foreign_mod(item),
             ItemKind::Const(ref item) => self.fmt_const(item),
@@ -1438,7 +1436,6 @@ impl Formatter {
         }
     }
 
-    #[inline]
     fn fmt_symbol_type(&mut self, ty: &str) {
         self.raw_insert(ty)
     }
@@ -1454,31 +1451,26 @@ impl Formatter {
         }
     }
 
-    #[inline]
     fn fmt_ptr_type(&mut self, ty: &PtrType) {
         let head = ptr_head(ty.is_mut);
         maybe_wrap!(self, head, head, ty.ty, fmt_type);
     }
 
-    #[inline]
     fn fmt_ref_type(&mut self, ty: &RefType) {
         let head = &ref_head(&ty.lifetime, ty.is_mut);
         maybe_wrap!(self, head, head, ty.ty, fmt_type);
     }
 
-    #[inline]
     fn fmt_tuple_type(&mut self, ty: &TupleType) {
         fmt_comma_lists!(self, "(", ")", &ty.types, fmt_type);
     }
 
-    #[inline]
     fn fmt_slice_type(&mut self, ty: &SliceType) {
         self.insert_mark_align("[");
         self.fmt_type(&ty.ty);
         self.insert_unmark_align("]");
     }
 
-    #[inline]
     fn fmt_array_type(&mut self, ty: &ArrayType) {
         self.insert_mark_align("[");
         self.fmt_type(&ty.ty);
@@ -1487,18 +1479,26 @@ impl Formatter {
         self.insert_unmark_align("]");
     }
 
-    #[inline]
     fn fmt_trait_type(&mut self, ty: &TraitType) {
         let head = &trait_head(ty.is_dyn, ty.is_impl);
         self.insert(head);
         self.fmt_type_param_bounds(&ty.bounds);
     }
 
-    #[inline]
     fn fmt_bare_fn_type(&mut self, ty: &BareFnType) {
         self.fmt_for_lifetime_defs(&ty.lifetime_defs);
         self.insert(&fn_head(ty.is_unsafe, false, &ty.abi));
         self.fmt_fn_sig(&ty.sig);
+    }
+
+    fn fmt_trait_alias(&mut self, item: &TraitAlias) {
+        self.insert(&format!("trait {}", &item.name));
+
+        self.fmt_generics(&item.generics);
+        self.fmt_where(&item.generics.wh);
+
+        //maybe_wrap!(self, " = ", "= ", item.bounds, fmt_type_param_bounds);
+        self.raw_insert(";");
     }
 
     /*
