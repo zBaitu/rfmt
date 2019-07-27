@@ -22,33 +22,6 @@ fn foreign_head(abi: &str) -> String {
 }
 
 #[inline]
-fn extern_head(abi: &str) -> String {
-    let mut head = String::new();
-    if abi != r#""Rust""# {
-        head.push_str("extern ");
-        if abi != r#""C""# {
-            head.push_str(abi);
-            head.push_str(" ");
-        }
-    }
-    head
-}
-
-#[inline]
-fn fn_head(is_unsafe: bool, is_const: bool, abi: &str) -> String {
-    let mut head = String::new();
-    if is_unsafe {
-        head.push_str("unsafe ");
-    }
-    if is_const {
-        head.push_str("const ");
-    }
-    head.push_str(&extern_head(abi));
-    head.push_str("fn");
-    head
-}
-
-#[inline]
 fn ident_patten_head(is_ref: bool, is_mut: bool) -> String {
     let mut head = String::new();
     if is_ref {
@@ -62,42 +35,6 @@ fn ident_patten_head(is_ref: bool, is_mut: bool) -> String {
 
 
 
-impl Display for ArrayType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "[{}]", self.ty)
-    }
-}
-
-impl Display for FixedSizeArrayType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "[{}; {}]", self.ty, self.expr)
-    }
-}
-
-impl Display for BareFnType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        display_for_liftime_defs(f, &self.lifetime_defs)?;
-        write!(f, "{}{}", fn_head(self.is_unsafe, false, &self.abi), self.fn_sig)
-    }
-}
-
-impl Display for SumType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        Display::fmt(&self.ty, f)?;
-        if !self.bounds.is_empty() {
-            write!(f, ": ")?;
-            display_type_param_bounds(f, &self.bounds)?;
-        }
-        Ok(())
-    }
-}
-
-impl Display for PolyTraitRefType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        display_type_param_bounds(f, &self.bounds)
-    }
-}
-
 impl Display for TupleField {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.is_pub {
@@ -107,73 +44,12 @@ impl Display for TupleField {
     }
 }
 
-impl Display for FnSig {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", self.arg, self.ret)
-    }
-}
-
-impl Display for FnArg {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.va {
-            write!(f, "(")?;
-
-            let mut first = true;
-            for e in &self.args {
-                if !first {
-                    write!(f, ", ")?;
-                }
-                Display::fmt(e, f)?;
-                first = false;
-            }
-
-            write!(f, ", ...)")
-        } else {
-            display_lists!(f, "(", ", ", ")", &self.args)
-        }
-    }
-}
-
-impl Display for Arg {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}: {}", self.pat, self.ty)
-    }
-}
-
-impl Display for FnReturn {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.ret {
-            FnReturnKind::Unit => Ok(()),
-            FnReturnKind::Diverge => write!(f, " -> !"),
-            FnReturnKind::Normal(ref ty) => write!(f, " -> {}", ty),
-        }
-    }
-}
 
 impl Display for Sf {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Sf::String(ref s) => Display::fmt(s, f),
             Sf::Type(ref ty) => write!(f, "self: {}", ty),
-        }
-    }
-}
-
-impl Display for Patten {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.pat {
-            PattenKind::Wildcard => write!(f, "_"),
-            PattenKind::Literal(ref pat) => Display::fmt(pat, f),
-            PattenKind::Range(ref pat) => Display::fmt(pat, f),
-            PattenKind::Ident(ref pat) => Display::fmt(pat, f),
-            PattenKind::Ref(ref pat) => Display::fmt(pat, f),
-            PattenKind::Path(ref pat) => Display::fmt(pat, f),
-            PattenKind::Enum(ref pat) => Display::fmt(pat, f),
-            PattenKind::Struct(ref pat) => Debug::fmt(pat, f),
-            PattenKind::Vec(ref pat) => Debug::fmt(pat, f),
-            PattenKind::Tuple(ref pat) => Display::fmt(pat, f),
-            PattenKind::Box(ref pat) => write!(f, "box {}", pat),
-            PattenKind::Macro(ref pat) => Display::fmt(pat, f),
         }
     }
 }
@@ -237,32 +113,7 @@ impl Display for TuplePatten {
     }
 }
 
-impl Display for Expr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.expr {
-            ExprKind::Literal(ref expr) => Display::fmt(expr, f),
-            ExprKind::Path(ref expr) => Display::fmt(expr, f),
-            ExprKind::Unary(ref expr) => Display::fmt(expr, f),
-            ExprKind::Ref(ref expr) => Display::fmt(expr, f),
-            ExprKind::List(ref expr) => Display::fmt(expr, f),
-            ExprKind::FixedSizeArray(ref expr) => Display::fmt(expr, f),
-            ExprKind::Vec(ref exprs) => display_lists!(f, "[", ", ", "]", &**exprs),
-            ExprKind::Tuple(ref exprs) => display_lists!(f, "(", ", ", ")", &**exprs),
-            ExprKind::FieldAccess(ref expr) => Display::fmt(expr, f),
-            ExprKind::Index(ref expr) => Display::fmt(expr, f),
-            ExprKind::Range(ref expr) => Display::fmt(expr, f),
-            ExprKind::Box(ref expr) => Display::fmt(expr, f),
-            ExprKind::Cast(ref expr) => Display::fmt(expr, f),
-            ExprKind::Type(ref expr) => Display::fmt(expr, f),
-            ExprKind::FnCall(ref expr) => Display::fmt(expr, f),
-            ExprKind::MethodCall(ref expr) => Display::fmt(expr, f),
-            ExprKind::Closure(ref expr) => Display::fmt(expr, f),
-            ExprKind::Try(ref expr) => write!(f, "{}?", expr),
-            ExprKind::Macro(ref expr) => Display::fmt(expr, f),
-            _ => Debug::fmt(self, f),
-        }
-    }
-}
+
 
 impl Display for UnaryExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -788,70 +639,6 @@ impl Display for WhereBound {
     }
 }
 
-impl Display for Type {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.ty {
-            TypeKind::Symbol(ref ty) => Display::fmt(ty, f),
-            TypeKind::Path(ref ty) => Display::fmt(ty, f),
-            TypeKind::Ptr(ref ty) => Display::fmt(ty, f),
-            TypeKind::Ref(ref ty) => Display::fmt(ty, f),
-            TypeKind::Tuple(ref ty) => Display::fmt(ty, f),
-            /*
-            TypeKind::Array(ref ty) => Display::fmt(ty, f),
-            TypeKind::FixedSizeArray(ref ty) => Display::fmt(ty, f),
-            TypeKind::BareFn(ref ty) => Display::fmt(ty, f),
-            TypeKind::Sum(ref ty) => Display::fmt(ty, f),
-            TypeKind::PolyTraitRef(ref ty) => Display::fmt(ty, f),
-            TypeKind::Macro(ref ty) => Debug::fmt(ty, f),
-            TypeKind::Infer => write!(f, "_"),
-            */
-            _ => unreachable!()
-        }
-    }
-}
-
-impl Display for Chunk {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut first = true;
-        for line in self.s.split('\n') {
-            if !first {
-                write!(f, "\n")?;
-            }
-
-            write!(f, "{}", line)?;
-            first = false;
-        }
-        Ok(())
-    }
-}
-
-impl Display for PathType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.qself {
-            Some(ref qself) => display_qself(f, qself, &self.path),
-            None => Display::fmt(&self.path, f),
-        }
-    }
-}
-
-impl Display for PtrType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", ptr_head(self.is_mut), self.ty)
-    }
-}
-
-impl Display for RefType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", ref_head(&self.lifetime, self.is_mut), self.ty)
-    }
-}
-
-impl Display for TupleType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        display_lists!(f, "(", ", ", ")", &self.types)
-    }
-}
-
 impl Display for Path {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         display_path_segments(f, &self.segments)
@@ -901,6 +688,167 @@ impl Display for ParenParam {
             write!(f, " -> {}", output)?;
         }
         Ok(())
+    }
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.ty {
+            TypeKind::Symbol(ref ty) => Display::fmt(ty, f),
+            TypeKind::Path(ref ty) => Display::fmt(ty, f),
+            TypeKind::Ptr(ref ty) => Display::fmt(ty, f),
+            TypeKind::Ref(ref ty) => Display::fmt(ty, f),
+            TypeKind::Tuple(ref ty) => Display::fmt(ty, f),
+            TypeKind::Slice(ref ty) => Display::fmt(ty, f),
+            TypeKind::Array(ref ty) => Display::fmt(ty, f),
+            TypeKind::Trait(ref ty) => Display::fmt(ty, f),
+            TypeKind::BareFn(ref ty) => Display::fmt(ty, f),
+            /*
+            TypeKind::Macro(ref ty) => Debug::fmt(ty, f),
+            */
+            _ => unreachable!()
+        }
+    }
+}
+
+impl Display for Chunk {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut first = true;
+        for line in self.s.split('\n') {
+            if !first {
+                write!(f, "\n")?;
+            }
+
+            write!(f, "{}", line)?;
+            first = false;
+        }
+        Ok(())
+    }
+}
+
+impl Display for PathType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.qself {
+            Some(ref qself) => display_qself(f, qself, &self.path),
+            None => Display::fmt(&self.path, f),
+        }
+    }
+}
+
+impl Display for PtrType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", ptr_head(self.is_mut), self.ty)
+    }
+}
+
+impl Display for RefType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", ref_head(&self.lifetime, self.is_mut), self.ty)
+    }
+}
+
+impl Display for TupleType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_lists!(f, "(", ", ", ")", &self.types)
+    }
+}
+
+impl Display for SliceType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[{}]", self.ty)
+    }
+}
+
+impl Display for ArrayType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[{}; {}]", self.ty, self.expr)
+    }
+}
+
+impl Display for TraitType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", trait_head(self.is_dyn, self.is_impl))?;
+        display_type_param_bounds(f, &self.bounds)
+    }
+}
+
+impl Display for BareFnType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_for_liftime_defs(f, &self.lifetime_defs)?;
+        write!(f, "{}{}", fn_head(self.is_unsafe, false, &self.abi), self.sig)
+    }
+}
+
+impl Display for FnSig {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_args(f, &self.args)?;
+        write!(f, "{}", self.ret)
+    }
+}
+
+impl Display for Arg {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}: {}", self.patten, self.ty)
+    }
+}
+
+impl Display for Return {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.ret {
+            Some(ref ty) => write!(f, " -> {}", ty),
+            None => Ok(()),
+        }
+    }
+}
+
+impl Display for Patten {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.patten {
+            /*
+            PattenKind::Wildcard => write!(f, "_"),
+            PattenKind::Literal(ref pat) => Display::fmt(pat, f),
+            PattenKind::Range(ref pat) => Display::fmt(pat, f),
+            PattenKind::Ident(ref pat) => Display::fmt(pat, f),
+            PattenKind::Ref(ref pat) => Display::fmt(pat, f),
+            PattenKind::Path(ref pat) => Display::fmt(pat, f),
+            PattenKind::Enum(ref pat) => Display::fmt(pat, f),
+            PattenKind::Struct(ref pat) => Debug::fmt(pat, f),
+            PattenKind::Vec(ref pat) => Debug::fmt(pat, f),
+            PattenKind::Tuple(ref pat) => Display::fmt(pat, f),
+            PattenKind::Box(ref pat) => write!(f, "box {}", pat),
+            PattenKind::Macro(ref pat) => Display::fmt(pat, f),
+            */
+            _ => Debug::fmt(self, f),
+        }
+    }
+}
+
+impl Display for Expr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.expr {
+            /*
+            ExprKind::Literal(ref expr) => Display::fmt(expr, f),
+            ExprKind::Path(ref expr) => Display::fmt(expr, f),
+            ExprKind::Unary(ref expr) => Display::fmt(expr, f),
+            ExprKind::Ref(ref expr) => Display::fmt(expr, f),
+            ExprKind::List(ref expr) => Display::fmt(expr, f),
+            ExprKind::FixedSizeArray(ref expr) => Display::fmt(expr, f),
+            ExprKind::Vec(ref exprs) => display_lists!(f, "[", ", ", "]", &**exprs),
+            ExprKind::Tuple(ref exprs) => display_lists!(f, "(", ", ", ")", &**exprs),
+            ExprKind::FieldAccess(ref expr) => Display::fmt(expr, f),
+            ExprKind::Index(ref expr) => Display::fmt(expr, f),
+            ExprKind::Range(ref expr) => Display::fmt(expr, f),
+            ExprKind::Box(ref expr) => Display::fmt(expr, f),
+            ExprKind::Cast(ref expr) => Display::fmt(expr, f),
+            ExprKind::Type(ref expr) => Display::fmt(expr, f),
+            ExprKind::FnCall(ref expr) => Display::fmt(expr, f),
+            ExprKind::MethodCall(ref expr) => Display::fmt(expr, f),
+            ExprKind::Closure(ref expr) => Display::fmt(expr, f),
+            ExprKind::Try(ref expr) => write!(f, "{}?", expr),
+            ExprKind::Macro(ref expr) => Display::fmt(expr, f),
+            */
+            _ => Debug::fmt(self, f),
+        }
     }
 }
 
@@ -956,6 +904,11 @@ fn display_path_segments(f: &mut fmt::Formatter, segments: &[PathSegment]) -> fm
 }
 
 #[inline]
+fn display_args(f: &mut fmt::Formatter, args: &Vec<Arg>) -> fmt::Result {
+    display_lists!(f, "(", ", ", ")", args)
+}
+
+#[inline]
 fn ref_head(lifetime: &Option<Lifetime>, is_mut: bool) -> String {
     let mut head = String::new();
     head.push_str("&");
@@ -968,6 +921,43 @@ fn ref_head(lifetime: &Option<Lifetime>, is_mut: bool) -> String {
         head.push_str("mut ");
     }
 
+    head
+}
+
+#[inline]
+fn trait_head(is_dyn: bool, is_impl: bool) -> String {
+    let mut head = String::new();
+    if is_dyn {
+        head.push_str("dyn ");
+    }
+    if is_impl {
+        head.push_str("impl ");
+    }
+    head
+}
+
+#[inline]
+fn fn_head(is_unsafe: bool, is_const: bool, abi: &str) -> String {
+    let mut head = String::new();
+    if is_unsafe {
+        head.push_str("unsafe ");
+    }
+    if is_const {
+        head.push_str("const ");
+    }
+    head.push_str(&extern_head(abi));
+    head.push_str("fn");
+    head
+}
+
+#[inline]
+fn extern_head(abi: &str) -> String {
+    let mut head = String::new();
+    if abi != r#""Rust""# {
+        head.push_str("extern ");
+        head.push_str(abi);
+        head.push_str(" ");
+    }
     head
 }
 
@@ -1437,14 +1427,12 @@ impl Formatter {
             TypeKind::Ptr(ref ty) => self.fmt_ptr_type(ty),
             TypeKind::Ref(ref ty) => self.fmt_ref_type(ty),
             TypeKind::Tuple(ref ty) => self.fmt_tuple_type(ty),
-            /*
+            TypeKind::Slice(ref ty) => self.fmt_slice_type(ty),
             TypeKind::Array(ref ty) => self.fmt_array_type(ty),
-            TypeKind::FixedSizeArray(ref ty) => self.fmt_fixed_size_array_type(ty),
+            TypeKind::Trait(ref ty) => self.fmt_trait_type(ty),
             TypeKind::BareFn(ref ty) => self.fmt_bare_fn_type(ty),
-            TypeKind::Sum(ref ty) => self.fmt_sum_type(ty),
-            TypeKind::PolyTraitRef(ref ty) => self.fmt_poly_trait_ref_type(ty),
+            /*
             TypeKind::Macro(ref ty) => self.fmt_macro(ty),
-            TypeKind::Infer => self.fmt_infer_type(),
             */
             _ => {}
         }
@@ -1483,16 +1471,15 @@ impl Formatter {
         fmt_comma_lists!(self, "(", ")", &ty.types, fmt_type);
     }
 
-    /*
     #[inline]
-    fn fmt_array_type(&mut self, ty: &ArrayType) {
+    fn fmt_slice_type(&mut self, ty: &SliceType) {
         self.insert_mark_align("[");
         self.fmt_type(&ty.ty);
         self.insert_unmark_align("]");
     }
 
     #[inline]
-    fn fmt_fixed_size_array_type(&mut self, ty: &FixedSizeArrayType) {
+    fn fmt_array_type(&mut self, ty: &ArrayType) {
         self.insert_mark_align("[");
         self.fmt_type(&ty.ty);
         insert_sep!(self, ";", ty.expr);
@@ -1501,31 +1488,20 @@ impl Formatter {
     }
 
     #[inline]
-    fn fmt_bare_fn_type(&mut self, ty: &BareFnType) {
-        self.fmt_for_lifetime_defs(&ty.lifetime_defs);
-        self.insert(&fn_head(ty.is_unsafe, false, &ty.abi));
-        self.fmt_fn_sig(&ty.fn_sig);
-    }
-
-    #[inline]
-    fn fmt_sum_type(&mut self, ty: &SumType) {
-        self.fmt_type(&ty.ty);
-        if !ty.bounds.is_empty() {
-            self.raw_insert(": ");
-            self.fmt_type_param_bounds(&ty.bounds);
-        }
-    }
-
-    #[inline]
-    fn fmt_poly_trait_ref_type(&mut self, ty: &PolyTraitRefType) {
+    fn fmt_trait_type(&mut self, ty: &TraitType) {
+        let head = &trait_head(ty.is_dyn, ty.is_impl);
+        self.insert(head);
         self.fmt_type_param_bounds(&ty.bounds);
     }
 
     #[inline]
-    fn fmt_infer_type(&mut self) {
-        self.raw_insert("_");
+    fn fmt_bare_fn_type(&mut self, ty: &BareFnType) {
+        self.fmt_for_lifetime_defs(&ty.lifetime_defs);
+        self.insert(&fn_head(ty.is_unsafe, false, &ty.abi));
+        self.fmt_fn_sig(&ty.sig);
     }
 
+    /*
     fn fmt_foreign_mod(&mut self, item: &ForeignMod) {
         self.insert(&foreign_head(&item.abi));
         fmt_block!(self, &item.items, fmt_foreign_items);
@@ -1789,69 +1765,41 @@ impl Formatter {
         self.fmt_method_sig(&item.method_sig);
         self.fmt_block(&item.block);
     }
+    */
 
-    fn fmt_fn_sig(&mut self, fn_sig: &FnSig) {
-        let is_wrap = self.fmt_fn_arg(&fn_sig.arg);
-        self.fmt_fn_return(&fn_sig.ret, is_wrap);
+    fn fmt_fn_sig(&mut self, sig: &FnSig) {
+        let is_wrap = self.fmt_fn_args(&sig.args);
+        self.fmt_fn_return(&sig.ret, is_wrap);
     }
 
-    fn fmt_fn_arg(&mut self, arg: &FnArg) -> bool {
-        if arg.va {
-            let mut is_wrap = false;
-            self.insert_mark_align("(");
-
-            let mut first = true;
-            for e in &arg.args {
-                if !first {
-                    is_wrap |= insert_sep!(self, ",", e);
-                }
-
-                self.fmt_arg(e);
-                first = false;
-            }
-
-            self.insert(", ...");
-            self.insert_unmark_align(")");
-            is_wrap
-        } else {
-            fmt_comma_lists!(self, "(", ")", &arg.args, fmt_arg)
-        }
+    fn fmt_fn_args(&mut self, args: &Vec<Arg>) -> bool {
+        fmt_comma_lists!(self, "(", ")", args, fmt_arg)
     }
 
     fn fmt_arg(&mut self, arg: &Arg) {
         maybe_nl!(self, arg);
         maybe_wrap!(self, arg);
 
-        if !arg.pat.to_string().is_empty() {
-            self.fmt_patten(&arg.pat);
+        if !arg.patten.to_string().is_empty() {
+            self.fmt_patten(&arg.patten);
             self.raw_insert(": ");
         }
         self.fmt_type(&arg.ty);
     }
 
-    fn fmt_fn_return(&mut self, ret: &FnReturn, is_wrap: bool) {
-        match ret.ret {
-            FnReturnKind::Unit => (),
-            FnReturnKind::Diverge => {
-                if ret.nl || is_wrap {
-                    self.nl_indent();
-                    self.raw_insert("-> !");
-                } else {
-                    maybe_nl_indent!(self, " -> !", "-> !", "");
-                }
+    fn fmt_fn_return(&mut self, ret: &Return, is_wrap: bool) {
+        if let Some(ref ty) = ret.ret {
+            if ret.nl || is_wrap {
+                self.nl_indent();
+                self.raw_insert("-> ");
+            } else {
+                maybe_nl_indent!(self, " -> ", "-> ", ty);
             }
-            FnReturnKind::Normal(ref ty) => {
-                if ret.nl || is_wrap {
-                    self.nl_indent();
-                    self.raw_insert("-> ");
-                } else {
-                    maybe_nl_indent!(self, " -> ", "-> ", ty);
-                }
-                self.fmt_type(ty);
-            }
+            self.fmt_type(ty);
         }
     }
 
+    /*
     fn fmt_method_sig(&mut self, sig: &MethodSig) {
         self.fmt_generics(&sig.generics);
 
@@ -1937,10 +1885,12 @@ impl Formatter {
         self.try_fmt_trailing_comment(&stmt.loc);
         self.nl();
     }
+    */
 
-    fn fmt_patten(&mut self, pat: &Patten) {
-        maybe_nl!(self, pat);
-        match pat.pat {
+    fn fmt_patten(&mut self, patten: &Patten) {
+        maybe_nl!(self, patten);
+        match patten.patten {
+            /*
             PattenKind::Wildcard => self.insert("_"),
             PattenKind::Literal(ref pat) => self.fmt_expr(pat),
             PattenKind::Range(ref pat) => self.fmt_range_patten(pat),
@@ -1953,9 +1903,12 @@ impl Formatter {
             PattenKind::Tuple(ref pat) => self.fmt_tuple_patten(pat),
             PattenKind::Box(ref pat) => self.fmt_box_patten(pat),
             PattenKind::Macro(ref pat) => self.fmt_macro(pat),
+            */
+            _ => {}
         }
     }
 
+    /*
     #[inline]
     fn fmt_range_patten(&mut self, pat: &RangePatten) {
         self.fmt_expr(&pat.start);
@@ -2096,10 +2049,12 @@ impl Formatter {
         self.try_fmt_trailing_comment(&stmt.loc);
         self.nl();
     }
+    */
 
     fn fmt_expr(&mut self, expr: &Expr) {
         maybe_nl!(self, expr);
         match expr.expr {
+            /*
             ExprKind::Literal(ref expr) => self.fmt_literal_expr(expr),
             ExprKind::Path(ref expr) => self.fmt_path_expr(expr),
             ExprKind::Unary(ref expr) => self.fmt_unary_expr(expr),
@@ -2131,9 +2086,12 @@ impl Formatter {
             ExprKind::Return(ref expr) => self.fmt_return_expr(expr),
             ExprKind::Try(ref expr) => self.fmt_try_expr(expr),
             ExprKind::Macro(ref expr) => self.fmt_macro(expr),
+            */
+            _ => {}
         }
     }
 
+    /*
     #[inline]
     fn fmt_literal_expr(&mut self, expr: &Chunk) {
         self.fmt_chunk(expr);
