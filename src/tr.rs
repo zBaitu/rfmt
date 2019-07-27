@@ -1150,8 +1150,11 @@ impl Translator {
     fn trans_bare_fn_type(&mut self, bare_fn: &ast::BareFnTy) -> BareFnType {
         BareFnType {
             lifetime_defs: self.trans_lifetime_defs(&bare_fn.generic_params),
-            is_unsafe: is_unsafe(bare_fn.unsafety),
-            abi: abi_to_string(bare_fn.abi),
+            header: FnHeader {
+                is_unsafe: is_unsafe(bare_fn.unsafety),
+                abi: abi_to_string(bare_fn.abi),
+                ..Default::default()
+            },
             sig: self.trans_fn_sig(&bare_fn.decl),
         }
     }
@@ -1380,7 +1383,7 @@ impl Translator {
                 ImplItemKind::Type(self.trans_type_impl_item(ident, ty))
             }
             ast::ImplItemKind::Existential(ref bounds) => {
-                ImplItemKind::Existential(self.trans_type_param_bounds(bounds))
+                ImplItemKind::Existential(self.trans_type_existential_item(ident, bounds))
             }
             ast::ImplItemKind::Method(ref method_sig, ref block) => {
                 ImplItemKind::Method(self.trans_method_impl_item(ident, method_sig, block))
@@ -1402,6 +1405,13 @@ impl Translator {
         TypeImplItem {
             name: ident,
             ty: self.trans_type(ty),
+        }
+    }
+
+    fn trans_type_existential_item(&mut self, ident: String, bounds: &ast::GenericBounds) -> ExistentialImplItem {
+        ExistentialImplItem {
+            name: ident,
+            bounds: self.trans_type_param_bounds(bounds),
         }
     }
 

@@ -404,8 +404,7 @@ pub struct TraitType {
 #[derive(Debug)]
 pub struct BareFnType {
     pub lifetime_defs: Vec<LifetimeDef>,
-    pub is_unsafe: bool,
-    pub abi: String,
+    pub header: FnHeader,
     pub sig: FnSig,
 }
 
@@ -454,7 +453,6 @@ pub struct TupleField {
     pub vis: Vis,
     pub ty: Type,
 }
-
 
 #[derive(Debug)]
 pub struct Union {
@@ -541,7 +539,7 @@ pub struct ForeignFn {
     pub sig: FnSig,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct FnHeader {
     pub is_unsafe: bool,
     pub is_async: bool,
@@ -635,7 +633,7 @@ pub struct ImplItem {
 pub enum ImplItemKind {
     Const(ConstImplItem),
     Type(TypeImplItem),
-    Existential(TypeParamBounds),
+    Existential(ExistentialImplItem),
     Method(MethodImplItem),
     Macro(Macro),
 }
@@ -646,6 +644,12 @@ pub type ConstImplItem = Const;
 pub struct TypeImplItem {
     pub name: String,
     pub ty: Type,
+}
+
+#[derive(Debug)]
+pub struct ExistentialImplItem {
+    pub name: String,
+    pub bounds: TypeParamBounds,
 }
 
 #[derive(Debug)]
