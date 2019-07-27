@@ -156,14 +156,14 @@ pub struct TypeAlias {
 pub struct TraitAlias {
     pub name: String,
     pub generics: Generics,
-    pub bounds: Vec<TypeParamBound>,
+    pub bounds: TypeParamBounds,
 }
 
 #[derive(Debug)]
 pub struct Existential {
     pub name: String,
     pub generics: Generics,
-    pub bounds: Vec<TypeParamBound>,
+    pub bounds: TypeParamBounds,
 }
 
 #[derive(Debug)]
@@ -193,7 +193,7 @@ pub type Lifetime = Chunk;
 pub struct TypeParam {
     pub loc: Loc,
     pub name: String,
-    pub bounds: Vec<TypeParamBound>,
+    pub bounds: TypeParamBounds,
     pub default: Option<Type>,
 }
 
@@ -201,6 +201,16 @@ pub struct TypeParam {
 pub enum TypeParamBound {
     Lifetime(Lifetime),
     PolyTraitRef(PolyTraitRef),
+}
+
+#[derive(Debug)]
+pub struct TypeParamBounds(pub Vec<TypeParamBound>);
+
+impl TypeParamBounds {
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 #[derive(Debug)]
@@ -250,7 +260,7 @@ pub enum WhereKind {
 pub struct WhereBound {
     pub lifetime_defs: Vec<LifetimeDef>,
     pub ty: Type,
-    pub bounds: Vec<TypeParamBound>,
+    pub bounds: TypeParamBounds,
 }
 
 #[derive(Debug)]
@@ -306,7 +316,7 @@ impl AngleParam {
 #[derive(Debug)]
 pub enum TypeBindingKind {
     Eq(Type),
-    Bound(Vec<TypeParamBound>),
+    Bound(TypeParamBounds),
 }
 
 #[derive(Debug)]
@@ -388,7 +398,7 @@ pub struct ArrayType {
 pub struct TraitType {
     pub is_dyn: bool,
     pub is_impl: bool,
-    pub bounds: Vec<TypeParamBound>,
+    pub bounds: TypeParamBounds,
 }
 
 #[derive(Debug)]
@@ -561,7 +571,7 @@ pub struct Trait {
     pub is_unsafe: bool,
     pub name: String,
     pub generics: Generics,
-    pub bounds: Vec<TypeParamBound>,
+    pub bounds: TypeParamBounds,
     pub items: Vec<TraitItem>,
 }
 
@@ -591,7 +601,7 @@ pub struct ConstTraitItem {
 #[derive(Debug)]
 pub struct TypeTraitItem {
     pub name: String,
-    pub bounds: Vec<TypeParamBound>,
+    pub bounds: TypeParamBounds,
     pub ty: Option<Type>,
 }
 
@@ -625,7 +635,7 @@ pub struct ImplItem {
 pub enum ImplItemKind {
     Const(ConstImplItem),
     Type(TypeImplItem),
-    Existential(Vec<TypeParamBound>),
+    Existential(TypeParamBounds),
     Method(MethodImplItem),
     Macro(Macro),
 }

@@ -728,8 +728,8 @@ impl Translator {
         }
     }
 
-    fn trans_type_param_bounds(&mut self, bounds: &ast::GenericBounds) -> Vec<TypeParamBound> {
-        trans_list!(self, bounds, trans_type_param_bound)
+    fn trans_type_param_bounds(&mut self, bounds: &ast::GenericBounds) -> TypeParamBounds {
+        TypeParamBounds(trans_list!(self, bounds, trans_type_param_bound))
     }
 
     #[inline]

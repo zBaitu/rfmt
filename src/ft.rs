@@ -609,6 +609,12 @@ impl Display for TypeParamBound {
     }
 }
 
+impl Display for TypeParamBounds {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_lists!(f, " + ", &self.0)
+    }
+}
+
 impl Display for PolyTraitRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         display_for_liftime_defs(f, &self.lifetime_defs)?;
@@ -675,7 +681,7 @@ impl Display for TypeBinding {
             TypeBindingKind::Eq(ref ty) => write!(f, "{}={}", self.name, ty),
             TypeBindingKind::Bound(ref bounds) => {
                 write!(f, "{}: ", self.name)?;
-                display_lists!(f, "+", bounds)
+                display_lists!(f, "+", &bounds.0)
             }
         }
     }
@@ -868,8 +874,8 @@ fn fmt_use_trees(f: &mut fmt::Formatter, trees: &Option<Vec<UseTree>>) -> fmt::R
 }
 
 #[inline]
-fn display_type_param_bounds(f: &mut fmt::Formatter, bounds: &Vec<TypeParamBound>) -> fmt::Result {
-    display_lists!(f, " + ", bounds)
+fn display_type_param_bounds(f: &mut fmt::Formatter, bounds: &TypeParamBounds) -> fmt::Result {
+    display_lists!(f, " + ", &bounds.0)
 }
 
 #[inline]
@@ -1289,8 +1295,8 @@ impl Formatter {
         }
     }
 
-    fn fmt_type_param_bounds(&mut self, bounds: &Vec<TypeParamBound>) {
-        fmt_lists!(self, " + ", "+ ", bounds, fmt_type_param_bound)
+    fn fmt_type_param_bounds(&mut self, bounds: &TypeParamBounds) {
+        fmt_lists!(self, " + ", "+ ", &bounds.0, fmt_type_param_bound)
     }
 
     fn fmt_type_param_bound(&mut self, bound: &TypeParamBound) {
@@ -1392,7 +1398,7 @@ impl Formatter {
             }
             TypeBindingKind::Bound(ref bounds) => {
                 self.raw_insert(": ");
-                fmt_lists!(self, "+", "+", bounds, fmt_type_param_bound);
+                fmt_lists!(self, "+", "+", &bounds.0, fmt_type_param_bound);
             }
         }
     }
@@ -1497,7 +1503,7 @@ impl Formatter {
         self.fmt_generics(&item.generics);
         self.fmt_where(&item.generics.wh);
 
-        //maybe_wrap!(self, " = ", "= ", item.bounds, fmt_type_param_bounds);
+        maybe_wrap!(self, " = ", "= ", item.bounds, fmt_type_param_bounds);
         self.raw_insert(";");
     }
 
