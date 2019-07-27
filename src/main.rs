@@ -40,6 +40,8 @@ fn main() {
         rfmt::fmt_from_stdin(opt);
     } else if opt.ast {
         rfmt::dump_ast(&opt.input.unwrap());
+    } else if opt.debug {
+        rfmt::debug(&opt.input.unwrap());
     } else {
         rfmt::fmt(opt);
     }

@@ -9,39 +9,6 @@ use crate::ir;
 use crate::ts;
 
 /*
-macro_rules! select_str {
-    ($fn_name:ident, $flag:ident, $true_value:expr, $false_value:expr) => (
-        #[inline]
-        fn $fn_name($flag: bool) -> &'static str {
-            static TRUE_HEAD: &'static str = $true_value;
-            static FALSE_HEAD: &'static str = $false_value;
-
-            if $flag {
-                TRUE_HEAD
-            } else {
-                FALSE_HEAD
-            }
-        }
-    );
-}
-select_str!(ptr_head, is_mut, "*mut ", "*const ");
-select_str!(static_head, is_mut, "static mut ", "static ");
-
-#[inline]
-fn ref_head(lifetime: &Option<Lifetime>, is_mut: bool) -> String {
-    let mut head = String::new();
-    head.push_str("&");
-
-    if let Some(ref lifetime) = *lifetime {
-        head.push_str(&lifetime.s);
-        head.push_str(" ");
-    }
-    if is_mut {
-        head.push_str("mut ");
-    }
-
-    head
-}
 
 #[inline]
 fn foreign_head(abi: &str) -> String {
@@ -95,18 +62,6 @@ fn ident_patten_head(is_ref: bool, is_mut: bool) -> String {
 
 
 
-impl Display for PtrType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", ptr_head(self.is_mut), self.ty)
-    }
-}
-
-impl Display for RefType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", ref_head(&self.lifetime, self.is_mut), self.ty)
-    }
-}
-
 impl Display for ArrayType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[{}]", self.ty)
@@ -116,12 +71,6 @@ impl Display for ArrayType {
 impl Display for FixedSizeArrayType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[{}; {}]", self.ty, self.expr)
-    }
-}
-
-impl Display for TupleType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        display_lists!(f, "(", ", ", ")", &self.types)
     }
 }
 
@@ -591,6 +540,24 @@ macro_rules! display_lists {
     });
 }
 
+macro_rules! select_str {
+    ($fn_name:ident, $flag:ident, $true_value:expr, $false_value:expr) => (
+        #[inline]
+        fn $fn_name($flag: bool) -> &'static str {
+            static TRUE_HEAD: &'static str = $true_value;
+            static FALSE_HEAD: &'static str = $false_value;
+
+            if $flag {
+                TRUE_HEAD
+            } else {
+                FALSE_HEAD
+            }
+        }
+    );
+}
+select_str!(ptr_head, is_mut, "*mut ", "*const ");
+//select_str!(static_head, is_mut, "static mut ", "static ");
+
 macro_rules! fmt_comma_lists {
     ($sf:expr, $open:expr, $close:expr, $($list:expr, $fmt:ident),+) => ({
         let mut is_wrap = false;
@@ -747,60 +714,10 @@ impl Display for UseTree {
     }
 }
 
-fn fmt_use_trees(f: &mut fmt::Formatter, trees: &Option<Vec<UseTree>>) -> fmt::Result {
-    if trees.is_none() {
-        return Ok(());
-    }
-
-    let trees: &Vec<UseTree> = &trees.as_ref().unwrap();
-    write!(f, "::")?;
-    if trees.len() == 1 {
-        write!(f, "{}", trees[0])
-    } else {
-        display_lists!(f, "{{", ", ", "}}", trees)
-    }
-}
 
 impl Display for ModDecl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "mod {}", self.name)
-    }
-}
-
-impl Display for Type {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.ty {
-            TypeKind::Symbol(ref ty) => Display::fmt(ty, f),
-            TypeKind::Path(ref ty) => Display::fmt(ty, f),
-            /*
-            TypeKind::Ptr(ref ty) => Display::fmt(ty, f),
-            TypeKind::Ref(ref ty) => Display::fmt(ty, f),
-            TypeKind::Array(ref ty) => Display::fmt(ty, f),
-            TypeKind::FixedSizeArray(ref ty) => Display::fmt(ty, f),
-            TypeKind::Tuple(ref ty) => Display::fmt(ty, f),
-            TypeKind::BareFn(ref ty) => Display::fmt(ty, f),
-            TypeKind::Sum(ref ty) => Display::fmt(ty, f),
-            TypeKind::PolyTraitRef(ref ty) => Display::fmt(ty, f),
-            TypeKind::Macro(ref ty) => Debug::fmt(ty, f),
-            TypeKind::Infer => write!(f, "_"),
-            */
-            _ => unreachable!()
-        }
-    }
-}
-
-impl Display for Chunk {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut first = true;
-        for line in self.s.split('\n') {
-            if !first {
-                write!(f, "\n")?;
-            }
-
-            write!(f, "{}", line)?;
-            first = false;
-        }
-        Ok(())
     }
 }
 
@@ -832,20 +749,6 @@ impl Display for TypeParam {
     }
 }
 
-impl Display for PathType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.qself {
-            Some(ref qself) => display_qself(f, qself, &self.path),
-            None => Display::fmt(&self.path, f),
-        }
-    }
-}
-
-#[inline]
-fn display_type_param_bounds(f: &mut fmt::Formatter, bounds: &Vec<TypeParamBound>) -> fmt::Result {
-    display_lists!(f, " + ", bounds)
-}
-
 impl Display for TypeParamBound {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
@@ -860,14 +763,6 @@ impl Display for PolyTraitRef {
         display_for_liftime_defs(f, &self.lifetime_defs)?;
         Display::fmt(&self.trait_ref, f)
     }
-}
-
-#[inline]
-fn display_for_liftime_defs(f: &mut fmt::Formatter, lifetime_defs: &Vec<LifetimeDef>) -> fmt::Result {
-    if !lifetime_defs.is_empty() {
-        display_lists!(f, "for<", ", ", "> ", lifetime_defs)?;
-    }
-    Ok(())
 }
 
 impl Display for Where {
@@ -893,15 +788,74 @@ impl Display for WhereBound {
     }
 }
 
+impl Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.ty {
+            TypeKind::Symbol(ref ty) => Display::fmt(ty, f),
+            TypeKind::Path(ref ty) => Display::fmt(ty, f),
+            TypeKind::Ptr(ref ty) => Display::fmt(ty, f),
+            TypeKind::Ref(ref ty) => Display::fmt(ty, f),
+            TypeKind::Tuple(ref ty) => Display::fmt(ty, f),
+            /*
+            TypeKind::Array(ref ty) => Display::fmt(ty, f),
+            TypeKind::FixedSizeArray(ref ty) => Display::fmt(ty, f),
+            TypeKind::BareFn(ref ty) => Display::fmt(ty, f),
+            TypeKind::Sum(ref ty) => Display::fmt(ty, f),
+            TypeKind::PolyTraitRef(ref ty) => Display::fmt(ty, f),
+            TypeKind::Macro(ref ty) => Debug::fmt(ty, f),
+            TypeKind::Infer => write!(f, "_"),
+            */
+            _ => unreachable!()
+        }
+    }
+}
+
+impl Display for Chunk {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut first = true;
+        for line in self.s.split('\n') {
+            if !first {
+                write!(f, "\n")?;
+            }
+
+            write!(f, "{}", line)?;
+            first = false;
+        }
+        Ok(())
+    }
+}
+
+impl Display for PathType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.qself {
+            Some(ref qself) => display_qself(f, qself, &self.path),
+            None => Display::fmt(&self.path, f),
+        }
+    }
+}
+
+impl Display for PtrType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", ptr_head(self.is_mut), self.ty)
+    }
+}
+
+impl Display for RefType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", ref_head(&self.lifetime, self.is_mut), self.ty)
+    }
+}
+
+impl Display for TupleType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_lists!(f, "(", ", ", ")", &self.types)
+    }
+}
+
 impl Display for Path {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         display_path_segments(f, &self.segments)
     }
-}
-
-#[inline]
-fn display_path_segments(f: &mut fmt::Formatter, segments: &[PathSegment]) -> fmt::Result {
-    display_lists!(f, "", "::", "", segments)
 }
 
 impl Display for PathSegment {
@@ -951,6 +905,34 @@ impl Display for ParenParam {
 }
 
 #[inline]
+fn fmt_use_trees(f: &mut fmt::Formatter, trees: &Option<Vec<UseTree>>) -> fmt::Result {
+    if trees.is_none() {
+        return Ok(());
+    }
+
+    let trees: &Vec<UseTree> = &trees.as_ref().unwrap();
+    write!(f, "::")?;
+    if trees.len() == 1 {
+        write!(f, "{}", trees[0])
+    } else {
+        display_lists!(f, "{{", ", ", "}}", trees)
+    }
+}
+
+#[inline]
+fn display_type_param_bounds(f: &mut fmt::Formatter, bounds: &Vec<TypeParamBound>) -> fmt::Result {
+    display_lists!(f, " + ", bounds)
+}
+
+#[inline]
+fn display_for_liftime_defs(f: &mut fmt::Formatter, lifetime_defs: &Vec<LifetimeDef>) -> fmt::Result {
+    if !lifetime_defs.is_empty() {
+        display_lists!(f, "for<", ", ", "> ", lifetime_defs)?;
+    }
+    Ok(())
+}
+
+#[inline]
 fn display_paren_param_inputs(f: &mut fmt::Formatter, inputs: &Vec<Type>) -> fmt::Result {
     display_lists!(f, "(", ", ", ")", inputs)
 }
@@ -966,6 +948,27 @@ fn display_qself(f: &mut fmt::Formatter, qself: &QSelf, path: &Path) -> fmt::Res
 
     write!(f, "::")?;
     display_path_segments(f, &path.segments[qself.pos..])
+}
+
+#[inline]
+fn display_path_segments(f: &mut fmt::Formatter, segments: &[PathSegment]) -> fmt::Result {
+    display_lists!(f, "", "::", "", segments)
+}
+
+#[inline]
+fn ref_head(lifetime: &Option<Lifetime>, is_mut: bool) -> String {
+    let mut head = String::new();
+    head.push_str("&");
+
+    if let Some(ref lifetime) = *lifetime {
+        head.push_str(&lifetime.s);
+        head.push_str(" ");
+    }
+    if is_mut {
+        head.push_str("mut ");
+    }
+
+    head
 }
 
 pub fn fmt(krate: Crate, leading_cmnts: HashMap<Pos, Vec<String>>, trailing_cmnts: HashMap<Pos, String>) -> TsResult {
@@ -1431,12 +1434,12 @@ impl Formatter {
         match ty.ty {
             TypeKind::Symbol(ref ty) => self.fmt_symbol_type(ty),
             TypeKind::Path(ref ty) => self.fmt_path_type(ty, false),
-            /*
             TypeKind::Ptr(ref ty) => self.fmt_ptr_type(ty),
             TypeKind::Ref(ref ty) => self.fmt_ref_type(ty),
+            TypeKind::Tuple(ref ty) => self.fmt_tuple_type(ty),
+            /*
             TypeKind::Array(ref ty) => self.fmt_array_type(ty),
             TypeKind::FixedSizeArray(ref ty) => self.fmt_fixed_size_array_type(ty),
-            TypeKind::Tuple(ref ty) => self.fmt_tuple_type(ty),
             TypeKind::BareFn(ref ty) => self.fmt_bare_fn_type(ty),
             TypeKind::Sum(ref ty) => self.fmt_sum_type(ty),
             TypeKind::PolyTraitRef(ref ty) => self.fmt_poly_trait_ref_type(ty),
@@ -1463,7 +1466,6 @@ impl Formatter {
         }
     }
 
-    /*
     #[inline]
     fn fmt_ptr_type(&mut self, ty: &PtrType) {
         let head = ptr_head(ty.is_mut);
@@ -1476,6 +1478,12 @@ impl Formatter {
         maybe_wrap!(self, head, head, ty.ty, fmt_type);
     }
 
+    #[inline]
+    fn fmt_tuple_type(&mut self, ty: &TupleType) {
+        fmt_comma_lists!(self, "(", ")", &ty.types, fmt_type);
+    }
+
+    /*
     #[inline]
     fn fmt_array_type(&mut self, ty: &ArrayType) {
         self.insert_mark_align("[");
@@ -1490,11 +1498,6 @@ impl Formatter {
         insert_sep!(self, ";", ty.expr);
         self.fmt_expr(&ty.expr);
         self.insert_unmark_align("]");
-    }
-
-    #[inline]
-    fn fmt_tuple_type(&mut self, ty: &TupleType) {
-        fmt_comma_lists!(self, "(", ")", &ty.types, fmt_type);
     }
 
     #[inline]

@@ -10,7 +10,7 @@ use walkdir::WalkDir;
 
 use crate::ft;
 use crate::Opt;
-use crate::tr;
+use crate::tr::{self, TrResult};
 
 macro_rules! p {
     () => ({println!()});
@@ -23,7 +23,9 @@ macro_rules! d {
     ($arg:expr) => ({println!("{:#?}", $arg)});
 }
 
-const SEP: &str = "--------------------------------------------------------------------------------";
+const SEP: &str = r#"
+------------------------------------------------------------------------------------------------------------------------
+"#;
 
 pub fn dump_ast(path: &PathBuf) {
     let src = fs::read_to_string(path).unwrap();
@@ -53,6 +55,16 @@ pub fn fmt_from_stdin(opt: Opt) {
     let mut src = String::new();
     io::stdin().read_to_string(&mut src).unwrap();
     fmt_str(src, &PathBuf::from("stdin"), &opt);
+}
+
+pub fn debug(path: &PathBuf) {
+    let src = fs::read_to_string(path).unwrap();
+    let result = trans(src, path);
+
+    d!(result.krate);
+    p!(SEP);
+    d!(result.leading_cmnts);
+    d!(result.trailing_cmnts);
 }
 
 pub fn fmt(opt: Opt) {
@@ -85,38 +97,34 @@ fn fmt_file(path: &PathBuf, opt: &Opt) {
 }
 
 fn fmt_str(src: String, path: &PathBuf, opt: &Opt) {
-    let result = syntax::with_default_globals(|| {
+    let tr_result = trans(src, path);
+    let ft_result = ft::fmt(tr_result.krate, tr_result.leading_cmnts, tr_result.trailing_cmnts);
+    if opt.overwrite {
+        let mut file = File::create(path).unwrap();
+        file.write_all(ft_result.s.as_bytes()).unwrap();
+    } else if opt.check {
+        if !ft_result.exceed_lines.is_empty() || !ft_result.trailing_ws_lines.is_empty() {
+            p!("{:?}", path);
+            if !ft_result.exceed_lines.is_empty() {
+                p!("exceed_lines: {:?}", ft_result.exceed_lines);
+            }
+            if !ft_result.trailing_ws_lines.is_empty() {
+                p!("trailing_ws_lines: {:?}", ft_result.trailing_ws_lines);
+            }
+            p!(SEP);
+        }
+    } else {
+        p!(ft_result.s);
+    }
+}
+
+fn trans(src: String, path: &PathBuf) -> TrResult {
+    syntax::with_default_globals(|| {
         let mut input = &src.as_bytes().to_vec()[..];
         let sess = ParseSess::new(FilePathMapping::empty());
         let krate = parse::parse_crate_from_source_str(FileName::from(path.to_path_buf()), src, &sess).unwrap();
         let cmnts = comments::gather_comments(&sess, FileName::from(path.to_path_buf()), &mut input);
         tr::trans(sess, krate, cmnts)
-    });
-
-    if opt.debug {
-        d!(result.krate);
-        d!(result.leading_cmnts);
-        d!(result.trailing_cmnts);
-        p!("{}\n", SEP);
-    }
-
-    let result = ft::fmt(result.krate, result.leading_cmnts, result.trailing_cmnts);
-    if opt.overwrite {
-        let mut file = File::create(path).unwrap();
-        file.write_all(result.s.as_bytes()).unwrap();
-    } else if opt.check {
-        if !result.exceed_lines.is_empty() || !result.trailing_ws_lines.is_empty() {
-            p!("{:?}", path);
-            if !result.exceed_lines.is_empty() {
-                p!("exceed_lines: {:?}", result.exceed_lines);
-            }
-            if !result.trailing_ws_lines.is_empty() {
-                p!("trailing_ws_lines: {:?}", result.trailing_ws_lines);
-            }
-            p!(SEP);
-        }
-    } else {
-        p!(result.s);
-    }
+    })
 }
 
