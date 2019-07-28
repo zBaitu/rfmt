@@ -493,6 +493,7 @@ pub struct Arg {
     pub loc: Loc,
     pub patten: Patten,
     pub ty: Type,
+    pub has_patten: bool,
 }
 
 #[derive(Debug)]
@@ -701,11 +702,10 @@ pub enum PattenKind {
     Range(RangePatten),
     Ref(Box<RefPatten>),
     Path(PathPatten),
-    Group(Box<Patten>),
     Ident(Box<IdentPatten>),
-    Struct(Box<StructPatten>),
+    Struct(StructPatten),
     Enum(EnumPatten),
-    Tuple(Box<TuplePatten>),
+    Tuple(TuplePatten),
     Slice(Box<SlicePatten>),
     Macro(Macro),
 }

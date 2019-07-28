@@ -1,4 +1,3 @@
-/*
 default impl A {}
 
 unsafe impl !A {}
@@ -10,8 +9,9 @@ impl<T> A for B<T> {
     type E = T;
     existential type Item: Debug;
     fn f(&self) {}
+    fn f(&'a mut self) {}
+    fn f(self: bool) {}
     //a!(true);
 }
-*/
 
 unsafe impl !A {}

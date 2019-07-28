@@ -148,6 +148,19 @@ fn abi_to_string(abi: ast::Abi) -> String {
 }
 
 #[inline]
+fn has_patten(arg: &ast::Arg) -> bool {
+    match arg.to_self() {
+        Some(sf) => {
+            match sf.node {
+                ast::SelfKind::Value(..) | ast::SelfKind::Region(..) => false,
+                _ => true,
+            }
+        }
+        None => true,
+    }
+}
+
+#[inline]
 fn is_neg(polarity: ast::ImplPolarity) -> bool {
     polarity == ast::ImplPolarity::Negative
 }
@@ -1177,6 +1190,7 @@ impl Translator {
             loc: patten.loc.clone(),
             patten,
             ty: self.trans_type(&arg.ty),
+            has_patten: has_patten(arg),
         }
     }
 
@@ -1493,20 +1507,20 @@ impl Translator {
             ast::PatKind::Path(ref qself, ref path) => {
                 PattenKind::Path(self.trans_path_type(qself, path))
             }
-            ast::PatKind::Paren(ref patten) => {
-                PattenKind::Group(Box::new(self.trans_patten(patten)))
-            }
             ast::PatKind::Ident(binding, ref ident, ref patten) => {
                 PattenKind::Ident(Box::new(self.trans_ident_patten(binding, ident, patten)))
             }
             ast::PatKind::Struct(ref path, ref fields, etc) => {
-                PattenKind::Struct(Box::new(self.trans_struct_patten(path, fields, etc)))
+                PattenKind::Struct(self.trans_struct_patten(path, fields, etc))
             }
             ast::PatKind::TupleStruct(ref path, ref pats, omit_pos) => {
                 PattenKind::Enum(self.trans_enum_patten(path, pats, omit_pos))
             }
+            ast::PatKind::Paren(ref pat) => {
+                PattenKind::Tuple(self.trans_tuple_patten(&vec![pat.clone()], None))
+            }
             ast::PatKind::Tuple(ref pattens, omit_pos) => {
-                PattenKind::Tuple(Box::new(self.trans_tuple_patten(pattens, omit_pos)))
+                PattenKind::Tuple(self.trans_tuple_patten(pattens, omit_pos))
             }
             ast::PatKind::Slice(ref start, ref omit, ref end) => {
                 PattenKind::Slice(Box::new(self.trans_slice_patten(start, omit, end)))
