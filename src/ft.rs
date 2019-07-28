@@ -8,50 +8,6 @@ use crate::{need_nl_indent, need_wrap};
 use crate::ir;
 use crate::ts;
 
-/*
-impl Display for Macro {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Macro::Raw(ref mac_raw) => Display::fmt(mac_raw, f),
-            Macro::Expr(ref mac_expr) => Display::fmt(mac_expr, f),
-        }
-    }
-}
-
-impl Display for MacroRaw {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        Display::fmt(&self.s, f)
-    }
-}
-
-impl Display for MacroExpr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let (open, close) = match self.style {
-            MacroStyle::Paren => ("(", ")"),
-            MacroStyle::Bracket => ("[", "]"),
-            MacroStyle::Brace => ("{", "}"),
-        };
-
-        write!(f, "{}!", self.name)?;
-        write!(f, "{}", open)?;
-        let expr_len = self.exprs.len();
-        for i in 0..expr_len {
-            let expr = &self.exprs[i];
-            if i > 0 {
-                let sep = &self.seps[i - 1];
-                if sep.is_sep {
-                    write!(f, "{} ", sep.s)?;
-                } else {
-                    write!(f, "{}", sep.s)?;
-                }
-            }
-            Display::fmt(expr, f)?;
-        }
-        write!(f, "{}", close)
-    }
-}
-*/
-
 macro_rules! maybe_nl {
     ($sf:expr, $e:ident) => ({
         if $e.loc.nl {
@@ -463,10 +419,7 @@ impl Display for Type {
             TypeKind::Array(ref ty) => Display::fmt(ty, f),
             TypeKind::Trait(ref ty) => Display::fmt(ty, f),
             TypeKind::BareFn(ref ty) => Display::fmt(ty, f),
-            /*
-            TypeKind::Macro(ref ty) => Debug::fmt(ty, f),
-            */
-            _ => Debug::fmt(self, f),
+            TypeKind::Macro(ref ty) => Display::fmt(ty, f),
         }
     }
 }
@@ -580,10 +533,7 @@ impl Display for Patten {
             PattenKind::Enum(ref patten) => Display::fmt(patten, f),
             PattenKind::Tuple(ref patten) => Display::fmt(patten, f),
             PattenKind::Slice(ref patten) => Display::fmt(patten, f),
-            /*
-            PattenKind::Macro(ref pat) => Display::fmt(pat, f),
-            */
-            _ => Debug::fmt(self, f),
+            PattenKind::Macro(ref patten) => Display::fmt(patten, f),
         }
     }
 }
@@ -656,11 +606,8 @@ impl Display for Expr {
             ExprKind::MethodCall(ref expr) => Display::fmt(expr, f),
             ExprKind::Closure(ref expr) => Display::fmt(expr, f),
             ExprKind::Return(ref expr) => Display::fmt(expr, f),
-            /*
-            ExprKind::Box(ref expr) => Display::fmt(expr, f),
             ExprKind::Macro(ref expr) => Display::fmt(expr, f),
-            */
-            _ => Debug::fmt(self, f),
+            _ => Debug::fmt(&self.expr, f),
         }
     }
 }
@@ -776,6 +723,33 @@ impl Display for ReturnExpr {
             write!(f, " {}", expr)?;
         }
         Ok(())
+    }
+}
+
+impl Display for Macro {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let (open, close) = match self.style {
+            MacroStyle::Paren => ("(", ")"),
+            MacroStyle::Bracket => ("[", "]"),
+            MacroStyle::Brace => ("{", "}"),
+        };
+
+        write!(f, "{}!", self.name)?;
+        write!(f, "{}", open)?;
+        let expr_len = self.exprs.len();
+        for i in 0..expr_len {
+            let expr = &self.exprs[i];
+            if i > 0 {
+                let sep = &self.seps[i - 1];
+                if sep.is_sep {
+                    write!(f, "{} ", sep.s)?;
+                } else {
+                    write!(f, "{}", sep.s)?;
+                }
+            }
+            Display::fmt(expr, f)?;
+        }
+        write!(f, "{}", close)
     }
 }
 
@@ -1229,10 +1203,8 @@ impl Formatter {
             ItemKind::Fn(ref item) => self.fmt_fn(item),
             ItemKind::Trait(ref item) => self.fmt_trait(item),
             ItemKind::Impl(ref item) => self.fmt_impl(item),
-            /*
-            ItemKind::Macro(ref item) => self.fmt_macro_raw(item),
-            */
-            _ => {}
+            ItemKind::MacroDef(ref item) => self.fmt_macro_def(item),
+            ItemKind::Macro(ref item) => self.fmt_macro_item(item),
         }
 
         self.try_fmt_trailing_comment(&item.loc);
@@ -1446,10 +1418,7 @@ impl Formatter {
             TypeKind::Array(ref ty) => self.fmt_array_type(ty),
             TypeKind::Trait(ref ty) => self.fmt_trait_type(ty),
             TypeKind::BareFn(ref ty) => self.fmt_bare_fn_type(ty),
-            /*
             TypeKind::Macro(ref ty) => self.fmt_macro(ty),
-            */
-            _ => {}
         }
     }
 
@@ -1644,8 +1613,7 @@ impl Formatter {
             ForeignKind::Type(ref item) => self.fmt_foreign_type(item),
             ForeignKind::Static(ref item) => self.fmt_foreign_static(item),
             ForeignKind::Fn(ref item) => self.fmt_foreign_fn(item),
-            //ForeignKind::Macro(ref item) => self.fmt_foreign_fn(item),
-            _ => {}
+            ForeignKind::Macro(ref item) => self.fmt_macro(item),
         }
         self.raw_insert(";");
     }
@@ -1875,8 +1843,7 @@ impl Formatter {
             StmtKind::Item(ref item) => self.fmt_item(item),
             StmtKind::Let(ref local) => self.fmt_let(local),
             StmtKind::Expr(ref expr, is_semi) => self.fmt_expr_stmt(expr, is_semi),
-            //StmtKind::Macro(ref mac, is_semi) => self.fmt_macro_stmt(mac, is_semi, stmt),
-            _ => {}
+            StmtKind::Macro(ref mac) => self.fmt_macro_stmt(mac),
         }
     }
 
@@ -1953,20 +1920,14 @@ impl Formatter {
             return;
         }
 
-        self.raw_insert(" {");
-        self.indent();
-        self.nl();
-
+        self.open_brace();
         self.fmt_struct_field_pattens(&patten.fields);
         if patten.omit {
             self.insert_indent();
             self.raw_insert("..");
             self.nl();
         }
-
-        self.outdent();
-        self.insert_indent();
-        self.raw_insert("}");
+        self.close_brace();
     }
 
     #[inline]
@@ -2085,11 +2046,7 @@ impl Formatter {
             ExprKind::MethodCall(ref expr) => self.fmt_method_call_expr(expr),
             ExprKind::Closure(ref expr) => self.fmt_closure_expr(expr),
             ExprKind::Return(ref expr) => self.fmt_return_expr(expr),
-            /*
-            ExprKind::Box(ref expr) => self.fmt_box_expr(expr),
             ExprKind::Macro(ref expr) => self.fmt_macro(expr),
-            */
-            _ => {}
         }
     }
 
@@ -2163,10 +2120,7 @@ impl Formatter {
             return;
         }
 
-        self.raw_insert(" {");
-        self.indent();
-        self.nl();
-
+        self.open_brace();
         self.fmt_struct_field_exprs(&expr.fields);
         if let Some(ref base) = expr.base {
             self.insert_indent();
@@ -2175,10 +2129,7 @@ impl Formatter {
             self.try_fmt_trailing_comment(&base.loc);
             self.nl();
         }
-
-        self.outdent();
-        self.insert_indent();
-        self.raw_insert("}");
+        self.close_brace();
     }
 
     #[inline]
@@ -2437,67 +2388,52 @@ impl Formatter {
         }
     }
 
-    /*
     #[inline]
-    fn fmt_macro_raw(&mut self, mac_raw: &MacroRaw) {
-        let lines = mac_raw.s.s.split('\n').collect::<Vec<_>>();
-        let len = lines.len();
-        for idx in 0..len {
-            if idx > 0 {
-                self.nl();
-            }
-
-            self.raw_insert(lines[idx]);
-            if idx == len - 1 {
-                match mac_raw.style {
-                    MacroStyle::Paren | MacroStyle::Bracket => self.raw_insert(";"),
-                    _ => (),
-                }
-            }
-        }
+    fn fmt_macro_def(&mut self, item: &MacroDef) {
+        self.raw_insert(&format!("macro_rules! {}", item.name));
+        self.open_brace();
+        self.insert_indent();
+        self.raw_insert(&item.def);
+        self.nl();
+        self.close_brace();
     }
 
     #[inline]
-    fn fmt_macro_stmt(&mut self, mac: &MacroStmt, is_semi: bool, stmt: &Stmt) {
+    fn fmt_macro_item(&mut self, item: &Macro) {
+        self.fmt_macro(item);
+        self.raw_insert(";");
+    }
+
+    #[inline]
+    fn fmt_macro_stmt(&mut self, mac: &MacroStmt) {
         self.try_fmt_leading_comments(&mac.loc);
         self.fmt_attrs(&mac.attrs);
         self.insert_indent();
 
         self.fmt_macro(&mac.mac);
-        if let Macro::Expr(_) = mac.mac {
-            if is_semi {
-                self.raw_insert(";");
-            }
+        if mac.is_semi {
+            self.raw_insert(";");
         }
 
         self.try_fmt_trailing_comment(&mac.loc);
-        self.try_fmt_trailing_comment(&stmt.loc);
         self.nl();
     }
 
     #[inline]
     fn fmt_macro(&mut self, mac: &Macro) {
-        match *mac {
-            Macro::Raw(ref mac_raw) => self.fmt_macro_raw(mac_raw),
-            Macro::Expr(ref mac_expr) => self.fmt_macro_expr(mac_expr),
-        }
-    }
-
-    #[inline]
-    fn fmt_macro_expr(&mut self, mac_expr: &MacroExpr) {
-        let (open, close) = match mac_expr.style {
+        let (open, close) = match mac.style {
             MacroStyle::Paren => ("(", ")"),
             MacroStyle::Bracket => ("[", "]"),
             MacroStyle::Brace => ("{", "}"),
         };
 
-        self.insert(&format!("{}!", mac_expr.name));
+        self.insert(&format!("{}!", mac.name));
         self.insert_mark_align(open);
-        let expr_len = mac_expr.exprs.len();
+        let expr_len = mac.exprs.len();
         for i in 0..expr_len {
-            let expr = &mac_expr.exprs[i];
+            let expr = &mac.exprs[i];
             if i > 0 {
-                let sep = &mac_expr.seps[i - 1];
+                let sep = &mac.seps[i - 1];
                 if sep.is_sep {
                     insert_sep!(self, sep.s, expr);
                 } else {
@@ -2508,7 +2444,6 @@ impl Formatter {
         }
         self.insert_unmark_align(close);
     }
-    */
 
     #[inline]
     fn clear_flag(&mut self) {
@@ -2588,5 +2523,19 @@ impl Formatter {
             self.raw_insert(vis);
             self.raw_insert(" ");
         }
+    }
+
+    #[inline]
+    fn open_brace(&mut self) {
+        self.raw_insert(" {");
+        self.indent();
+        self.nl();
+    }
+
+    #[inline]
+    fn close_brace(&mut self) {
+        self.outdent();
+        self.insert_indent();
+        self.raw_insert("}");
     }
 }

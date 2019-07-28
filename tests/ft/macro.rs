@@ -1,29 +1,28 @@
-macro_rules! a {
-    () => (println!("a"));
-    ($a: expr) => (println!($a));
-    ($a: ident) => ({
-        print!("b");
-    });
+macro_rules! a { () => (); }
+
+macro_rules! m {
+    (1) => {};
 }
 
-type a = f::a!{"a"};
-
-/*
-macro_rules! a {
-    () => (),
+macro_rules! ambiguity {
+    ($($i:ident)* $j:ident) => {};
 }
-*/
 
-fn f() {
-    let a!() = bool;
-
-    a![ABCDEFG; 8,
-    9 && 10];
-
-    a!("abcdefg", a + b);
-    ff(a!("abcdefg", a + b));
-
-    a!{"abcdefg", a + b}
-
-    true
+macro_rules! d {
+    ($arg:expr) => ({println!("{:#?}", $arg)});
 }
+
+macro_rules! p {
+    () => ({println!()});
+    ($arg:expr) => ({println!("{}", $arg)});
+    ($fmt:expr, $($arg:tt)*) => ({println!($fmt, $($arg)*)});
+    ($($arg:tt)+) => ({println!("{}", $($arg)+)});
+}
+
+
+a!();
+a![];
+a!{}
+println!("{}");
+println!(a, b);
+maybe_wrap!( self, " ", "", expr, fmt_expr);
