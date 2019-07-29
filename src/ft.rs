@@ -310,6 +310,11 @@ impl Display for Item {
             ItemKind::ExternCrate(ref item) => Display::fmt(item, f)?,
             ItemKind::Use(ref item) => Display::fmt(item, f)?,
             ItemKind::TypeAlias(ref item) => Display::fmt(item, f)?,
+            ItemKind::TraitAlias(ref item) => Display::fmt(item, f)?,
+            ItemKind::Existential(ref item) => Display::fmt(item, f)?,
+            ItemKind::Const(ref item) => Display::fmt(item, f)?,
+            ItemKind::Static(ref item) => Display::fmt(item, f)?,
+            ItemKind::Struct(ref item) => Display::fmt(item, f)?,
             _ => {}
         }
         write!(f, ";")
@@ -342,11 +347,6 @@ impl Display for ModDecl {
     }
 }
 
-impl Display for TypeAlias {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "type {}{} = {}", self.name, self.generics, self.ty)
-    }
-}
 
 impl Display for Generics {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -485,6 +485,13 @@ impl Display for ParenParam {
     }
 }
 
+impl Display for TypeAlias {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "type {}{} = {}", self.name, self.generics, self.ty)
+    }
+}
+
+
 impl Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.ty {
@@ -583,6 +590,60 @@ impl Display for Return {
             Some(ref ty) => write!(f, " -> {}", ty),
             None => Ok(()),
         }
+    }
+}
+
+impl Display for TraitAlias {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "trait {}{} = {}", self.name, self.generics, self.bounds)
+    }
+}
+
+impl Display for Existential {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "existential type {}{}: {}", self.name, self.generics, self.bounds)
+    }
+}
+
+impl Display for Const {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "const {}: {} = {}", self.name, self.ty, self.expr)
+    }
+}
+
+impl Display for Static {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}: {} = {}", static_head(self.is_mut), self.name, self.ty, self.expr)
+    }
+}
+
+impl Display for Struct {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "struct {}{}{}", self.name, self.generics, self.body)
+    }
+}
+
+impl Display for StructBody {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            StructBody::Struct(ref fields) => {
+                writeln!(f, " {{")?;
+                display_struct_fields(f, fields)?;
+                write!(f, "}}")
+            }
+            StructBody::Tuple(ref fields) => {
+                display_lists!(f, "(", ", ", ")", fields)
+            }
+            StructBody::Unit => Ok(()),
+        }
+    }
+}
+
+impl Display for StructField {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_attrs(f, &self.attrs)?;
+        display_vis(f, &self.vis)?;
+        write!(f, "{}: {}", self.name, self.ty)
     }
 }
 
@@ -886,6 +947,14 @@ fn display_path_segments(f: &mut fmt::Formatter, segments: &[PathSegment]) -> fm
 #[inline]
 fn display_args(f: &mut fmt::Formatter, args: &Vec<Arg>) -> fmt::Result {
     display_lists!(f, "(", ", ", ")", args)
+}
+
+#[inline]
+fn display_struct_fields(f: &mut fmt::Formatter, fields: &Vec<StructField>) -> fmt::Result {
+    for field in fields {
+        writeln!(f, "{},", field)?;
+    }
+    Ok(())
 }
 
 #[inline]
@@ -1645,7 +1714,6 @@ impl Formatter {
         maybe_nl!(self, field);
         self.try_fmt_leading_comments(&field.loc);
         self.fmt_attrs(&field.attrs);
-
         self.fmt_vis(&field.vis);
         self.fmt_type(&field.ty);
     }
