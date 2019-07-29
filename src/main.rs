@@ -24,6 +24,10 @@ pub struct Opt {
     debug: bool,
 
     #[structopt(short, long)]
+    /// Print the rfmt ir
+    print: bool,
+
+    #[structopt(short, long)]
     /// Overwrite the source file
     overwrite: bool,
 
@@ -42,6 +46,8 @@ fn main() {
         rfmt::dump_ast(&opt.input.unwrap());
     } else if opt.debug {
         rfmt::debug(&opt.input.unwrap());
+    } else if opt.print {
+        rfmt::print(&opt.input.unwrap());
     } else {
         rfmt::fmt(opt);
     }

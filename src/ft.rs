@@ -65,46 +65,6 @@ macro_rules! insert_sep {
     });
 }
 
-macro_rules! display_lists {
-    ($f:expr, $open:expr, $sep:expr, $close:expr, $($lists:expr),+) => ({
-        write!($f, $open)?;
-
-        let mut first = true;
-        $(for e in $lists {
-            if !first {
-                write!($f, "{}", $sep)?;
-            }
-            Display::fmt(e, $f)?;
-            first = false;
-        })+
-
-        write!($f, $close)
-    });
-
-    ($f:expr, $sep:expr, $($lists:expr),+) => ({
-       display_lists!($f, "", $sep, "", $($lists)+)
-    });
-}
-
-macro_rules! select_str {
-    ($fn_name:ident, $flag:ident, $true_value:expr, $false_value:expr) => (
-        #[inline]
-        fn $fn_name($flag: bool) -> &'static str {
-            static TRUE_HEAD: &'static str = $true_value;
-            static FALSE_HEAD: &'static str = $false_value;
-
-            if $flag {
-                TRUE_HEAD
-            } else {
-                FALSE_HEAD
-            }
-        }
-    );
-}
-select_str!(ptr_head, is_mut, "*mut ", "*const ");
-select_str!(static_head, is_mut, "static mut ", "static ");
-select_str!(range, is_inclusive, "..=", "..");
-
 macro_rules! fmt_comma_lists {
     ($sf:expr, $open:expr, $close:expr, $($list:expr, $fmt:ident),+) => ({
         let mut is_wrap = false;
@@ -234,6 +194,79 @@ macro_rules! fmt_items {
             $sf.nl();
         }
     });
+}
+
+macro_rules! display_lists {
+    ($f:expr, $open:expr, $sep:expr, $close:expr, $($lists:expr),+) => ({
+        write!($f, $open)?;
+
+        let mut first = true;
+        $(for e in $lists {
+            if !first {
+                write!($f, "{}", $sep)?;
+            }
+            Display::fmt(e, $f)?;
+            first = false;
+        })+
+
+        write!($f, $close)
+    });
+
+    ($f:expr, $sep:expr, $($lists:expr),+) => ({
+       display_lists!($f, "", $sep, "", $($lists)+)
+    });
+}
+
+macro_rules! select_str {
+    ($fn_name:ident, $flag:ident, $true_value:expr, $false_value:expr) => (
+        #[inline]
+        fn $fn_name($flag: bool) -> &'static str {
+            static TRUE_HEAD: &'static str = $true_value;
+            static FALSE_HEAD: &'static str = $false_value;
+
+            if $flag {
+                TRUE_HEAD
+            } else {
+                FALSE_HEAD
+            }
+        }
+    );
+}
+select_str!(ptr_head, is_mut, "*mut ", "*const ");
+select_str!(static_head, is_mut, "static mut ", "static ");
+select_str!(range, is_inclusive, "..=", "..");
+
+impl Display for Crate {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for attr in &self.attrs {
+            writeln!(f, "{}", attr)?;
+        }
+        Ok(())
+    }
+}
+
+impl Display for AttrKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            AttrKind::Doc(ref doc) => Display::fmt(doc, f),
+            AttrKind::Attr(ref attr) => Display::fmt(attr, f),
+        }
+    }
+}
+
+impl Display for Chunk {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut first = true;
+        for line in self.s.split('\n') {
+            if !first {
+                writeln!(f)?
+            }
+
+            write!(f, "{}", line)?;
+            first = false;
+        }
+        Ok(())
+    }
 }
 
 impl Display for Attr {
@@ -421,21 +454,6 @@ impl Display for Type {
             TypeKind::BareFn(ref ty) => Display::fmt(ty, f),
             TypeKind::Macro(ref ty) => Display::fmt(ty, f),
         }
-    }
-}
-
-impl Display for Chunk {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut first = true;
-        for line in self.s.split('\n') {
-            if !first {
-                write!(f, "\n")?;
-            }
-
-            write!(f, "{}", line)?;
-            first = false;
-        }
-        Ok(())
     }
 }
 

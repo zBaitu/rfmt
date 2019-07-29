@@ -67,6 +67,12 @@ pub fn debug(path: &PathBuf) {
     d!(result.trailing_cmnts);
 }
 
+pub fn print(path: &PathBuf) {
+    let src = fs::read_to_string(path).unwrap();
+    let result = trans(src, path);
+    p!(result.krate);
+}
+
 pub fn fmt(opt: Opt) {
     let path = opt.input.as_ref().unwrap();
     if path.is_dir() {
