@@ -309,6 +309,7 @@ impl Display for Item {
             ItemKind::ModDecl(ref item) => Display::fmt(item, f)?,
             ItemKind::ExternCrate(ref item) => Display::fmt(item, f)?,
             ItemKind::Use(ref item) => Display::fmt(item, f)?,
+            ItemKind::TypeAlias(ref item) => Display::fmt(item, f)?,
             _ => {}
         }
         write!(f, ";")
@@ -338,6 +339,24 @@ impl Display for UseTree {
 impl Display for ModDecl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "mod {}", self.name)
+    }
+}
+
+impl Display for TypeAlias {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "type {}{} = {}", self.name, self.generics, self.ty)
+    }
+}
+
+impl Display for Generics {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if !self.is_empty() {
+            display_lists!(f, "<", ", ", ">", &self.lifetime_defs, &self.type_params)?;
+        }
+        if !self.wh.is_empty() {
+            write!(f, " where {}", self.wh)?;
+        }
+        Ok(())
     }
 }
 
