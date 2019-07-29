@@ -238,10 +238,8 @@ select_str!(range, is_inclusive, "..=", "..");
 
 impl Display for Crate {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for attr in &self.attrs {
-            writeln!(f, "{}", attr)?;
-        }
-        Ok(())
+        display_attrs(f, &self.attrs)?;
+        Display::fmt(&self.module, f)
     }
 }
 
@@ -286,6 +284,34 @@ impl Display for MetaItem {
             display_lists!(f, "(", ", ", ")", &**items)?;
         }
         Ok(())
+    }
+}
+
+impl Display for Mod {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for item in &self.items {
+            writeln!(f, "{}", item)?;
+        }
+        Ok(())
+    }
+}
+
+impl Display for Item {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_attrs(f, &self.attrs)?;
+        display_vis(f, &self.vis)?;
+        match self.item {
+            ItemKind::Mod(ref item) => {
+                writeln!(f, "mod {} {{", item.name)?;
+                Display::fmt(item, f)?;
+                return write!(f, "}}");
+            }
+            ItemKind::ModDecl(ref item) => Display::fmt(item, f)?,
+            ItemKind::ExternCrate(ref item) => Display::fmt(item, f)?,
+            ItemKind::Use(ref item) => Display::fmt(item, f)?,
+            _ => {}
+        }
+        write!(f, ";")
     }
 }
 
@@ -784,6 +810,19 @@ fn fmt_use_trees(f: &mut fmt::Formatter, trees: &Option<Vec<UseTree>>) -> fmt::R
     } else {
         display_lists!(f, "{{", ", ", "}}", trees)
     }
+}
+
+#[inline]
+fn display_attrs(f: &mut fmt::Formatter, attrs: &Vec<AttrKind>) -> fmt::Result {
+    for attr in attrs {
+        writeln!(f, "{}", attr)?;
+    }
+    Ok(())
+}
+
+#[inline]
+fn display_vis(f: &mut fmt::Formatter, vis: &Vis) -> fmt::Result {
+    write!(f, "{}", vis_head(vis))
 }
 
 #[inline]
