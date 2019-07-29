@@ -323,7 +323,6 @@ impl Translator {
         }
     }
 
-
     #[inline]
     fn trans_comments(&mut self, pos: Pos) {
         let cmnts = self.trans_trailing_comments(pos);
@@ -338,7 +337,7 @@ impl Translator {
             return cmnts;
         }
         let cmnt = &self.cmnts[self.cmnt_idx];
-        if cmnt.pos > pos || cmnt.kind != CommentKind::Trailing {
+        if cmnt.pos >= pos || cmnt.kind != CommentKind::Trailing {
             return cmnts;
         }
         self.cmnt_idx += 1;

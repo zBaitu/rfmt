@@ -42,7 +42,7 @@ pub fn dump_ast(path: &PathBuf) {
         };
         d!(krate);
 
-        p!("\n{}\n", SEP);
+        p!(SEP);
 
         let cmnts = comments::gather_comments(&sess, FileName::from(path.clone()), &mut input);
         for cmnt in cmnts {

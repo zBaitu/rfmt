@@ -3,9 +3,9 @@ use std::fmt::{self, Debug};
 
 const NL: char = '\n';
 
-const MAX_WIDTH: usize = 115;
 const EXCEED_WIDTH: usize = 120;
-const MAX_ALIGN_COL: usize = 50;
+const MAX_WIDTH: usize = EXCEED_WIDTH - 2;
+const MAX_ALIGN_COL: usize = EXCEED_WIDTH / 3;
 
 const INDENT: &'static str = "    ";
 const WRAP_INDENT: &'static str = "        ";
@@ -35,6 +35,16 @@ macro_rules! raw_insert {
     });
 }
 
+macro_rules! minus_nf {
+    ($a: expr, $b: expr) => ({
+        if $a <= $b {
+            0
+        } else {
+            $a - $b
+        }
+    })
+}
+
 #[inline]
 fn list_len_info(list: &[&str]) -> (usize, usize) {
     let prefix_len = if list.len() > 1 {
@@ -55,26 +65,16 @@ fn fill_str(ch: char, count: usize) -> String {
     s
 }
 
-macro_rules! minus_nf {
-    ($a: expr, $b: expr) => ({
-        if $a <= $b {
-            0
-        } else {
-            $a - $b
-        }
-    })
-}
-
 #[derive(Default)]
 pub struct Typesetter {
     line: u32,
     col: usize,
     indent: String,
     align_stack: Vec<usize>,
-    exceed_lines: BTreeSet<u32>,
-    trailing_ws_lines: BTreeSet<u32>,
 
     s: String,
+    exceed_lines: BTreeSet<u32>,
+    trailing_ws_lines: BTreeSet<u32>,
 }
 
 pub struct TsResult {
@@ -166,11 +166,6 @@ impl Typesetter {
     }
 
     #[inline]
-    fn need_wrap_len(&self, prefix_len: usize, len: usize) -> bool {
-        (minus_nf!(self.left(), prefix_len) <= 0) || (len > self.left() && len <= self.nl_left())
-    }
-
-    #[inline]
     pub fn need_nl_indent(&self, list: &[&str]) -> bool {
         let (prefix_len, len) = list_len_info(list);
         self.need_nl_indent_len(prefix_len, len)
@@ -201,14 +196,14 @@ impl Typesetter {
     }
 
     #[inline]
-    fn need_nl_indent_len(&self, prefix_len: usize, len: usize) -> bool {
-        (minus_nf!(self.left(), prefix_len) <= 0)
-                || (len > self.left() && len <= self.nl_indent_left())
+    fn wrap_insert(&mut self, s: &str) {
+        self.wrap();
+        self.raw_insert(s);
     }
 
     #[inline]
-    fn left(&self) -> usize {
-        minus_nf!(MAX_WIDTH, self.col)
+    fn need_wrap_len(&self, prefix_len: usize, len: usize) -> bool {
+        (minus_nf!(self.left(), prefix_len) <= 0) || (len > self.left() && len <= self.nl_left())
     }
 
     #[inline]
@@ -239,14 +234,19 @@ impl Typesetter {
     }
 
     #[inline]
-    fn nl_indent_left(&self) -> usize {
-        minus_nf!(MAX_WIDTH, self.indent.len())
+    fn need_nl_indent_len(&self, prefix_len: usize, len: usize) -> bool {
+        (minus_nf!(self.left(), prefix_len) <= 0)
+                || (len > self.left() && len <= self.nl_indent_left())
     }
 
     #[inline]
-    fn wrap_insert(&mut self, s: &str) {
-        self.wrap();
-        self.raw_insert(s);
+    fn left(&self) -> usize {
+        minus_nf!(MAX_WIDTH, self.col)
+    }
+
+    #[inline]
+    fn nl_indent_left(&self) -> usize {
+        minus_nf!(MAX_WIDTH, self.indent.len())
     }
 
     #[inline]
