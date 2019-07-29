@@ -570,7 +570,10 @@ impl Display for FnSig {
 
 impl Display for Arg {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}: {}", self.patten, self.ty)
+        if self.has_patten {
+            write!(f, "{}: ", self.patten)?;
+        }
+        Display::fmt(&self.ty, f)
     }
 }
 

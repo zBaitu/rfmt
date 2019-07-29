@@ -148,15 +148,20 @@ fn abi_to_string(abi: ast::Abi) -> String {
 }
 
 #[inline]
-fn has_patten(arg: &ast::Arg) -> bool {
+fn has_patten(arg: &ast::Arg, patten: &Patten) -> bool {
     match arg.to_self() {
         Some(sf) => {
             match sf.node {
-                ast::SelfKind::Value(..) | ast::SelfKind::Region(..) => false,
-                _ => true,
+                ast::SelfKind::Value(..) | ast::SelfKind::Region(..) => return false,
+                _ => {}
             }
         }
-        None => true,
+        None => {}
+    }
+
+    match patten.patten {
+        PattenKind::Ident(ref ident) => !ident.name.is_empty(),
+        _ => true,
     }
 }
 
@@ -1185,11 +1190,12 @@ impl Translator {
     #[inline]
     fn trans_arg(&mut self, arg: &ast::Arg) -> Arg {
         let patten = self.trans_patten(&arg.pat);
+        let has_patten = has_patten(arg, &patten);
         Arg {
             loc: patten.loc.clone(),
             patten,
             ty: self.trans_type(&arg.ty),
-            has_patten: has_patten(arg),
+            has_patten,
         }
     }
 
