@@ -2500,9 +2500,10 @@ impl Formatter {
         if arg.has_patten {
             self.fmt_patten(&arg.patten);
             self.raw_insert(": ");
-        }
-        if let PattenKind::Ident(ref patten) = arg.patten.patten {
-            self.insert(&ident_patten_head(patten.is_ref, patten.is_mut));
+        } else {
+            if let PattenKind::Ident(ref patten) = arg.patten.patten {
+                self.insert(&ident_patten_head(patten.is_ref, patten.is_mut));
+            }
         }
         self.fmt_type(&arg.ty);
     }
