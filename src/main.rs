@@ -3,10 +3,10 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 
 mod ast;
+mod ft;
 mod ir;
 mod rfmt;
 mod tr;
-mod ft;
 mod ts;
 
 #[derive(Debug, StructOpt)]
