@@ -133,6 +133,21 @@ macro_rules! fmt_item_group {
     });
 }
 
+macro_rules! fmt_lists {
+    ($sf:expr, $sep:expr, $wrap_sep:expr, $($list:expr, $act:ident),+) => ({
+        let mut first = true;
+        $(for e in $list {
+            if !first {
+                maybe_wrap!($sf, $sep, $wrap_sep, e, $act);
+            } else {
+                $sf.$act(e);
+            }
+
+            first = false;
+        })+
+    });
+}
+
 macro_rules! fmt_block {
     ($sf:expr, $items: expr, $block:expr, $fmt:ident) => ({
         if $items.is_empty() {
@@ -164,21 +179,6 @@ macro_rules! fmt_block {
     ($sf:expr, $items:expr, $fmt:ident) => ({
         fmt_block!($sf, $items, $items, $fmt);
     })
-}
-
-macro_rules! fmt_lists {
-    ($sf:expr, $sep:expr, $wrap_sep:expr, $($list:expr, $act:ident),+) => ({
-        let mut first = true;
-        $(for e in $list {
-            if !first {
-                maybe_wrap!($sf, $sep, $wrap_sep, e, $act);
-            } else {
-                $sf.$act(e);
-            }
-
-            first = false;
-        })+
-    });
 }
 
 macro_rules! fmt_items {
@@ -214,6 +214,43 @@ macro_rules! display_lists {
 
     ($f:expr, $sep:expr, $($lists:expr),+) => ({
        display_lists!($f, "", $sep, "", $($lists)+)
+    });
+}
+
+macro_rules! display_fields_block {
+    ($f:expr, $fields: expr) => ({
+        writeln!($f, " {{")?;
+        display_fields!($f, $fields)?;
+        write!($f, "}}")
+    })
+}
+
+macro_rules! display_items_block {
+    ($f:expr, $items: expr) => ({
+        writeln!($f, " {{")?;
+        display_items!($f, $items)?;
+        write!($f, "}}")
+    })
+}
+
+macro_rules! display_items {
+    ($f:expr, $items:expr) => ({
+        display_lines!($f, $items, ";")
+    });
+}
+
+macro_rules! display_fields {
+    ($f:expr, $fields:expr) => ({
+        display_lines!($f, $fields, ",")
+    });
+}
+
+macro_rules! display_lines {
+    ($f:expr, $lines:expr, $sep:expr) => ({
+        for line in $lines {
+            writeln!($f, "{}{}", line, $sep)?;
+        }
+        Ok(())
     });
 }
 
@@ -279,7 +316,7 @@ impl Display for Attr {
 
 impl Display for MetaItem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        Display::fmt(&self.name, f)?;
+        write!(f, "{}", self.name)?;
         if let Some(ref items) = self.items {
             display_lists!(f, "(", ", ", ")", &**items)?;
         }
@@ -315,6 +352,9 @@ impl Display for Item {
             ItemKind::Const(ref item) => Display::fmt(item, f)?,
             ItemKind::Static(ref item) => Display::fmt(item, f)?,
             ItemKind::Struct(ref item) => Display::fmt(item, f)?,
+            ItemKind::Union(ref item) => Display::fmt(item, f)?,
+            ItemKind::Enum(ref item) => Display::fmt(item, f)?,
+            ItemKind::ForeignMod(ref item) => Display::fmt(item, f)?,
             _ => {}
         }
         write!(f, ";")
@@ -571,7 +611,7 @@ impl Display for TupleField {
 impl Display for FnSig {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         display_args(f, &self.args)?;
-        write!(f, "{}", self.ret)
+        Display::fmt(&self.ret, f)
     }
 }
 
@@ -627,9 +667,7 @@ impl Display for StructBody {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             StructBody::Struct(ref fields) => {
-                writeln!(f, " {{")?;
-                display_struct_fields(f, fields)?;
-                write!(f, "}}")
+                display_fields_block!(f, fields)
             }
             StructBody::Tuple(ref fields) => {
                 display_lists!(f, "(", ", ", ")", fields)
@@ -644,6 +682,74 @@ impl Display for StructField {
         display_attrs(f, &self.attrs)?;
         display_vis(f, &self.vis)?;
         write!(f, "{}: {}", self.name, self.ty)
+    }
+}
+
+impl Display for Union {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "union {}{}", self.name, self.generics)?;
+        display_fields_block!(f, &self.fields)
+    }
+}
+
+impl Display for Enum {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "enum {}{}{}", self.name, self.generics, self.body)
+    }
+}
+
+impl Display for EnumBody {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_fields_block!(f, &self.fields)
+    }
+}
+
+impl Display for EnumField {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_attrs(f, &self.attrs)?;
+        write!(f, "{}{}", self.name, self.body)?;
+        if let Some(ref expr) = self.expr {
+            write!(f, " = {}", expr)?;
+        }
+        Ok(())
+    }
+}
+
+impl Display for ForeignMod {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", foreign_head(&self.abi))?;
+        display_items_block!(f, &self.items)
+    }
+}
+
+impl Display for ForeignItem {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_attrs(f, &self.attrs)?;
+        display_vis(f, &self.vis)?;
+        Display::fmt(&self.item, f)
+    }
+}
+
+impl Display for ForeignKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ForeignKind::Type(ref item) => write!(f, "type {}", item),
+            ForeignKind::Static(ref item) => Display::fmt(item, f),
+            ForeignKind::Fn(ref item) => Display::fmt(item, f),
+            ForeignKind::Macro(ref item) => Display::fmt(item, f),
+        }
+    }
+}
+
+impl Display for ForeignStatic {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}: {}", static_head(self.is_mut), self.name, self.ty)
+    }
+}
+
+impl Display for ForeignFn {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "fn {}{}{}", self.name, self.generics, self.sig)
     }
 }
 
@@ -947,14 +1053,6 @@ fn display_path_segments(f: &mut fmt::Formatter, segments: &[PathSegment]) -> fm
 #[inline]
 fn display_args(f: &mut fmt::Formatter, args: &Vec<Arg>) -> fmt::Result {
     display_lists!(f, "(", ", ", ")", args)
-}
-
-#[inline]
-fn display_struct_fields(f: &mut fmt::Formatter, fields: &Vec<StructField>) -> fmt::Result {
-    for field in fields {
-        writeln!(f, "{},", field)?;
-    }
-    Ok(())
 }
 
 #[inline]
