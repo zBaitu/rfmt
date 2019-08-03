@@ -7,7 +7,7 @@ pub trait Trait {
     type E<T>: Iterator + 'static where T: bool  = bool;
     unsafe fn f();
     const fn f(&self);
-    fn f(&self);
+    fn ff(&self);
     fn f(&'a self);
     fn f(self: Iterator);
     fn f<T>(&self) where T: bool;

@@ -443,9 +443,14 @@ impl Display for FnSig {
 impl Display for Arg {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.has_patten {
-            write!(f, "{}: ", self.patten)?;
+            write!(f, "{}", self.patten)?;
+            match self.ty.ty {
+                TypeKind::Symbol(s) if s == "_" => Ok(()),
+                _ => write!(f, ": {}", self.ty),
+            }
+        } else {
+            Display::fmt(&self.ty, f)
         }
-        Display::fmt(&self.ty, f)
     }
 }
 
