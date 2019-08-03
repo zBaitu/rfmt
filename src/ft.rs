@@ -8,194 +8,6 @@ use crate::{need_nl_indent, need_wrap};
 use crate::ir;
 use crate::ts;
 
-macro_rules! maybe_nl {
-    ($sf:expr, $e:ident) => ({
-        if $e.loc.nl {
-            $sf.wrap();
-        }
-    });
-}
-
-macro_rules! maybe_wrap {
-    ($sf:expr, $sep:expr, $wrap_sep:expr, $e:expr) => ({
-        if !need_wrap!($sf.ts, $sep, &$e.to_string()) {
-            $sf.raw_insert($sep);
-        } else {
-            $sf.wrap();
-            $sf.raw_insert($wrap_sep);
-        }
-    });
-
-    ($sf:expr, $e:expr) => ({
-        maybe_wrap!($sf, "", "", $e);
-    });
-
-    ($sf:expr, $sep:expr, $wrap_sep:expr, $e:expr, $fmt:ident) => ({
-        maybe_wrap!($sf, $sep, $wrap_sep, $e);
-        $sf.$fmt(&$e);
-    });
-}
-
-macro_rules! maybe_nl_indent {
-    ($sf:expr, $sep:expr, $wrap_sep:expr, $e:expr) => ({
-        if !need_nl_indent!($sf.ts, $sep, &$e.to_string()) {
-            $sf.raw_insert($sep);
-        } else {
-            $sf.nl_indent();
-            $sf.raw_insert($wrap_sep);
-        }
-    });
-
-    ($sf:expr, $sep:expr, $wrap_sep:expr, $e:expr, $fmt:ident) => ({
-        maybe_nl_indent!($sf, $sep, $wrap_sep, $e);
-        $sf.$fmt($e);
-    });
-}
-
-macro_rules! insert_sep {
-    ($sf:expr, $sep:expr, $e:expr) => ({
-        $sf.raw_insert($sep);
-        if !$e.loc.nl && !need_wrap!($sf.ts, " ", &$e.to_string()) {
-            $sf.raw_insert(" ");
-            false
-        } else {
-            $sf.wrap();
-            true
-        }
-    });
-}
-
-macro_rules! fmt_comma_lists {
-    ($sf:expr, $open:expr, $close:expr, $($list:expr, $fmt:ident),+) => ({
-        let mut is_wrap = false;
-        $sf.insert_mark_align($open);
-
-        let mut first = true;
-        $(for e in $list {
-            if !first {
-                is_wrap |= insert_sep!($sf, ",", e);
-            }
-
-            $sf.$fmt(e);
-            first = false;
-        })+
-
-        $sf.insert_unmark_align($close);
-        is_wrap
-    });
-
-    ($sf:expr, $($list:expr, $fmt:ident),+) => ({
-        fmt_comma_lists!($sf, "", "", $($list, $fmt)+);
-    });
-}
-
-macro_rules! fmt_item_groups {
-    ($sf:expr, $items:expr, $item_kind:path, $item_type:ty, $fmt_item:ident) => ({
-        let mut group: Vec<(&Loc, &String, &Vec<AttrKind>, $item_type)> = Vec::new();
-
-        for item in $items {
-            match item.item {
-                $item_kind(ref e) => {
-                    if $sf.has_leading_comments(&item.loc) {
-                        fmt_item_group!($sf, &group, $item_type, $fmt_item);
-                        group.clear();
-
-                        $sf.fmt_leading_comments(&item.loc);
-                    }
-                    group.push((&item.loc, &item.vis, &item.attrs, e));
-                }
-                _ => {
-                    fmt_item_group!($sf, &group, $item_type, $fmt_item);
-                    group.clear();
-                }
-            }
-        }
-
-        fmt_item_group!($sf, &group, $item_type, $fmt_item);
-    });
-}
-
-macro_rules! fmt_item_group {
-    ($sf:expr, $group:expr, $ty:ty, $fmt_item:ident) => ({
-        let map: BTreeMap<String, (&Loc, &String, &Vec<AttrKind>, $ty)>
-                = $group.into_iter().map(|e| (e.3.to_string(), *e)).collect();
-
-        for (_, e) in map {
-            $sf.fmt_attrs(e.2);
-
-            $sf.insert_indent();
-            $sf.fmt_vis(e.1);
-            $sf.$fmt_item(e.3);
-
-            $sf.try_fmt_trailing_comment(e.0);
-            $sf.nl();
-        }
-    });
-}
-
-macro_rules! fmt_lists {
-    ($sf:expr, $sep:expr, $wrap_sep:expr, $($list:expr, $act:ident),+) => ({
-        let mut first = true;
-        $(for e in $list {
-            if !first {
-                maybe_wrap!($sf, $sep, $wrap_sep, e, $act);
-            } else {
-                $sf.$act(e);
-            }
-
-            first = false;
-        })+
-    });
-}
-
-macro_rules! fmt_block {
-    ($sf:expr, $items: expr, $block:expr, $fmt:ident) => ({
-        if $items.is_empty() {
-            if $sf.block_non_sep {
-                $sf.raw_insert("{}");
-                $sf.block_non_sep = false;
-            } else {
-                $sf.raw_insert(" {}");
-            }
-            return;
-        }
-
-        if $sf.block_non_sep {
-            $sf.raw_insert("{");
-            $sf.block_non_sep = false;
-        } else {
-            $sf.raw_insert(" {");
-        }
-        $sf.indent();
-        $sf.nl();
-
-        $sf.$fmt($block);
-
-        $sf.outdent();
-        $sf.insert_indent();
-        $sf.raw_insert("}");
-    });
-
-    ($sf:expr, $items:expr, $fmt:ident) => ({
-        fmt_block!($sf, $items, $items, $fmt);
-    })
-}
-
-macro_rules! fmt_items {
-    ($sf:ident, $items:expr, $fmt_item:ident) => ({
-        for item in $items {
-            $sf.try_fmt_leading_comments(&item.loc);
-            $sf.fmt_attrs(&item.attrs);
-            $sf.insert_indent();
-
-            $sf.$fmt_item(item);
-
-            $sf.try_fmt_trailing_comment(&item.loc);
-            $sf.nl();
-        }
-    });
-}
-
 macro_rules! display_lists {
     ($f:expr, $open:expr, $sep:expr, $close:expr, $($lists:expr),+) => ({
         write!($f, $open)?;
@@ -225,7 +37,15 @@ macro_rules! display_fields_block {
     })
 }
 
-macro_rules! display_items_block {
+macro_rules! display_decls_block {
+    ($f:expr, $items: expr) => ({
+        writeln!($f, " {{")?;
+        display_decls!($f, $items)?;
+        write!($f, "}}")
+    })
+}
+
+macro_rules! display_block {
     ($f:expr, $items: expr) => ({
         writeln!($f, " {{")?;
         display_items!($f, $items)?;
@@ -233,16 +53,22 @@ macro_rules! display_items_block {
     })
 }
 
-macro_rules! display_items {
+macro_rules! display_fields {
+    ($f:expr, $fields:expr) => ({
+        display_lines!($f, $fields, ",")
+    });
+}
+
+macro_rules! display_decls {
     ($f:expr, $items:expr) => ({
         display_lines!($f, $items, ";")
     });
 }
 
-macro_rules! display_fields {
-    ($f:expr, $fields:expr) => ({
-        display_lines!($f, $fields, ",")
-    });
+macro_rules! display_items {
+    ($f:expr, $items: expr) => ({
+        display_lines!($f, $items, "")
+    })
 }
 
 macro_rules! display_lines {
@@ -717,7 +543,7 @@ impl Display for EnumField {
 impl Display for ForeignMod {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", foreign_head(&self.abi))?;
-        display_items_block!(f, &self.items)
+        display_decls_block!(f, &self.items)
     }
 }
 
@@ -771,7 +597,7 @@ impl Display for Trait {
         display_generics(f, &self.generics)?;
         try_display_type_param_bounds(f, &self.bounds)?;
         display_where(f, &self.generics)?;
-        display_items_block!(f, &self.items)
+        display_decls_block!(f, &self.items)
     }
 }
 
@@ -960,7 +786,7 @@ impl Display for SlicePatten {
 impl Display for Block {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", block_head(self.is_unsafe))?;
-        display_items_block!(f, &self.stmts)
+        display_block!(f, &self.stmts)
     }
 }
 
@@ -1002,17 +828,26 @@ impl Display for Expr {
             ExprKind::Array(ref exprs) => display_lists!(f, "[", ", ", "]", &**exprs),
             ExprKind::Tuple(ref exprs) => display_lists!(f, "(", ", ", ")", &**exprs),
             ExprKind::Index(ref expr) => Display::fmt(expr, f),
-            ExprKind::Struct(ref expr) => Debug::fmt(expr, f),
+            ExprKind::Struct(ref expr) => Display::fmt(expr, f),
             ExprKind::Field(ref expr) => Display::fmt(expr, f),
             ExprKind::Type(ref expr) => Display::fmt(expr, f),
             ExprKind::Cast(ref expr) => Display::fmt(expr, f),
             ExprKind::Range(ref expr) => Display::fmt(expr, f),
+            ExprKind::Block(ref expr) => Display::fmt(expr, f),
+            ExprKind::If(ref expr) => Display::fmt(expr, f),
+            ExprKind::IfLet(ref expr) => Display::fmt(expr, f),
+            ExprKind::While(ref expr) => Display::fmt(expr, f),
+            ExprKind::WhileLet(ref expr) => Display::fmt(expr, f),
+            ExprKind::For(ref expr) => Display::fmt(expr, f),
+            ExprKind::Loop(ref expr) => Display::fmt(expr, f),
+            ExprKind::Break(ref expr) => Display::fmt(expr, f),
+            ExprKind::Continue(ref expr) => Display::fmt(expr, f),
+            ExprKind::Match(ref expr) => Display::fmt(expr, f),
             ExprKind::FnCall(ref expr) => Display::fmt(expr, f),
             ExprKind::MethodCall(ref expr) => Display::fmt(expr, f),
             ExprKind::Closure(ref expr) => Display::fmt(expr, f),
             ExprKind::Return(ref expr) => Display::fmt(expr, f),
             ExprKind::Macro(ref expr) => Display::fmt(expr, f),
-            _ => Debug::fmt(&self.expr, f),
         }
     }
 }
@@ -1045,6 +880,29 @@ impl Display for RepeatExpr {
 impl Display for IndexExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}[{}]", self.obj, self.index)
+    }
+}
+
+impl Display for StructExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        Display::fmt(&self.path, f)?;
+        writeln!(f, " {{")?;
+        display_fields!(f, &self.fields)?;
+        if let Some(ref base) = self.base {
+            write!(f, "..{}", base)?;
+        }
+        write!(f, "}}")
+    }
+}
+
+impl Display for StructFieldExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let value = self.value.to_string();
+        if self.name == value {
+            write!(f, "{}", self.name)
+        } else {
+            write!(f, "{}: {}", self.name, value)
+        }
     }
 }
 
@@ -1083,6 +941,120 @@ impl Display for RangeExpr {
     }
 }
 
+impl Display for BlockExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(ref label) = self.label {
+            write!(f, "{}:", label)?;
+        }
+        Display::fmt(&self.block, f)
+    }
+}
+
+impl Display for IfExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "if {}", self.expr)?;
+        Display::fmt(&self.block, f)?;
+        if let Some(ref br) = self.br {
+            write!(f, " else {}", br)?
+        }
+        Ok(())
+    }
+}
+
+impl Display for IfLetExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "if let ")?;
+        display_pattens(f, &self.pattens)?;
+        write!(f, " = {}", self.expr)?;
+        Display::fmt(&self.block, f)?;
+        if let Some(ref br) = self.br {
+            write!(f, " else {}", br)?
+        }
+        Ok(())
+    }
+}
+
+impl Display for WhileExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(ref label) = self.label {
+            writeln!(f, "{}:", label)?;
+        }
+        write!(f, "while {}", self.expr)?;
+        Display::fmt(&self.block, f)
+    }
+}
+
+impl Display for WhileLetExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(ref label) = self.label {
+            writeln!(f, "{}:", label)?;
+        }
+        write!(f, "while ")?;
+        display_pattens(f, &self.pattens)?;
+        write!(f, " = {}", self.expr)?;
+        Display::fmt(&self.block, f)
+    }
+}
+
+impl Display for ForExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(ref label) = self.label {
+            writeln!(f, "{}:", label)?;
+        }
+        write!(f, "for {} in {}", self.patten, self.expr)?;
+        Display::fmt(&self.block, f)
+    }
+}
+
+impl Display for LoopExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(ref label) = self.label {
+            writeln!(f, "{}:", label)?;
+        }
+        write!(f, "loop{}", self.block)
+    }
+}
+
+impl Display for BreakExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "break ")?;
+        if let Some(ref label) = self.label {
+            Display::fmt(&label, f)?;
+        }
+        if let Some(ref expr) = self.expr {
+            Display::fmt(&expr, f)?;
+        }
+        Ok(())
+    }
+}
+
+impl Display for ContinueExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "continue ")?;
+        if let Some(ref label) = self.label {
+            Display::fmt(&label, f)?;
+        }
+        Ok(())
+    }
+}
+
+impl Display for MatchExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "match {}", self.expr)?;
+        display_fields_block!(f, &self.arms)
+    }
+}
+
+impl Display for Arm {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_pattens(f, &self.pattens)?;
+        if let Some(ref guard) = self.guard {
+            write!(f, "if {}", guard)?;
+        }
+        Display::fmt(&self.body, f)
+    }
+}
+
 impl Display for FnCallExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.name)?;
@@ -1092,7 +1064,10 @@ impl Display for FnCallExpr {
 
 impl Display for MethodCallExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}.{}", &self.args[0], &self.path)?;
+        write!(f, "{}.{}", &self.args[0], self.path.name)?;
+        if !self.path.is_empty() {
+            write!(f, "::{}", &self.path)?;
+        }
         display_lists!(f, "(", ", ", ")", &self.args[1..])
     }
 }
@@ -1292,6 +1267,11 @@ fn display_omit_pattens(f: &mut fmt::Formatter, pattens: &Vec<Patten>, omit_pos:
 }
 
 #[inline]
+fn display_pattens(f: &mut fmt::Formatter, pattens: &Vec<Patten>) -> fmt::Result {
+    display_lists!(f, " | ", pattens)
+}
+
+#[inline]
 fn display_expr(f: &mut fmt::Formatter, expr: &Expr, is_semi: bool) -> fmt::Result {
     Display::fmt(expr, f)?;
     if is_semi {
@@ -1444,6 +1424,193 @@ fn closure_head(is_static: bool, is_async: bool, is_move: bool) -> String {
         head.push_str("move ");
     }
     head
+}
+macro_rules! maybe_nl {
+    ($sf:expr, $e:ident) => ({
+        if $e.loc.nl {
+            $sf.wrap();
+        }
+    });
+}
+
+macro_rules! maybe_wrap {
+    ($sf:expr, $sep:expr, $wrap_sep:expr, $e:expr) => ({
+        if !need_wrap!($sf.ts, $sep, &$e.to_string()) {
+            $sf.raw_insert($sep);
+        } else {
+            $sf.wrap();
+            $sf.raw_insert($wrap_sep);
+        }
+    });
+
+    ($sf:expr, $e:expr) => ({
+        maybe_wrap!($sf, "", "", $e);
+    });
+
+    ($sf:expr, $sep:expr, $wrap_sep:expr, $e:expr, $fmt:ident) => ({
+        maybe_wrap!($sf, $sep, $wrap_sep, $e);
+        $sf.$fmt(&$e);
+    });
+}
+
+macro_rules! maybe_nl_indent {
+    ($sf:expr, $sep:expr, $wrap_sep:expr, $e:expr) => ({
+        if !need_nl_indent!($sf.ts, $sep, &$e.to_string()) {
+            $sf.raw_insert($sep);
+        } else {
+            $sf.nl_indent();
+            $sf.raw_insert($wrap_sep);
+        }
+    });
+
+    ($sf:expr, $sep:expr, $wrap_sep:expr, $e:expr, $fmt:ident) => ({
+        maybe_nl_indent!($sf, $sep, $wrap_sep, $e);
+        $sf.$fmt($e);
+    });
+}
+
+macro_rules! insert_sep {
+    ($sf:expr, $sep:expr, $e:expr) => ({
+        $sf.raw_insert($sep);
+        if !$e.loc.nl && !need_wrap!($sf.ts, " ", &$e.to_string()) {
+            $sf.raw_insert(" ");
+            false
+        } else {
+            $sf.wrap();
+            true
+        }
+    });
+}
+
+macro_rules! fmt_comma_lists {
+    ($sf:expr, $open:expr, $close:expr, $($list:expr, $fmt:ident),+) => ({
+        let mut is_wrap = false;
+        $sf.insert_mark_align($open);
+
+        let mut first = true;
+        $(for e in $list {
+            if !first {
+                is_wrap |= insert_sep!($sf, ",", e);
+            }
+
+            $sf.$fmt(e);
+            first = false;
+        })+
+
+        $sf.insert_unmark_align($close);
+        is_wrap
+    });
+
+    ($sf:expr, $($list:expr, $fmt:ident),+) => ({
+        fmt_comma_lists!($sf, "", "", $($list, $fmt)+);
+    });
+}
+
+macro_rules! fmt_item_groups {
+    ($sf:expr, $items:expr, $item_kind:path, $item_type:ty, $fmt_item:ident) => ({
+        let mut group: Vec<(&Loc, &String, &Vec<AttrKind>, $item_type)> = Vec::new();
+
+        for item in $items {
+            match item.item {
+                $item_kind(ref e) => {
+                    if $sf.has_leading_comments(&item.loc) {
+                        fmt_item_group!($sf, &group, $item_type, $fmt_item);
+                        group.clear();
+
+                        $sf.fmt_leading_comments(&item.loc);
+                    }
+                    group.push((&item.loc, &item.vis, &item.attrs, e));
+                }
+                _ => {
+                    fmt_item_group!($sf, &group, $item_type, $fmt_item);
+                    group.clear();
+                }
+            }
+        }
+
+        fmt_item_group!($sf, &group, $item_type, $fmt_item);
+    });
+}
+
+macro_rules! fmt_item_group {
+    ($sf:expr, $group:expr, $ty:ty, $fmt_item:ident) => ({
+        let map: BTreeMap<String, (&Loc, &String, &Vec<AttrKind>, $ty)>
+                = $group.into_iter().map(|e| (e.3.to_string(), *e)).collect();
+
+        for (_, e) in map {
+            $sf.fmt_attrs(e.2);
+
+            $sf.insert_indent();
+            $sf.fmt_vis(e.1);
+            $sf.$fmt_item(e.3);
+
+            $sf.try_fmt_trailing_comment(e.0);
+            $sf.nl();
+        }
+    });
+}
+
+macro_rules! fmt_lists {
+    ($sf:expr, $sep:expr, $wrap_sep:expr, $($list:expr, $act:ident),+) => ({
+        let mut first = true;
+        $(for e in $list {
+            if !first {
+                maybe_wrap!($sf, $sep, $wrap_sep, e, $act);
+            } else {
+                $sf.$act(e);
+            }
+
+            first = false;
+        })+
+    });
+}
+
+macro_rules! fmt_block {
+    ($sf:expr, $items: expr, $block:expr, $fmt:ident) => ({
+        if $items.is_empty() {
+            if $sf.block_non_sep {
+                $sf.raw_insert("{}");
+                $sf.block_non_sep = false;
+            } else {
+                $sf.raw_insert(" {}");
+            }
+            return;
+        }
+
+        if $sf.block_non_sep {
+            $sf.raw_insert("{");
+            $sf.block_non_sep = false;
+        } else {
+            $sf.raw_insert(" {");
+        }
+        $sf.indent();
+        $sf.nl();
+
+        $sf.$fmt($block);
+
+        $sf.outdent();
+        $sf.insert_indent();
+        $sf.raw_insert("}");
+    });
+
+    ($sf:expr, $items:expr, $fmt:ident) => ({
+        fmt_block!($sf, $items, $items, $fmt);
+    })
+}
+
+macro_rules! fmt_items {
+    ($sf:ident, $items:expr, $fmt_item:ident) => ({
+        for item in $items {
+            $sf.try_fmt_leading_comments(&item.loc);
+            $sf.fmt_attrs(&item.attrs);
+            $sf.insert_indent();
+
+            $sf.$fmt_item(item);
+
+            $sf.try_fmt_trailing_comment(&item.loc);
+            $sf.nl();
+        }
+    });
 }
 
 pub fn fmt(krate: Crate, leading_cmnts: HashMap<Pos, Vec<String>>, trailing_cmnts: HashMap<Pos, String>) -> TsResult {
@@ -2648,8 +2815,11 @@ impl Formatter {
     #[inline]
     fn fmt_struct_field_expr(&mut self, field: &StructFieldExpr) {
         self.insert(&field.name);
-        insert_sep!(self, ":", field.value);
-        self.fmt_expr(&field.value);
+        let value = field.value.to_string();
+        if field.name != value {
+            insert_sep!(self, ":", field.value);
+            self.fmt_expr(&field.value);
+        }
         self.raw_insert(",");
     }
 

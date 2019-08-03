@@ -24,7 +24,7 @@ pub struct Opt {
     debug: bool,
 
     #[structopt(short, long)]
-    /// Print the rfmt ir
+    /// Print the rfmt ir simple format
     print: bool,
 
     #[structopt(short, long)]

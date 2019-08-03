@@ -291,6 +291,14 @@ impl PathSegment {
             param: PathParam::Angle(Default::default()),
         }
     }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        match self.param {
+            PathParam::Angle(ref param) => param.is_empty(),
+            PathParam::Paren(ref param) => param.is_empty(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -331,6 +339,13 @@ pub struct ParenParam {
     pub loc: Loc,
     pub inputs: Vec<Type>,
     pub output: Option<Type>,
+}
+
+impl ParenParam {
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.inputs.is_empty()
+    }
 }
 
 #[derive(Debug)]
