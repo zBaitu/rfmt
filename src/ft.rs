@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
-use std::fmt::{self, Debug, Display};
+use std::fmt::{self, Display};
 
 use ir::*;
 use ts::*;
@@ -733,7 +733,7 @@ impl Display for Patten {
             PattenKind::Ref(ref patten) => Display::fmt(patten, f),
             PattenKind::Path(ref patten) => Display::fmt(patten, f),
             PattenKind::Ident(ref patten) => Display::fmt(patten, f),
-            PattenKind::Struct(ref patten) => Debug::fmt(patten, f),
+            PattenKind::Struct(ref patten) => Display::fmt(patten, f),
             PattenKind::Enum(ref patten) => Display::fmt(patten, f),
             PattenKind::Tuple(ref patten) => Display::fmt(patten, f),
             PattenKind::Slice(ref patten) => Display::fmt(patten, f),
@@ -761,6 +761,28 @@ impl Display for IdentPatten {
             write!(f, " @ {}", patten)?;
         }
         Ok(())
+    }
+}
+
+impl Display for StructPatten {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        Display::fmt(&self.path, f)?;
+        writeln!(f, " {{")?;
+        display_fields!(f, &self.fields)?;
+        if self.omit {
+            writeln!(f, "..")?;
+        }
+        write!(f, "}}")
+    }
+}
+
+impl Display for StructFieldPatten {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.shorthand {
+            Display::fmt(&self.patten, f)
+        } else {
+            write!(f, "{}: {}", self.name, self.patten)
+        }
     }
 }
 
@@ -894,7 +916,7 @@ impl Display for StructExpr {
         writeln!(f, " {{")?;
         display_fields!(f, &self.fields)?;
         if let Some(ref base) = self.base {
-            write!(f, "..{}", base)?;
+            writeln!(f, "..{}", base)?;
         }
         write!(f, "}}")
     }
@@ -1054,9 +1076,9 @@ impl Display for Arm {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         display_pattens(f, &self.pattens)?;
         if let Some(ref guard) = self.guard {
-            write!(f, "if {}", guard)?;
+            write!(f, " if {}", guard)?;
         }
-        Display::fmt(&self.body, f)
+        write!(f, " => {}", self.body)
     }
 }
 
@@ -1086,7 +1108,7 @@ impl Display for ClosureExpr {
         match self.expr.expr {
             ExprKind::Block(ref block) => {
                 if block.block.stmts.len() > 1 {
-                    Debug::fmt(block, f)
+                    Display::fmt(block, f)
                 } else {
                     match block.block.stmts[0].stmt {
                         StmtKind::Expr(ref expr, is_semi) if !is_semi => {
@@ -2553,10 +2575,7 @@ impl Formatter {
             PattenKind::Enum(ref patten) => self.fmt_enum_patten(patten),
             PattenKind::Tuple(ref patten) => self.fmt_tuple_patten(patten),
             PattenKind::Slice(ref patten) => self.fmt_slice_patten(patten),
-            /*
-            //PattenKind::Macro(ref pat) => self.fmt_macro(pat),
-            */
-            _ => {}
+            PattenKind::Macro(ref patten) => self.fmt_macro(patten),
         }
     }
 
