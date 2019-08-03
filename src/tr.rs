@@ -1375,8 +1375,8 @@ impl Translator {
                   -> Impl {
         Impl {
             is_unsafe: is_unsafe(unsafety),
-            is_neg: is_neg(polarity),
             is_default: is_default(defaultness),
+            is_neg: is_neg(polarity),
             generics: self.trans_generics(generics),
             trait_ref: map_ref_mut(trait_ref, |trait_ref| self.trans_trait_ref(trait_ref)),
             ty: self.trans_type(ty),

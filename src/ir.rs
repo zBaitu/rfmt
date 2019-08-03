@@ -614,8 +614,8 @@ pub struct MethodTraitItem {
 #[derive(Debug)]
 pub struct Impl {
     pub is_unsafe: bool,
-    pub is_neg: bool,
     pub is_default: bool,
+    pub is_neg: bool,
     pub generics: Generics,
     pub trait_ref: Option<TraitRef>,
     pub ty: Type,

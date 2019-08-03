@@ -357,7 +357,9 @@ impl Display for Item {
             ItemKind::ForeignMod(ref item) => Display::fmt(item, f)?,
             ItemKind::Fn(ref item) => Display::fmt(item, f)?,
             ItemKind::Trait(ref item) => Display::fmt(item, f)?,
-            _ => {}
+            ItemKind::Impl(ref item) => Display::fmt(item, f)?,
+            ItemKind::MacroDef(ref item) => Display::fmt(item, f)?,
+            ItemKind::Macro(ref item) => Display::fmt(item, f)?,
         }
         Ok(())
     }
@@ -746,21 +748,29 @@ impl Display for ForeignStatic {
 
 impl Display for ForeignFn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "fn {}{}{}", self.name, self.generics, self.sig)
+        write!(f, "fn {}", self.name)?;
+        display_generics(f, &self.generics)?;
+        Display::fmt(&self.sig, f)?;
+        display_where(f, &self.generics)
     }
 }
 
 impl Display for Fn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}{}{}", fn_head(&self.header), self.name, self.generics, self.sig)?;
+        write!(f, "{} {}", fn_head(&self.header), self.name)?;
+        display_generics(f, &self.generics)?;
+        Display::fmt(&self.sig, f)?;
+        display_where(f, &self.generics)?;
         Display::fmt(&self.block, f)
     }
 }
 
 impl Display for Trait {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}{}", trait_head(self.is_auto, self.is_unsafe), self.name, self.generics)?;
+        write!(f, "{}{}", trait_head(self.is_auto, self.is_unsafe), self.name)?;
+        display_generics(f, &self.generics)?;
         try_display_type_param_bounds(f, &self.bounds)?;
+        display_where(f, &self.generics)?;
         display_items_block!(f, &self.items)
     }
 }
@@ -789,8 +799,10 @@ impl Display for ConstTraitItem {
 
 impl Display for TypeTraitItem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "type {}{}", self.name, self.generics)?;
+        write!(f, "type {}", self.name)?;
+        display_generics(f, &self.generics)?;
         try_display_type_param_bounds(f, &self.bounds)?;
+        display_where(f, &self.generics)?;
         if let Some(ref ty) = self.ty {
             write!(f, " = {}", ty)?;
         }
@@ -810,8 +822,74 @@ impl Display for MethodTraitItem {
 
 impl Display for MethodSig {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}{}", fn_head(&self.header), self.name, self.generics)?;
-        Display::fmt(&self.sig, f)
+        write!(f, "{} {}", fn_head(&self.header), self.name)?;
+        display_generics(f, &self.generics)?;
+        Display::fmt(&self.sig, f)?;
+        display_where(f, &self.generics)
+    }
+}
+
+impl Display for Impl {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", impl_head(self.is_unsafe, self.is_default))?;
+        display_generics(f, &self.generics)?;
+        write!(f, " ")?;
+
+        if self.is_neg {
+            write!(f, "!")?;
+        }
+        if let Some(ref trait_ref) = self.trait_ref {
+            Display::fmt(trait_ref, f)?;
+            write!(f, " for {}", self.ty)?;
+        } else {
+            Display::fmt(&self.ty, f)?;
+        }
+        display_where(f, &self.generics)?;
+
+        display_lines!(f, &self.items, "")
+    }
+}
+
+impl Display for ImplItem {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        display_attrs(f, &self.attrs)?;
+        display_vis(f, &self.vis)?;
+        write!(f, "{}", impl_item_head(self.is_default))?;
+
+        let mut is_method = false;
+        match self.item {
+            ImplItemKind::Const(ref item) => Display::fmt(item, f)?,
+            ImplItemKind::Type(ref item) => Display::fmt(item, f)?,
+            ImplItemKind::Existential(ref item) => Display::fmt(item, f)?,
+            ImplItemKind::Method(ref item) => {
+                is_method = true;
+                Display::fmt(item, f)?
+            }
+            ImplItemKind::Macro(ref item) => Display::fmt(item, f)?,
+        }
+        if !is_method {
+            write!(f, ";")?;
+        }
+        Ok(())
+    }
+}
+
+impl Display for TypeImplItem {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "type {}{} = {}", self.name, self.generics, self.ty)
+    }
+}
+
+impl Display for ExistentialImplItem {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "existential type {}{}: {}", self.name, self.generics, self.bounds)
+    }
+}
+
+impl Display for MethodImplItem {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        Display::fmt(&self.sig, f)?;
+        Display::fmt(&self.block, f)
     }
 }
 
@@ -1053,6 +1131,12 @@ impl Display for ReturnExpr {
     }
 }
 
+impl Display for MacroDef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "macro_rules! {} {{\n    {}\n}}", self.name, self.def)
+    }
+}
+
 impl Display for MacroStmt {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         display_attrs(f, &self.attrs)?;
@@ -1165,6 +1249,22 @@ fn display_path_segments(f: &mut fmt::Formatter, segments: &[PathSegment]) -> fm
 }
 
 #[inline]
+fn display_generics(f: &mut fmt::Formatter, generics: &Generics) -> fmt::Result {
+    if !generics.is_empty() {
+        display_lists!(f, "<", ", ", ">", &generics.lifetime_defs, &generics.type_params)?;
+    }
+    Ok(())
+}
+
+#[inline]
+fn display_where(f: &mut fmt::Formatter, generics: &Generics) -> fmt::Result {
+    if !generics.wh.is_empty() {
+        write!(f, " where {}", generics.wh)?;
+    }
+    Ok(())
+}
+
+#[inline]
 fn display_args(f: &mut fmt::Formatter, args: &Vec<Arg>) -> fmt::Result {
     display_lists!(f, "(", ", ", ")", args)
 }
@@ -1246,6 +1346,17 @@ fn fn_head(header: &FnHeader) -> String {
 }
 
 #[inline]
+fn extern_head(abi: &str) -> String {
+    let mut head = String::new();
+    if abi != r#""Rust""# {
+        head.push_str("extern ");
+        head.push_str(abi);
+        head.push_str(" ");
+    }
+    head
+}
+
+#[inline]
 fn trait_head(is_auto: bool, is_unsafe: bool) -> String {
     let mut head = String::new();
     if is_auto {
@@ -1259,12 +1370,23 @@ fn trait_head(is_auto: bool, is_unsafe: bool) -> String {
 }
 
 #[inline]
-fn extern_head(abi: &str) -> String {
+fn impl_head(is_unsafe: bool, is_default: bool) -> String {
     let mut head = String::new();
-    if abi != r#""Rust""# {
-        head.push_str("extern ");
-        head.push_str(abi);
-        head.push_str(" ");
+    if is_unsafe {
+        head.push_str("unsafe ");
+    }
+    if is_default {
+        head.push_str("default ");
+    }
+    head.push_str("impl");
+    head
+}
+
+#[inline]
+fn impl_item_head(is_default: bool) -> String {
+    let mut head = String::new();
+    if is_default {
+        head.push_str("default ");
     }
     head
 }
@@ -1536,7 +1658,7 @@ impl Formatter {
     }
 
     fn fmt_use_tree(&mut self, item: &UseTree) {
-        self.insert(&format!("{}", &item.path));
+        self.insert(&item.path);
         self.fmt_use_trees(&item.trees);
     }
 
@@ -2062,6 +2184,9 @@ impl Formatter {
         self.insert(&format!("const {}", item.name));
         insert_sep!(self, ":", item.ty);
         self.fmt_type(&item.ty);
+        if let Some(ref expr) = item.expr {
+            maybe_wrap!(self, " = ", "= ", expr, fmt_expr);
+        }
         self.raw_insert(";");
     }
 
@@ -2088,14 +2213,7 @@ impl Formatter {
     }
 
     fn fmt_impl(&mut self, item: &Impl) {
-        if item.is_default {
-            self.raw_insert("default ");
-        }
-        if item.is_unsafe {
-            self.raw_insert("unsafe ");
-        }
-
-        self.raw_insert("impl");
+        self.insert(&impl_head(item.is_unsafe, item.is_default));
         self.fmt_generics(&item.generics);
         self.raw_insert(" ");
         if item.is_neg {
@@ -2119,9 +2237,7 @@ impl Formatter {
     #[inline]
     fn fmt_impl_item(&mut self, item: &ImplItem) {
         self.fmt_vis(&item.vis);
-        if item.is_default {
-            self.raw_insert("default ");
-        }
+        self.insert(&impl_item_head(item.is_default));
 
         let mut is_method = false;
         match item.item {
@@ -2212,7 +2328,7 @@ impl Formatter {
     }
 
     fn fmt_block(&mut self, block: &Block) {
-        self.insert(&format!("{}", block_head(block.is_unsafe)));
+        self.insert(&block_head(block.is_unsafe));
         fmt_block!(self, &block.stmts, fmt_stmts);
     }
 
