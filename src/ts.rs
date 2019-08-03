@@ -240,8 +240,7 @@ impl Typesetter {
 
     #[inline]
     fn need_nl_indent_len(&self, prefix_len: usize, len: usize) -> bool {
-        (minus_nf!(self.left(), prefix_len) <= 0)
-                || (len > self.left() && len <= self.nl_indent_left())
+        (minus_nf!(self.left(), prefix_len) <= 0) || (len > self.left() && len <= self.nl_indent_left())
     }
 
     #[inline]
