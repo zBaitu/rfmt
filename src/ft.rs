@@ -3089,7 +3089,7 @@ impl Formatter {
         self.raw_insert(&format!("macro_rules! {}", item.name));
         self.open_brace();
         self.insert_indent();
-        self.raw_insert(&item.def);
+        self.force_insert(&item.def);
         self.nl();
         self.close_brace();
     }
@@ -3151,6 +3151,12 @@ impl Formatter {
     fn insert_indent(&mut self) {
         self.ts.insert_indent();
         self.after_indent = true;
+    }
+
+    #[inline]
+    fn force_insert(&mut self, s: &str) {
+        self.ts.force_insert(s);
+        self.clear_flag();
     }
 
     #[inline]

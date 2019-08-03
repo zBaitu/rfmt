@@ -38,7 +38,6 @@ pub struct Comment {
     pub lines: Vec<String>,
 }
 
-
 #[derive(Debug, Default)]
 pub struct Chunk {
     pub loc: Loc,

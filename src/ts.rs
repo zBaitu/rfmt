@@ -111,6 +111,11 @@ impl Typesetter {
     }
 
     #[inline]
+    pub fn force_insert(&mut self, s: &str) {
+        self.s.push_str(s);
+    }
+
+    #[inline]
     pub fn raw_insert(&mut self, s: &str) {
         raw_insert!(self, s);
     }
