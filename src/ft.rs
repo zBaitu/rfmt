@@ -449,7 +449,11 @@ impl Display for Arg {
                 _ => write!(f, ": {}", self.ty),
             }
         } else {
-            Display::fmt(&self.ty, f)
+            if let PattenKind::Ident(ref patten) = self.patten.patten {
+                write!(f, "{}{}", ident_patten_head(patten.is_ref, patten.is_mut), self.ty)
+            } else {
+                Display::fmt(&self.ty, f)
+            }
         }
     }
 }
@@ -677,7 +681,7 @@ impl Display for Impl {
         }
         display_where(f, &self.generics)?;
 
-        display_lines!(f, &self.items, "")
+        display_block!(f, &self.items)
     }
 }
 
@@ -2496,6 +2500,9 @@ impl Formatter {
         if arg.has_patten {
             self.fmt_patten(&arg.patten);
             self.raw_insert(": ");
+        }
+        if let PattenKind::Ident(ref patten) = arg.patten.patten {
+            self.insert(&ident_patten_head(patten.is_ref, patten.is_mut));
         }
         self.fmt_type(&arg.ty);
     }
