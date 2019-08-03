@@ -2609,7 +2609,11 @@ impl Formatter {
         self.fmt_path(&patten.path, true);
 
         if patten.fields.is_empty() {
-            self.raw_insert("{}");
+            if patten.omit {
+                self.raw_insert("{..}");
+            } else {
+                self.raw_insert("{}");
+            }
             return;
         }
 
