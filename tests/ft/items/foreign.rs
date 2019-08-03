@@ -4,7 +4,7 @@ extern { type bool; }
 
 extern "C" {
     static a: bool;
-    pub fn f<T>(a: bool) -> i32;
+    pub fn f<T>(a: bool) -> i32 where T: bool;
 }
 
 extern "Rust" {

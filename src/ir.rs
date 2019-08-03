@@ -561,6 +561,7 @@ pub struct Fn {
 pub struct MethodSig {
     pub header: FnHeader,
     pub name: String,
+    pub generics: Generics,
     pub sig: FnSig,
 }
 
@@ -578,7 +579,6 @@ pub struct Trait {
 pub struct TraitItem {
     pub loc: Loc,
     pub attrs: Vec<AttrKind>,
-    pub generics: Generics,
     pub item: TraitItemKind,
 }
 
@@ -600,6 +600,7 @@ pub struct ConstTraitItem {
 #[derive(Debug)]
 pub struct TypeTraitItem {
     pub name: String,
+    pub generics: Generics,
     pub bounds: TypeParamBounds,
     pub ty: Option<Type>,
 }
@@ -644,12 +645,14 @@ pub type ConstImplItem = Const;
 #[derive(Debug)]
 pub struct TypeImplItem {
     pub name: String,
+    pub generics: Generics,
     pub ty: Type,
 }
 
 #[derive(Debug)]
 pub struct ExistentialImplItem {
     pub name: String,
+    pub generics: Generics,
     pub bounds: TypeParamBounds,
 }
 
