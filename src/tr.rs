@@ -908,7 +908,7 @@ impl Translator {
         let name = ident_to_string(&binding.ident);
         let binding = match binding.kind {
             ast::AssocTyConstraintKind::Equality { ref ty, } => TypeBindingKind::Eq(self.trans_type(ty)),
-            ast::AssocTyConstraintKind::Bound { ref bounds, } => 
+            ast::AssocTyConstraintKind::Bound { ref bounds, } =>
                     TypeBindingKind::Bound(self.trans_type_param_bounds(bounds)),
         };
         self.set_loc(&loc);
@@ -1661,7 +1661,8 @@ impl Translator {
             ast::ExprKind::Range(ref start, ref end, limit) => {
                 ExprKind::Range(Box::new(self.trans_range_expr(start, end, limit)))
             },
-            ast::ExprKind::Block(ref block, ref label) => ExprKind::Block(Box::new(self.trans_block_expr(block, label))),
+            ast::ExprKind::Block(ref block, ref label) =>
+                    ExprKind::Block(Box::new(self.trans_block_expr(block, label))),
             ast::ExprKind::If(ref expr, ref block, ref br) => {
                 ExprKind::If(Box::new(self.trans_if_expr(expr, block, br)))
             },
