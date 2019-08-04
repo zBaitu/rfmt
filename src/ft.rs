@@ -4,9 +4,9 @@ use std::fmt::{self, Display};
 use ir::*;
 use ts::*;
 
+use crate::{need_nl_indent, need_wrap};
 use crate::ir;
 use crate::ts;
-use crate::{need_nl_indent, need_wrap};
 
 macro_rules! display_lists {
     ($f:expr, $open:expr, $sep:expr, $close:expr, $($lists:expr),+) => ({
@@ -168,7 +168,7 @@ impl Display for Item {
                 writeln!(f, "mod {} {{", item.name)?;
                 Display::fmt(item, f)?;
                 return write!(f, "}}");
-            },
+            }
             ItemKind::ModDecl(ref item) => Display::fmt(item, f)?,
             ItemKind::ExternCrate(ref item) => Display::fmt(item, f)?,
             ItemKind::Use(ref item) => Display::fmt(item, f)?,
@@ -334,7 +334,7 @@ impl Display for TypeBinding {
             TypeBindingKind::Bound(ref bounds) => {
                 write!(f, "{}: ", self.name)?;
                 display_lists!(f, "+", &bounds.0)
-            },
+            }
         }
     }
 }
@@ -500,10 +500,10 @@ impl Display for StructBody {
         match self {
             StructBody::Struct(ref fields) => {
                 display_fields_block!(f, fields)
-            },
+            }
             StructBody::Tuple(ref fields) => {
                 display_lists!(f, "(", ", ", ")", fields)
-            },
+            }
             StructBody::Unit => Ok(()),
         }
     }
@@ -697,7 +697,7 @@ impl Display for ImplItem {
             ImplItemKind::Method(ref item) => {
                 is_method = true;
                 Display::fmt(item, f)?
-            },
+            }
             ImplItemKind::Macro(ref item) => Display::fmt(item, f)?,
         }
         if !is_method {
@@ -730,6 +730,7 @@ impl Display for Patten {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.patten {
             PattenKind::Wildcard => write!(f, "_"),
+            PattenKind::Symbol(ref patten) => Display::fmt(patten, f),
             PattenKind::Literal(ref patten) => Display::fmt(patten, f),
             PattenKind::Range(ref patten) => Display::fmt(patten, f),
             PattenKind::Ref(ref patten) => Display::fmt(patten, f),
@@ -800,24 +801,19 @@ impl Display for StructFieldPatten {
 impl Display for EnumPatten {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(&self.path, f)?;
-        display_omit_pattens(f, &self.pattens, &self.omit_pos)
+        display_lists!(f, "(", ", ", ")", &self.pattens)
     }
 }
 
 impl Display for TuplePatten {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        display_omit_pattens(f, &self.pattens, &self.omit_pos)
+        display_lists!(f, "(", ", ", ")", &self.pattens)
     }
 }
 
 impl Display for SlicePatten {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let omit = if let Some(ref patten) = self.omit {
-            vec![Chunk::new(patten.to_string() + "..")]
-        } else {
-            Vec::new()
-        };
-        display_lists!(f, "[", ", ", "]", &self.start, &omit, &self.end)
+        display_lists!(f, "[", ", ", "]", &self.pattens)
     }
 }
 
@@ -873,9 +869,8 @@ impl Display for Expr {
             ExprKind::Range(ref expr) => Display::fmt(expr, f),
             ExprKind::Block(ref expr) => Display::fmt(expr, f),
             ExprKind::If(ref expr) => Display::fmt(expr, f),
-            ExprKind::IfLet(ref expr) => Display::fmt(expr, f),
             ExprKind::While(ref expr) => Display::fmt(expr, f),
-            ExprKind::WhileLet(ref expr) => Display::fmt(expr, f),
+            ExprKind::Let(ref expr) => Display::fmt(expr, f),
             ExprKind::For(ref expr) => Display::fmt(expr, f),
             ExprKind::Loop(ref expr) => Display::fmt(expr, f),
             ExprKind::Break(ref expr) => Display::fmt(expr, f),
@@ -1004,19 +999,6 @@ impl Display for IfExpr {
     }
 }
 
-impl Display for IfLetExpr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "if let ")?;
-        display_pattens(f, &self.pattens)?;
-        write!(f, " = {}", self.expr)?;
-        Display::fmt(&self.block, f)?;
-        if let Some(ref br) = self.br {
-            write!(f, " else {}", br)?
-        }
-        Ok(())
-    }
-}
-
 impl Display for WhileExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if let Some(ref label) = self.label {
@@ -1027,15 +1009,10 @@ impl Display for WhileExpr {
     }
 }
 
-impl Display for WhileLetExpr {
+impl Display for LetExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(ref label) = self.label {
-            writeln!(f, "{}:", label)?;
-        }
-        write!(f, "while ")?;
         display_pattens(f, &self.pattens)?;
-        write!(f, " = {}", self.expr)?;
-        Display::fmt(&self.block, f)
+        write!(f, " = {}", self.expr)
     }
 }
 
@@ -1277,28 +1254,6 @@ fn display_args(f: &mut fmt::Formatter, args: &Vec<Arg>) -> fmt::Result {
 }
 
 #[inline]
-fn display_omit_pattens(f: &mut fmt::Formatter, pattens: &Vec<Patten>, omit_pos: &Option<usize>) -> fmt::Result {
-    match *omit_pos {
-        Some(pos) => {
-            write!(f, "(")?;
-            display_lists!(f, ", ", &pattens[..pos])?;
-            if pos != 0 {
-                write!(f, ", ")?;
-            }
-            write!(f, "..")?;
-            if pos != pattens.len() {
-                write!(f, ", ")?;
-            }
-            display_lists!(f, ", ", &pattens[pos..])?;
-            write!(f, ")")
-        },
-        None => {
-            display_lists!(f, "(", ", ", ")", pattens)
-        },
-    }
-}
-
-#[inline]
 fn display_pattens(f: &mut fmt::Formatter, pattens: &Vec<Patten>) -> fmt::Result {
     display_lists!(f, " | ", pattens)
 }
@@ -1487,7 +1442,7 @@ fn exract_if_else_value(expr: &IfExpr) -> (&Expr, &Expr) {
                 StmtKind::Expr(ref expr, _) => expr,
                 _ => unreachable!(),
             }
-        },
+        }
         _ => unreachable!(),
     };
 
@@ -1794,7 +1749,7 @@ impl Formatter {
                     attr_group.clear();
 
                     self.fmt_doc(doc);
-                },
+                }
                 AttrKind::Attr(ref attr) => {
                     if self.has_leading_comments(&attr.loc) {
                         self.fmt_attr_group(&attr_group);
@@ -1803,7 +1758,7 @@ impl Formatter {
                         self.fmt_leading_comments(&attr.loc);
                     }
                     attr_group.push(attr);
-                },
+                }
             }
         }
 
@@ -2141,11 +2096,11 @@ impl Formatter {
             TypeBindingKind::Eq(ref ty) => {
                 self.raw_insert("=");
                 self.fmt_type(ty);
-            },
+            }
             TypeBindingKind::Bound(ref bounds) => {
                 self.raw_insert(": ");
                 fmt_lists!(self, "+", "+", &bounds.0, fmt_type_param_bound);
-            },
+            }
         }
     }
 
@@ -2196,7 +2151,7 @@ impl Formatter {
             Some(ref qself) => {
                 maybe_wrap!(self, ty);
                 self.fmt_qself_path(qself, &ty.path, from_expr);
-            },
+            }
             None => self.fmt_path(&ty.path, from_expr),
         }
     }
@@ -2493,7 +2448,7 @@ impl Formatter {
             ImplItemKind::Method(ref item) => {
                 is_method = true;
                 self.fmt_method_impl_item(item);
-            },
+            }
             ImplItemKind::Macro(ref item) => self.fmt_macro(item),
         }
         if !is_method {
@@ -2622,6 +2577,7 @@ impl Formatter {
         maybe_nl!(self, patten);
         match patten.patten {
             PattenKind::Wildcard => self.insert("_"),
+            PattenKind::Symbol(ref patten) => self.insert(patten),
             PattenKind::Literal(ref patten) => self.fmt_expr(patten),
             PattenKind::Range(ref patten) => self.fmt_range_patten(patten),
             PattenKind::Ref(ref patten) => self.fmt_ref_patten(patten),
@@ -2722,48 +2678,17 @@ impl Formatter {
     #[inline]
     fn fmt_enum_patten(&mut self, patten: &EnumPatten) {
         self.fmt_path(&patten.path, true);
-        self.fmt_omit_pattens(&patten.pattens, &patten.omit_pos);
+        fmt_comma_lists!(self, "(", ")", &patten.pattens, fmt_patten);
     }
 
     #[inline]
     fn fmt_tuple_patten(&mut self, patten: &TuplePatten) {
-        self.fmt_omit_pattens(&patten.pattens, &patten.omit_pos);
-    }
-
-    #[inline]
-    fn fmt_omit_pattens(&mut self, pattens: &Vec<Patten>, omit_pos: &Option<usize>) {
-        match *omit_pos {
-            Some(pos) => {
-                let omit = vec![Chunk::new("..")];
-                fmt_comma_lists!(self, "(", ")", &pattens[..pos], fmt_patten,
-                                 &omit, fmt_chunk, &pattens[pos..], fmt_patten);
-            },
-            None => {
-                fmt_comma_lists!(self, "(", ")", pattens, fmt_patten);
-            },
-        }
+        fmt_comma_lists!(self, "(", ")", &patten.pattens, fmt_patten);
     }
 
     #[inline]
     fn fmt_slice_patten(&mut self, patten: &SlicePatten) {
-        match patten.omit {
-            Some(ref omit) => {
-                fmt_comma_lists!(self, "[", "]", &patten.start, fmt_patten,
-                                 &vec![omit], fmt_slice_omit_patten, &patten.end, fmt_patten);
-            },
-            None => {
-                fmt_comma_lists!(self, "[", "]", &patten.start, fmt_patten, &patten.end, fmt_patten);
-            },
-        }
-    }
-
-    #[inline]
-    fn fmt_slice_omit_patten(&mut self, patten: &Patten) {
-        match patten.patten {
-            PattenKind::Wildcard => {},
-            _ => self.fmt_patten(&patten),
-        }
-        self.raw_insert("..");
+        fmt_comma_lists!(self, "[", "]", &patten.pattens, fmt_patten);
     }
 
     #[inline]
@@ -2801,9 +2726,8 @@ impl Formatter {
             ExprKind::Range(ref expr) => self.fmt_range_expr(expr),
             ExprKind::Block(ref expr) => self.fmt_block_expr(expr),
             ExprKind::If(ref expr) => self.fmt_if_expr(expr),
-            ExprKind::IfLet(ref expr) => self.fmt_if_let_expr(expr),
             ExprKind::While(ref expr) => self.fmt_while_expr(expr),
-            ExprKind::WhileLet(ref expr) => self.fmt_while_let_expr(expr),
+            ExprKind::Let(ref expr) => self.fmt_let_expr(expr),
             ExprKind::For(ref expr) => self.fmt_for_expr(expr),
             ExprKind::Loop(ref expr) => self.fmt_loop_expr(expr),
             ExprKind::Break(ref expr) => self.fmt_break_expr(expr),
@@ -2999,21 +2923,6 @@ impl Formatter {
     }
 
     #[inline]
-    fn fmt_if_let_expr(&mut self, expr: &IfLetExpr) {
-        self.block_non_sep = false;
-        self.raw_insert("if let ");
-        self.fmt_pattens(&expr.pattens);
-        maybe_wrap!(self, " = ", "= ", expr.expr, fmt_expr);
-        self.fmt_block(&expr.block);
-
-        if let Some(ref br) = expr.br {
-            self.block_non_sep = true;
-            self.raw_insert(" else ");
-            self.fmt_expr(br);
-        }
-    }
-
-    #[inline]
     fn fmt_while_expr(&mut self, expr: &WhileExpr) {
         self.fmt_label(&expr.label);
         self.raw_insert("while ");
@@ -3031,12 +2940,10 @@ impl Formatter {
     }
 
     #[inline]
-    fn fmt_while_let_expr(&mut self, expr: &WhileLetExpr) {
-        self.fmt_label(&expr.label);
-        self.raw_insert("while let ");
+    fn fmt_let_expr(&mut self, expr: &LetExpr) {
+        self.raw_insert("let ");
         self.fmt_pattens(&expr.pattens);
         maybe_wrap!(self, " = ", "= ", expr.expr, fmt_expr);
-        self.fmt_block(&expr.block);
     }
 
     #[inline]
@@ -3102,11 +3009,11 @@ impl Formatter {
             ExprKind::Block(..) => {
                 self.raw_insert(" => ");
                 self.fmt_expr(&arm.body);
-            },
+            }
             _ => {
                 self.raw_insert(" =>");
                 maybe_wrap!(self, " ", "", &arm.body, fmt_expr);
-            },
+            }
         }
         self.raw_insert(",");
     }
@@ -3136,7 +3043,7 @@ impl Formatter {
             _ => {
                 self.raw_insert(" ");
                 self.fmt_expr(&expr.expr);
-            },
+            }
         }
     }
 
@@ -3152,11 +3059,11 @@ impl Formatter {
 
         self.fmt_patten(&arg.patten);
         match arg.ty.ty {
-            TypeKind::Symbol(ref s) if s == &"_" => {},
+            TypeKind::Symbol(ref s) if s == &"_" => {}
             _ => {
                 self.raw_insert(": ");
                 self.fmt_type(&arg.ty)
-            },
+            }
         }
     }
 

@@ -697,7 +697,7 @@ impl Block {
                 } else {
                     false
                 }
-            },
+            }
             _ => false,
         }
     }
@@ -735,6 +735,7 @@ pub struct Patten {
 #[derive(Debug)]
 pub enum PattenKind {
     Wildcard,
+    Symbol(&'static str),
     Literal(Expr),
     Range(RangePatten),
     Ref(Box<RefPatten>),
@@ -789,20 +790,16 @@ pub struct StructFieldPatten {
 pub struct EnumPatten {
     pub path: Path,
     pub pattens: Vec<Patten>,
-    pub omit_pos: Option<usize>,
 }
 
 #[derive(Debug)]
 pub struct TuplePatten {
     pub pattens: Vec<Patten>,
-    pub omit_pos: Option<usize>,
 }
 
 #[derive(Debug)]
 pub struct SlicePatten {
-    pub start: Vec<Patten>,
-    pub omit: Option<Patten>,
-    pub end: Vec<Patten>,
+    pub pattens: Vec<Patten>,
 }
 
 #[derive(Debug)]
@@ -831,9 +828,8 @@ pub enum ExprKind {
     Range(Box<RangeExpr>),
     Block(Box<BlockExpr>),
     If(Box<IfExpr>),
-    IfLet(Box<IfLetExpr>),
     While(Box<WhileExpr>),
-    WhileLet(Box<WhileLetExpr>),
+    Let(Box<LetExpr>),
     For(Box<ForExpr>),
     Loop(Box<LoopExpr>),
     Break(Box<BreakExpr>),
@@ -931,14 +927,6 @@ pub struct IfExpr {
 }
 
 #[derive(Debug)]
-pub struct IfLetExpr {
-    pub pattens: Vec<Patten>,
-    pub expr: Expr,
-    pub block: Block,
-    pub br: Option<Expr>,
-}
-
-#[derive(Debug)]
 pub struct WhileExpr {
     pub label: Option<String>,
     pub expr: Expr,
@@ -946,11 +934,9 @@ pub struct WhileExpr {
 }
 
 #[derive(Debug)]
-pub struct WhileLetExpr {
-    pub label: Option<String>,
+pub struct LetExpr {
     pub pattens: Vec<Patten>,
     pub expr: Expr,
-    pub block: Block,
 }
 
 #[derive(Debug)]
