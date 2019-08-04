@@ -771,6 +771,15 @@ impl Display for IdentPatten {
 impl Display for StructPatten {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(&self.path, f)?;
+
+        if self.fields.is_empty() {
+            if self.omit {
+                return write!(f, " {{..}}");
+            } else {
+                return write!(f, " {{}}");
+            }
+        }
+
         writeln!(f, " {{")?;
         display_fields!(f, &self.fields)?;
         if self.omit {
@@ -2649,9 +2658,9 @@ impl Formatter {
 
         if patten.fields.is_empty() {
             if patten.omit {
-                self.raw_insert("{..}");
+                self.raw_insert(" {..}");
             } else {
-                self.raw_insert("{}");
+                self.raw_insert(" {}");
             }
             return;
         }
