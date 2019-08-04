@@ -1110,19 +1110,8 @@ impl Display for ClosureExpr {
         Display::fmt(&self.sig.ret, f)?;
 
         match self.expr.expr {
-            ExprKind::Block(ref block) => {
-                if block.block.stmts.len() > 1 {
-                    Display::fmt(block, f)
-                } else {
-                    match block.block.stmts[0].stmt {
-                        StmtKind::Expr(ref expr, is_semi) if !is_semi => {
-                            write!(f, " {}", expr)
-                        }
-                        _ => unreachable!(),
-                    }
-                }
-            }
-            _ => write!(f, " {}", self.expr)
+            ExprKind::Block(ref block) => Display::fmt(block, f),
+            _ => write!(f, " {}", self.expr),
         }
     }
 }
@@ -3043,13 +3032,7 @@ impl Formatter {
         self.fmt_fn_return(&expr.sig.ret, false);
 
         match expr.expr.expr {
-            ExprKind::Block(ref block) => {
-                if block.block.stmts.len() > 1 {
-                    self.fmt_block(&block.block);
-                } else {
-                    self.fmt_closure_stmt(&block.block.stmts[0]);
-                }
-            }
+            ExprKind::Block(ref block) => self.fmt_block(&block.block),
             _ => {
                 self.raw_insert(" ");
                 self.fmt_expr(&expr.expr);
@@ -3075,18 +3058,6 @@ impl Formatter {
                 self.fmt_type(&arg.ty)
             }
         }
-    }
-
-    #[inline]
-    fn fmt_closure_stmt(&mut self, stmt: &Stmt) {
-        self.try_fmt_leading_comments(&stmt.loc);
-        match stmt.stmt {
-            StmtKind::Expr(ref expr, is_semi) if !is_semi => {
-                maybe_wrap!(self, " ", "", expr, fmt_expr)
-            }
-            _ => unreachable!(),
-        }
-        self.try_fmt_trailing_comment(&stmt.loc);
     }
 
     #[inline]
