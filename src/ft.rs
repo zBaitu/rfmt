@@ -780,12 +780,12 @@ impl Display for StructPatten {
             }
         }
 
-        writeln!(f, " {{")?;
-        display_fields!(f, &self.fields)?;
+        write!(f, " {{ ")?;
+        display_lists!(f, ", ", &self.fields)?;
         if self.omit {
-            writeln!(f, "..")?;
+            write!(f, ", ..")?;
         }
-        write!(f, "}}")
+        write!(f, " }}")
     }
 }
 
@@ -1496,6 +1496,12 @@ fn exract_if_else_value(expr: &IfExpr) -> (&Expr, &Expr) {
     (if_value, else_value)
 }
 
+macro_rules! can_one_line {
+    ($sf:expr, $e:expr) => ({
+        $sf.ts.can_one_line(&$e.to_string())
+    });
+}
+
 macro_rules! maybe_nl {
     ($sf:expr, $e:ident) => ({
         if $e.loc.nl {
@@ -1633,6 +1639,10 @@ macro_rules! fmt_lists {
 
             first = false;
         })+
+    });
+
+    ($sf:expr, $($list:expr, $act:ident),+) => ({
+        fmt_lists!($sf, " ", " ", $($list, $act)+);
     });
 }
 
@@ -2665,6 +2675,11 @@ impl Formatter {
             return;
         }
 
+        if can_one_line!(self, patten) {
+            self.fmt_struct_patten_one_line(patten);
+            return;
+        }
+
         self.open_brace();
         self.fmt_struct_field_pattens(&patten.fields);
         if patten.omit {
@@ -2673,6 +2688,15 @@ impl Formatter {
             self.nl();
         }
         self.close_brace();
+    }
+
+    fn fmt_struct_patten_one_line(&mut self, patten: &StructPatten) {
+        self.raw_insert(" { ");
+        fmt_lists!(self, &patten.fields, fmt_struct_field_patten);
+        if patten.omit {
+            self.raw_insert(" ..");
+        }
+        self.raw_insert(" }");
     }
 
     #[inline]

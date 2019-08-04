@@ -165,6 +165,11 @@ impl Typesetter {
     }
 
     #[inline]
+    pub fn can_one_line(&self, s: &str) -> bool {
+        self.left() > s.len()
+    }
+
+    #[inline]
     pub fn need_wrap(&self, list: &[&str]) -> bool {
         let (prefix_len, len) = list_len_info(list);
         self.need_wrap_len(prefix_len, len)
