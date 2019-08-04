@@ -3097,8 +3097,17 @@ impl Formatter {
         if let Some(ref guard) = arm.guard {
             maybe_wrap!(self, " if ", "if ", guard, fmt_expr);
         }
-        self.raw_insert(" =>");
-        maybe_wrap!(self, " ", "", &arm.body, fmt_expr);
+
+        match arm.body.expr {
+            ExprKind::Block(..) => {
+                self.raw_insert(" => ");
+                self.fmt_expr(&arm.body);
+            }
+            _ => {
+                self.raw_insert(" =>");
+                maybe_wrap!(self, " ", "", &arm.body, fmt_expr);
+            }
+        }
         self.raw_insert(",");
     }
 
