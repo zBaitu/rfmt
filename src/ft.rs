@@ -1901,9 +1901,7 @@ impl Formatter {
         self.fmt_vis(&item.vis);
 
         match item.item {
-            ItemKind::ExternCrate(ref item) => self.fmt_extern_crate(item),
-            ItemKind::Use(ref item) => self.fmt_use(item),
-            ItemKind::ModDecl(ref item) => self.fmt_mod_decl(item),
+            ItemKind::ExternCrate(..) | ItemKind::Use(..) | ItemKind::ModDecl(..) => unreachable!(),
             ItemKind::Mod(ref item) => self.fmt_sub_mod(item),
             ItemKind::TypeAlias(ref item) => self.fmt_type_alias(item),
             ItemKind::TraitAlias(ref item) => self.fmt_trait_alias(item),

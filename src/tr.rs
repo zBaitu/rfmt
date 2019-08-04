@@ -520,12 +520,8 @@ impl Translator {
             ast::ItemKind::Static(ref ty, mutbl, ref expr) => {
                 ItemKind::Static(self.trans_static(mutbl, ident, ty, expr))
             },
-            ast::ItemKind::Struct(ref var, ref generics) => {
-                ItemKind::Struct(self.trans_struct(ident, generics, var))
-            },
-            ast::ItemKind::Union(ref var, ref generics) => {
-                ItemKind::Union(self.trans_union(ident, generics, var))
-            },
+            ast::ItemKind::Struct(ref var, ref generics) => ItemKind::Struct(self.trans_struct(ident, generics, var)),
+            ast::ItemKind::Union(ref var, ref generics) => ItemKind::Union(self.trans_union(ident, generics, var)),
             ast::ItemKind::Enum(ref enum_def, ref generics) => {
                 ItemKind::Enum(self.trans_enum(ident, generics, enum_def))
             },
