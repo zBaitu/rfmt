@@ -2533,8 +2533,8 @@ impl Formatter {
 
     #[inline]
     fn fmt_fn_sig(&mut self, sig: &FnSig) {
-        let is_wrap = self.fmt_fn_args(&sig.args);
-        self.fmt_fn_return(&sig.ret, is_wrap);
+        self.fmt_fn_args(&sig.args);
+        self.fmt_fn_return(&sig.ret);
     }
 
     #[inline]
@@ -2559,9 +2559,9 @@ impl Formatter {
     }
 
     #[inline]
-    fn fmt_fn_return(&mut self, ret: &Return, is_wrap: bool) {
+    fn fmt_fn_return(&mut self, ret: &Return) {
         if let Some(ref ty) = ret.ret {
-            if ret.nl || is_wrap {
+            if ret.nl {
                 self.nl_indent();
                 self.raw_insert("-> ");
             } else {
@@ -3122,7 +3122,7 @@ impl Formatter {
     fn fmt_closure_expr(&mut self, expr: &ClosureExpr) {
         self.insert(&closure_head(expr.is_static, expr.is_async, expr.is_move));
         self.fmt_closure_args(&expr.sig.args);
-        self.fmt_fn_return(&expr.sig.ret, false);
+        self.fmt_fn_return(&expr.sig.ret);
 
         match expr.expr.expr {
             ExprKind::Block(ref block) => self.fmt_block(&block.block),
