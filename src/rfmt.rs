@@ -3,13 +3,13 @@ use std::fs::File;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
-use syntax::parse::{self, lexer::comments, ParseSess};
+use syntax::parse::{self, ParseSess, lexer::comments};
 use syntax::source_map::FilePathMapping;
 use syntax_pos::FileName;
 use walkdir::WalkDir;
 
-use crate::ft;
 use crate::Opt;
+use crate::ft;
 use crate::tr::{self, TrResult};
 
 macro_rules! p {
@@ -37,7 +37,7 @@ pub fn dump_ast(path: &PathBuf) {
             Err(mut e) => {
                 e.emit();
                 return;
-            }
+            },
         };
         d!(krate);
 

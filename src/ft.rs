@@ -4,9 +4,9 @@ use std::fmt::{self, Display};
 use ir::*;
 use ts::*;
 
-use crate::{need_nl_indent, need_wrap};
 use crate::ir;
 use crate::ts;
+use crate::{need_nl_indent, need_wrap};
 
 macro_rules! display_lists {
     ($f:expr, $open:expr, $sep:expr, $close:expr, $($lists:expr),+) => ({
@@ -168,7 +168,7 @@ impl Display for Item {
                 writeln!(f, "mod {} {{", item.name)?;
                 Display::fmt(item, f)?;
                 return write!(f, "}}");
-            }
+            },
             ItemKind::ModDecl(ref item) => Display::fmt(item, f)?,
             ItemKind::ExternCrate(ref item) => Display::fmt(item, f)?,
             ItemKind::Use(ref item) => Display::fmt(item, f)?,
@@ -334,7 +334,7 @@ impl Display for TypeBinding {
             TypeBindingKind::Bound(ref bounds) => {
                 write!(f, "{}: ", self.name)?;
                 display_lists!(f, "+", &bounds.0)
-            }
+            },
         }
     }
 }
@@ -500,10 +500,10 @@ impl Display for StructBody {
         match self {
             StructBody::Struct(ref fields) => {
                 display_fields_block!(f, fields)
-            }
+            },
             StructBody::Tuple(ref fields) => {
                 display_lists!(f, "(", ", ", ")", fields)
-            }
+            },
             StructBody::Unit => Ok(()),
         }
     }
@@ -697,7 +697,7 @@ impl Display for ImplItem {
             ImplItemKind::Method(ref item) => {
                 is_method = true;
                 Display::fmt(item, f)?
-            }
+            },
             ImplItemKind::Macro(ref item) => Display::fmt(item, f)?,
         }
         if !is_method {
@@ -1442,7 +1442,7 @@ fn exract_if_else_value(expr: &IfExpr) -> (&Expr, &Expr) {
                 StmtKind::Expr(ref expr, _) => expr,
                 _ => unreachable!(),
             }
-        }
+        },
         _ => unreachable!(),
     };
 
@@ -1749,7 +1749,7 @@ impl Formatter {
                     attr_group.clear();
 
                     self.fmt_doc(doc);
-                }
+                },
                 AttrKind::Attr(ref attr) => {
                     if self.has_leading_comments(&attr.loc) {
                         self.fmt_attr_group(&attr_group);
@@ -1758,7 +1758,7 @@ impl Formatter {
                         self.fmt_leading_comments(&attr.loc);
                     }
                     attr_group.push(attr);
-                }
+                },
             }
         }
 
@@ -2096,11 +2096,11 @@ impl Formatter {
             TypeBindingKind::Eq(ref ty) => {
                 self.raw_insert("=");
                 self.fmt_type(ty);
-            }
+            },
             TypeBindingKind::Bound(ref bounds) => {
                 self.raw_insert(": ");
                 fmt_lists!(self, "+", "+", &bounds.0, fmt_type_param_bound);
-            }
+            },
         }
     }
 
@@ -2151,7 +2151,7 @@ impl Formatter {
             Some(ref qself) => {
                 maybe_wrap!(self, ty);
                 self.fmt_qself_path(qself, &ty.path, from_expr);
-            }
+            },
             None => self.fmt_path(&ty.path, from_expr),
         }
     }
@@ -2448,7 +2448,7 @@ impl Formatter {
             ImplItemKind::Method(ref item) => {
                 is_method = true;
                 self.fmt_method_impl_item(item);
-            }
+            },
             ImplItemKind::Macro(ref item) => self.fmt_macro(item),
         }
         if !is_method {
@@ -3009,11 +3009,11 @@ impl Formatter {
             ExprKind::Block(..) => {
                 self.raw_insert(" => ");
                 self.fmt_expr(&arm.body);
-            }
+            },
             _ => {
                 self.raw_insert(" =>");
                 maybe_wrap!(self, " ", "", &arm.body, fmt_expr);
-            }
+            },
         }
         self.raw_insert(",");
     }
@@ -3043,7 +3043,7 @@ impl Formatter {
             _ => {
                 self.raw_insert(" ");
                 self.fmt_expr(&expr.expr);
-            }
+            },
         }
     }
 
@@ -3059,11 +3059,11 @@ impl Formatter {
 
         self.fmt_patten(&arg.patten);
         match arg.ty.ty {
-            TypeKind::Symbol(ref s) if s == &"_" => {}
+            TypeKind::Symbol(ref s) if s == &"_" => {},
             _ => {
                 self.raw_insert(": ");
                 self.fmt_type(&arg.ty)
-            }
+            },
         }
     }
 

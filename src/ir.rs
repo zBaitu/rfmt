@@ -691,13 +691,7 @@ impl Block {
         }
 
         match &self.stmts[0].stmt {
-            StmtKind::Expr(ref expr, _) => {
-                if let ExprKind::Literal(_) = expr.expr {
-                    true
-                } else {
-                    false
-                }
-            }
+            StmtKind::Expr(ref expr, _) => if let ExprKind::Literal(_) = expr.expr { true } else { false },
             _ => false,
         }
     }
