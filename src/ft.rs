@@ -983,6 +983,11 @@ impl Display for BlockExpr {
 
 impl Display for IfExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if is_if_one_line(self) {
+            let (if_value, else_value) = exract_if_else_value(self);
+            return write!(f, "if {} {{ {} }} else {{ {} }}", self.expr, if_value, else_value);
+        }
+
         write!(f, "if {}", self.expr)?;
         Display::fmt(&self.block, f)?;
         if let Some(ref br) = self.br {
@@ -1445,6 +1450,43 @@ fn closure_head(is_static: bool, is_async: bool, is_move: bool) -> String {
     }
     head
 }
+
+#[inline]
+fn is_if_one_line(expr: &IfExpr) -> bool {
+    if expr.br.is_none() {
+        return false;
+    }
+
+    if !expr.block.is_one_literal_expr() {
+        return false;
+    }
+
+    match expr.br.as_ref().unwrap().expr {
+        ExprKind::Block(ref block) => block.block.is_one_literal_expr(),
+        _ => false,
+    }
+}
+
+#[inline]
+fn exract_if_else_value(expr: &IfExpr) -> (&Expr, &Expr) {
+    let if_value = match &expr.block.stmts[0].stmt {
+        StmtKind::Expr(ref expr, _) => expr,
+        _ => unreachable!(),
+    };
+
+    let else_value = match expr.br.as_ref().unwrap().expr {
+        ExprKind::Block(ref block) => {
+            match &block.block.stmts[0].stmt {
+                StmtKind::Expr(ref expr, _) => expr,
+                _ => unreachable!(),
+            }
+        }
+        _ => unreachable!(),
+    };
+
+    (if_value, else_value)
+}
+
 macro_rules! maybe_nl {
     ($sf:expr, $e:ident) => ({
         if $e.loc.nl {
@@ -2895,6 +2937,10 @@ impl Formatter {
 
     #[inline]
     fn fmt_if_expr(&mut self, expr: &IfExpr) {
+        if is_if_one_line(expr) {
+            return self.fmt_if_expr_one_line(expr);
+        }
+
         self.block_non_sep = false;
         self.raw_insert("if ");
         self.fmt_expr(&expr.expr);
@@ -2905,6 +2951,20 @@ impl Formatter {
             self.raw_insert(" else ");
             self.fmt_expr(br);
         }
+    }
+
+    #[inline]
+    fn fmt_if_expr_one_line(&mut self, expr: &IfExpr) {
+        self.block_non_sep = false;
+        self.raw_insert("if ");
+        self.fmt_expr(&expr.expr);
+
+        let (if_value, else_value) = exract_if_else_value(expr);
+        self.raw_insert(" { ");
+        self.fmt_expr(if_value);
+        self.raw_insert(" } else { ");
+        self.fmt_expr(else_value);
+        self.raw_insert(" }");
     }
 
     #[inline]

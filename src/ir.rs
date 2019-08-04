@@ -683,6 +683,22 @@ pub struct Block {
     pub stmts: Vec<Stmt>,
 }
 
+impl Block {
+    #[inline]
+    pub fn is_one_literal_expr(&self) -> bool {
+        if self.stmts.len() != 1 {
+            return false;
+        }
+
+        match &self.stmts[0].stmt {
+            StmtKind::Expr(ref expr, _) => {
+                if let ExprKind::Literal(_) = expr.expr { true } else { false }
+            }
+            _ => false
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Stmt {
     pub loc: Loc,
