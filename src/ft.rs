@@ -1543,11 +1543,11 @@ macro_rules! fmt_item_groups {
         for item in $items {
             match item.item {
                 $item_kind(ref e) => {
-                    if $sf.has_leading_comments(item.loc.start) {
+                    if $sf.has_leading_comments(&item.loc) {
                         fmt_item_group!($sf, &group, $item_type, $fmt_item);
                         group.clear();
 
-                        $sf.fmt_leading_comments(item.loc.start);
+                        $sf.fmt_leading_comments(&item.loc);
                     }
                     group.push((&item.loc, &item.vis, &item.attrs, e));
                 }
@@ -1618,12 +1618,14 @@ macro_rules! fmt_block {
             $sf.raw_insert(" {");
         }
 
-        let loc = $sf.last_loc;
-        $sf.try_fmt_block_trailing_comment(&loc);
+        let loc = Loc {
+            start: $sf.block_locs.last().unwrap().end,
+            ..Default::default()
+        };
         $sf.indent();
         $sf.nl();
         $sf.$fmt($block);
-        $sf.try_fmt_block_leading_comments(&loc);
+        $sf.try_fmt_leading_comments(&loc);
 
         $sf.outdent();
         $sf.insert_indent();
@@ -1659,7 +1661,7 @@ struct Formatter {
 
     leading_cmnts: HashMap<Pos, Vec<String>>,
     trailing_cmnts: HashMap<Pos, String>,
-    last_loc: Loc,
+    block_locs: Vec<Loc>,
 
     after_indent: bool,
     after_wrap: bool,
@@ -1673,7 +1675,7 @@ impl Formatter {
 
             leading_cmnts,
             trailing_cmnts,
-            last_loc: Default::default(),
+            block_locs: Vec::new(),
 
             after_indent: false,
             after_wrap: false,
@@ -1690,27 +1692,20 @@ impl Formatter {
     }
 
     #[inline]
+    fn has_leading_comments(&self, loc: &Loc) -> bool {
+        self.leading_cmnts.contains_key(&loc.start)
+    }
+
+    #[inline]
     fn try_fmt_leading_comments(&mut self, loc: &Loc) {
-        if self.has_leading_comments(loc.start) {
-            self.fmt_leading_comments(loc.start);
+        if self.has_leading_comments(loc) {
+            self.fmt_leading_comments(loc);
         }
     }
 
     #[inline]
-    fn try_fmt_block_leading_comments(&mut self, loc: &Loc) {
-        if self.has_leading_comments(loc.end) {
-            self.fmt_leading_comments(loc.end);
-        }
-    }
-
-    #[inline]
-    fn has_leading_comments(&self, pos: Pos) -> bool {
-        self.leading_cmnts.contains_key(&pos)
-    }
-
-    #[inline]
-    fn fmt_leading_comments(&mut self, pos: Pos) {
-        for cmnt in &self.leading_cmnts.remove(&pos).unwrap() {
+    fn fmt_leading_comments(&mut self, loc: &Loc) {
+        for cmnt in &self.leading_cmnts.remove(&loc.start).unwrap() {
             if !cmnt.is_empty() {
                 self.insert_indent();
                 self.raw_insert(cmnt);
@@ -1720,28 +1715,21 @@ impl Formatter {
     }
 
     #[inline]
+    fn has_trailing_comment(&self, loc: &Loc) -> bool {
+        self.trailing_cmnts.contains_key(&loc.end)
+    }
+
+    #[inline]
     fn try_fmt_trailing_comment(&mut self, loc: &Loc) {
-        if self.has_trailing_comment(loc.end) {
-            self.fmt_trailing_comment(loc.end);
+        if self.has_trailing_comment(loc) {
+            self.fmt_trailing_comment(loc);
         }
     }
 
     #[inline]
-    fn try_fmt_block_trailing_comment(&mut self, loc: &Loc) {
-        if self.has_trailing_comment(loc.start) {
-            self.fmt_trailing_comment(loc.start);
-        }
-    }
-
-    #[inline]
-    fn has_trailing_comment(&self, pos: Pos) -> bool {
-        self.trailing_cmnts.contains_key(&pos)
-    }
-
-    #[inline]
-    fn fmt_trailing_comment(&mut self, pos: Pos) {
+    fn fmt_trailing_comment(&mut self, loc: &Loc) {
         self.raw_insert(" ");
-        let cmnt = self.trailing_cmnts.remove(&pos).unwrap();
+        let cmnt = self.trailing_cmnts.remove(&loc.end).unwrap();
         self.raw_insert(&cmnt);
     }
 
@@ -1770,11 +1758,11 @@ impl Formatter {
                     self.fmt_doc(doc);
                 },
                 AttrKind::Attr(ref attr) => {
-                    if self.has_leading_comments(attr.loc.start) {
+                    if self.has_leading_comments(&attr.loc) {
                         self.fmt_attr_group(&attr_group);
                         attr_group.clear();
 
-                        self.fmt_leading_comments(attr.loc.start);
+                        self.fmt_leading_comments(&attr.loc);
                     }
                     attr_group.push(attr);
                 },
@@ -1848,7 +1836,6 @@ impl Formatter {
     }
 
     fn fmt_mod(&mut self, module: &Mod) {
-        self.last_loc = module.loc;
         self.fmt_group_items(&module.items);
         self.fmt_items(&module.items);
     }
@@ -1915,12 +1902,12 @@ impl Formatter {
     }
 
     fn fmt_item(&mut self, item: &Item) {
-        self.last_loc = item.loc;
         self.try_fmt_leading_comments(&item.loc);
         self.fmt_attrs(&item.attrs);
         self.insert_indent();
         self.fmt_vis(&item.vis);
 
+        self.block_locs.push(item.loc);
         match item.item {
             ItemKind::ExternCrate(..) | ItemKind::Use(..) | ItemKind::ModDecl(..) => unreachable!(),
             ItemKind::Mod(ref item) => self.fmt_sub_mod(item),
@@ -1939,6 +1926,7 @@ impl Formatter {
             ItemKind::MacroDef(ref item) => self.fmt_macro_def(item),
             ItemKind::Macro(ref item) => self.fmt_macro_item(item),
         }
+        self.block_locs.pop();
 
         self.try_fmt_trailing_comment(&item.loc);
         self.nl();
@@ -1965,7 +1953,6 @@ impl Formatter {
 
     #[inline]
     fn fmt_lifetime_def(&mut self, lifetime_def: &LifetimeDef) {
-        self.last_loc = lifetime_def.loc;
         maybe_nl!(self, lifetime_def);
         maybe_wrap!(self, lifetime_def);
 
@@ -1983,7 +1970,6 @@ impl Formatter {
 
     #[inline]
     fn fmt_type_param(&mut self, type_param: &TypeParam) {
-        self.last_loc = type_param.loc;
         maybe_nl!(self, type_param);
         maybe_wrap!(self, type_param);
 
@@ -2016,7 +2002,6 @@ impl Formatter {
 
     #[inline]
     fn fmt_poly_trait_ref(&mut self, poly_trait_ref: &PolyTraitRef) {
-        self.last_loc = poly_trait_ref.loc;
         self.fmt_for_lifetime_defs(&poly_trait_ref.lifetime_defs);
         self.fmt_trait_ref(&poly_trait_ref.trait_ref);
     }
@@ -2048,7 +2033,6 @@ impl Formatter {
 
     #[inline]
     fn fmt_where_clause(&mut self, clause: &WhereClause) {
-        self.last_loc = clause.loc;
         match clause.clause {
             WhereKind::LifetimeDef(ref lifetime_def) => self.fmt_lifetime_def(lifetime_def),
             WhereKind::Bound(ref bound) => self.fmt_where_bound(bound),
@@ -2070,7 +2054,6 @@ impl Formatter {
 
     #[inline]
     fn fmt_path(&mut self, path: &Path, from_expr: bool) {
-        self.last_loc = path.loc;
         maybe_nl!(self, path);
         self.fmt_path_segments(&path.segments, from_expr);
     }
@@ -2112,7 +2095,6 @@ impl Formatter {
     }
 
     fn fmt_type_binding(&mut self, binding: &TypeBinding) {
-        self.last_loc = binding.loc;
         maybe_nl!(self, binding);
         maybe_wrap!(self, binding);
 
@@ -2130,7 +2112,6 @@ impl Formatter {
     }
 
     fn fmt_paren_param(&mut self, param: &ParenParam) {
-        self.last_loc = param.loc;
         fmt_comma_lists!(self, "(", ")", &param.inputs, fmt_type);
         if let Some(ref output) = param.output {
             maybe_wrap!(self, " -> ", "-> ", output, fmt_type);
@@ -2151,7 +2132,6 @@ impl Formatter {
     }
 
     fn fmt_type(&mut self, ty: &Type) {
-        self.last_loc = ty.loc;
         maybe_nl!(self, ty);
         match ty.ty {
             TypeKind::Symbol(ref ty) => self.fmt_symbol_type(ty),
@@ -2289,7 +2269,6 @@ impl Formatter {
 
     #[inline]
     fn fmt_struct_field(&mut self, field: &StructField) {
-        self.last_loc = field.loc;
         self.fmt_vis(&field.vis);
         self.insert(&field.name);
         insert_sep!(self, ":", field.ty);
@@ -2303,7 +2282,6 @@ impl Formatter {
 
     #[inline]
     fn fmt_tuple_field(&mut self, field: &TupleField) {
-        self.last_loc = field.loc;
         maybe_nl!(self, field);
         self.try_fmt_leading_comments(&field.loc);
         self.fmt_attrs(&field.attrs);
@@ -2329,7 +2307,6 @@ impl Formatter {
 
     #[inline]
     fn fmt_enum_field(&mut self, field: &EnumField) {
-        self.last_loc = field.loc;
         self.insert(&field.name);
         self.fmt_struct_body(&field.body);
         if let Some(ref expr) = field.expr {
@@ -2349,7 +2326,6 @@ impl Formatter {
 
     #[inline]
     fn fmt_foreign_item(&mut self, item: &ForeignItem) {
-        self.last_loc = item.loc;
         self.fmt_vis(&item.vis);
         match item.item {
             ForeignKind::Type(ref item) => self.fmt_foreign_type(item),
@@ -2402,7 +2378,6 @@ impl Formatter {
 
     #[inline]
     fn fmt_trait_item(&mut self, item: &TraitItem) {
-        self.last_loc = item.loc;
         self.fmt_attrs(&item.attrs);
         match item.item {
             TraitItemKind::Const(ref item) => self.fmt_const_trait_item(item),
@@ -2469,7 +2444,6 @@ impl Formatter {
 
     #[inline]
     fn fmt_impl_item(&mut self, item: &ImplItem) {
-        self.last_loc = item.loc;
         self.fmt_vis(&item.vis);
         self.insert(&impl_item_head(item.is_default));
 
@@ -2530,7 +2504,6 @@ impl Formatter {
 
     #[inline]
     fn fmt_arg(&mut self, arg: &Arg) {
-        self.last_loc = arg.loc;
         maybe_nl!(self, arg);
         maybe_wrap!(self, arg);
 
@@ -2567,9 +2540,10 @@ impl Formatter {
     }
 
     fn fmt_block(&mut self, block: &Block) {
-        self.last_loc = block.loc;
+        self.block_locs.push(block.loc);
         self.insert(&block_head(block.is_unsafe));
         fmt_block!(self, &block.stmts, fmt_stmts);
+        self.block_locs.pop();
     }
 
     fn fmt_stmts(&mut self, stmts: &Vec<Stmt>) {
@@ -2580,7 +2554,7 @@ impl Formatter {
 
     #[inline]
     fn fmt_stmt(&mut self, stmt: &Stmt) {
-        self.last_loc = stmt.loc;
+        self.block_locs.push(stmt.loc);
         self.try_fmt_leading_comments(&stmt.loc);
         match stmt.stmt {
             StmtKind::Item(ref item) => self.fmt_item(item),
@@ -2588,10 +2562,10 @@ impl Formatter {
             StmtKind::Expr(ref expr, is_semi) => self.fmt_expr_stmt(expr, is_semi),
             StmtKind::Macro(ref mac) => self.fmt_macro_stmt(mac),
         }
+        self.block_locs.pop();
     }
 
     fn fmt_let(&mut self, local: &Let) {
-        self.last_loc = local.loc;
         self.try_fmt_leading_comments(&local.loc);
         self.fmt_attrs(&local.attrs);
         self.insert_indent();
@@ -2611,7 +2585,6 @@ impl Formatter {
     }
 
     fn fmt_patten(&mut self, patten: &Patten) {
-        self.last_loc = patten.loc;
         maybe_nl!(self, patten);
         match patten.patten {
             PattenKind::Wildcard => self.insert("_"),
@@ -2673,12 +2646,19 @@ impl Formatter {
         }
 
         self.open_brace();
+        let loc = Loc {
+            start: self.block_locs.last().unwrap().end,
+            ..Default::default()
+        };
+
         self.fmt_struct_field_pattens(&patten.fields);
         if patten.omit {
             self.insert_indent();
             self.raw_insert("..");
             self.nl();
         }
+
+        self.try_fmt_leading_comments(&loc);
         self.close_brace();
     }
 
@@ -2704,7 +2684,6 @@ impl Formatter {
 
     #[inline]
     fn fmt_struct_field_patten(&mut self, field: &StructFieldPatten) {
-        self.last_loc = field.loc;
         if field.shorthand {
             self.fmt_patten(&field.patten);
         } else {
@@ -2732,6 +2711,7 @@ impl Formatter {
 
     #[inline]
     fn fmt_expr_stmt(&mut self, expr: &Expr, is_semi: bool) {
+        self.block_locs.push(expr.loc);
         self.try_fmt_leading_comments(&expr.loc);
         self.fmt_attrs(&expr.attrs);
         self.insert_indent();
@@ -2743,10 +2723,11 @@ impl Formatter {
 
         self.try_fmt_trailing_comment(&expr.loc);
         self.nl();
+        self.block_locs.pop();
     }
 
     fn fmt_expr(&mut self, expr: &Expr) {
-        self.last_loc = expr.loc;
+        self.block_locs.push(expr.loc);
         maybe_nl!(self, expr);
         match expr.expr {
             ExprKind::Literal(ref expr) => self.fmt_literal_expr(expr),
@@ -2779,6 +2760,7 @@ impl Formatter {
             ExprKind::Return(ref expr) => self.fmt_return_expr(expr),
             ExprKind::Macro(ref expr) => self.fmt_macro(expr),
         }
+        self.block_locs.pop();
     }
 
     #[inline]
@@ -2852,6 +2834,11 @@ impl Formatter {
         }
 
         self.open_brace();
+        let loc = Loc {
+            start: self.block_locs.last().unwrap().end,
+            ..Default::default()
+        };
+
         self.fmt_struct_field_exprs(&expr.fields);
         if let Some(ref base) = expr.base {
             self.insert_indent();
@@ -2860,6 +2847,8 @@ impl Formatter {
             self.try_fmt_trailing_comment(&base.loc);
             self.nl();
         }
+
+        self.try_fmt_leading_comments(&loc);
         self.close_brace();
     }
 
@@ -2876,7 +2865,6 @@ impl Formatter {
 
     #[inline]
     fn fmt_struct_field_expr(&mut self, field: &StructFieldExpr) {
-        self.last_loc = field.loc;
         self.insert(&field.name);
         let value = field.value.to_string();
         if field.name != value {
@@ -3041,7 +3029,6 @@ impl Formatter {
 
     #[inline]
     fn fmt_arm(&mut self, arm: &Arm) {
-        self.last_loc = arm.loc;
         fmt_lists!(self, " | ", "| ", &arm.pattens, fmt_patten);
         if let Some(ref guard) = arm.guard {
             maybe_wrap!(self, " if ", "if ", guard, fmt_expr);
@@ -3135,7 +3122,6 @@ impl Formatter {
 
     #[inline]
     fn fmt_macro_stmt(&mut self, mac: &MacroStmt) {
-        self.last_loc = mac.loc;
         self.try_fmt_leading_comments(&mac.loc);
         self.fmt_attrs(&mac.attrs);
         self.insert_indent();

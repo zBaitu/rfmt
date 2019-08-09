@@ -1187,7 +1187,7 @@ impl Translator {
         let patten = self.trans_patten(&arg.pat);
         let has_patten = has_patten(arg, &patten);
         Arg {
-            loc: patten.loc,
+            loc: patten.loc.clone(),
             patten,
             ty: self.trans_type(&arg.ty),
             has_patten,
@@ -2043,11 +2043,6 @@ impl Translator {
     #[inline]
     fn loc(&mut self, sp: &ast::Span) -> Loc {
         self.trans_comments(sp.lo().0);
-
-        self.last_loc = Loc {
-            end: sp.lo().0,
-            ..Default::default()
-        };
 
         Loc {
             start: sp.lo().0,

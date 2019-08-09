@@ -1,5 +1,6 @@
 fn f() {
     'label: for a in b {
-        continue 'label;
+        let c = 10;
+        // leading
     }
 }
