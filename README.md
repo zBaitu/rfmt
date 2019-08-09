@@ -1,17 +1,20 @@
-rFmt ---- Rust source code formatter
-===============================
+# rFmt ---- Rust source code formatter
 
 https://github.com/zBaitu/rfmt
 
-Overview
-----------
+
+# Overview
 rfmt is a Rust source code formatter. Yes, there is already an official tool [rustfmt](https://github.com/rust-lang-nursery/rustfmt) from [Rust Nursery](https://github.com/rust-lang-nursery). So why write another one?
 * rustfmt is great for configurable, but there are still some style that i don't like in my personal taste.
 * Write a code formatter for Rust can make me learn Rust more deeply, for example, the AST of Rust.
-* For fun: ) 
+* For fun: )
 
-Install, Build
-----------
+
+# Version
+Support for [Rust 1.36.0](https://blog.rust-lang.org/2019/07/04/Rust-1.36.0.html)
+
+
+# Install, Build
 * Install
 
 ```
@@ -23,25 +26,32 @@ git clone git@github.com:zBaitu/rfmt.git
 cargo build --release
 ```
 
-Usage
-----------
-```
-Usage: rfmt [options] [path]
-    If `path` is a dir, rfmt will do action for all files in this dir recursively.
-    If `path` is not specified, use the current dir by default.
-    If neither `options` nor `path` is specified, rfmt will format source code from stdin.
 
-Options:
-    -a, --ast           print the rust original syntax ast debug info
-    -c, --check         check exceed lines and trailing white space lines
-    -d, --debug         print the rfmt ir debug info
-    -o, --overwrite     overwrite the source file
-    -v, --version       show version
-    -h, --help          show help
+# Usage
+```
+rfmt 1.36.0
+baitu <zbaitu@gmail.com>
+Another Rust source code formatter.
+
+USAGE:
+    rfmt [FLAGS] [input]
+
+FLAGS:
+    -a, --ast          Print the rust original syntax ast debug info
+    -c, --check        Check exceed lines and trailing white space lines
+    -d, --debug        Print the rfmt ir debug info
+    -h, --help         Prints help information
+    -o, --overwrite    Overwrite the source file
+    -p, --print        Print the rfmt ir simple format
+    -V, --version      Prints version information
+
+ARGS:
+    <input>    Input file or dir. If `input` is a dir, rfmt will do action for all files in this dir recursively. If
+               neither `options` nor `input` is specified, rfmt will format source code from stdin.
 ```
 
-Running rfmt from your editor(Copy from rustfmt)
-----------
+
+# Running rfmt from your editor(Copy from rustfmt)
 * [Vim](http://johannh.me/blog/rustfmt-vim.html)
 * [Emacs](https://github.com/fbergroth/emacs-rustfmt)
 * [Sublime Text 3](https://packagecontrol.io/packages/BeautifyRust)
@@ -54,35 +64,17 @@ let g:formatdef_rfmt = '"rfmt"'
 let g:formatters_rust = ['rfmt']
 ```
 
-Features
-----------
+
+# Features
 Comparing to **rustfmt**, there are some main different features from **rfmt**:
-* **DO NOT** parse sub module.
 * Keep wrap from user input.
 * Different align strategy.
 * Group `crate`, `use`, `mod`, `attributes` and sort them.
 * **DO NOT** format `doc`, `comment`, `string`. You can use the **check** function to show exceed lines and trailing white space lines.
-* Provide check, directory recursively, ast dump.
-* Nightly features, like `expr?`, `default fn`.
+* Provide check, directory recursively, ast dump, debug.
+* Nightly features.
 
 The following part will show such features in detail, with some existing issues from rustfmt.
-
-### **DO NOT** parse sub mod
-What happen when you format the following source by rustfmt when you edit on editor.
-```
-// lib.rs
-pub mod a;
-pub mod b;
-pub mod c;
-pub mod d;
-...
-```
-It will parse all sub modules, this is the default action of the Rust parser. But in fact most of such scenario I just want to format only this file that I editing now.  
-rfmt use a custom Rust parser, [rSyntax](https://github.com/zBaitu/rsyntax), it is cloned from the libsyntax of Rust. The main difference between rSyntax and Rust libsyntax is that, rSyntax skip sub module parse.  So rfmt can format quickly on editor scenario.
-If you want to format all the source code in a project, just specify the project directory as rfmt command argument:
-```
-rfmt project_dir
-```
 
 ### Keep wrap from user input
 For the issue: [rustfmt reformats bit manipiulations](https://github.com/rust-lang-nursery/rustfmt/issues/626).
@@ -99,8 +91,8 @@ fn main() {
 ```
 fn main() {
     let (a, b, c, d) = (0, 0, 0, 0);
-    let _ = u32::from_be(((a as u32) << 24) | ((b as u32) << 16) | ((c as u32) << 8) |
-                         (d as u32) << 0);
+    let _ =
+        u32::from_be(((a as u32) << 24) | ((b as u32) << 16) | ((c as u32) << 8) | (d as u32) << 0);
 }
 ```
 Of cause you can use `#[rustfmt_skip]` to avoid such code, but in my personal opinon, I really don't like to add other code just for the source formatting tool.
@@ -125,8 +117,9 @@ fn main() {
 * rustfmt
 ```
 fn main() {
-    let ref_packet = [0xde, 0xf0, 0x12, 0x34, 0x45, 0x67, 0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc,
-                      0x86, 0xdd];
+    let ref_packet = [
+        0xde, 0xf0, 0x12, 0x34, 0x45, 0x67, 0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0x86, 0xdd,
+    ];
 }
 ```
 * rfmt
@@ -139,6 +132,7 @@ fn main() {
 ```
 
 ### Different align strategy
+I prefer to put parameters on one line as much as possible. 
 ```
 fn main() {
     f(123456789, "abcdefg", "hijklmn", 0987654321, "opqrst", "uvwxyz", 123456789, "abcdefg", "hijklmn", 0987654321, "opqrst", "uvwxyz");
@@ -147,18 +141,10 @@ fn main() {
 * rustfmt
 ```
 fn main() {
-    f(123456789,
-      "abcdefg",
-      "hijklmn",
-      0987654321,
-      "opqrst",
-      "uvwxyz",
-      123456789,
-      "abcdefg",
-      "hijklmn",
-      0987654321,
-      "opqrst",
-      "uvwxyz");
+    f(
+        123456789, "abcdefg", "hijklmn", 0987654321, "opqrst", "uvwxyz", 123456789, "abcdefg",
+        "hijklmn", 0987654321, "opqrst", "uvwxyz",
+    );
 }
 ```
 * rfmt
@@ -168,38 +154,8 @@ fn main() {
       "hijklmn", 0987654321, "opqrst", "uvwxyz");
 }
 ```
-I prefer to put parameters on one line as much as possible. This is only for my personal preferences. But another case I really think it is bad looking.
-```
-fn main() {
-    fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff(123456789, "abcdefg", "hijklmn", 0987654321, "opqrst", "uvwxyz", 123456789, "abcdefg", "hijklmn", 0987654321, "opqrst", "uvwxyz");
-}
-```
-* rustfmt
-```
-fn main() {
-    fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff(123456789,
-                                                                                      "abcdefg",
-                                                                                      "hijklmn",
-                                                                                      0987654321,
-                                                                                      "opqrst",
-                                                                                      "uvwxyz",
-                                                                                      123456789,
-                                                                                      "abcdefg",
-                                                                                      "hijklmn",
-                                                                                      0987654321,
-                                                                                      "opqrst",
-                                                                                      "uvwxyz");
-}
-```
-* rfmt
-```
-fn main() {
-    fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff(123456789,
-            "abcdefg", "hijklmn", 0987654321, "opqrst", "uvwxyz", 123456789, "abcdefg",
-            "hijklmn", 0987654321, "opqrst", "uvwxyz");
-}
-```
-If the left align position is beyond limit(It is **50** for now), rfmt prefer double indent align to function call align. rfmt make source code left lean, while rustfmt is right lean, I think. An exsiting issue: [rustfmt should avoid rightwards drifting big blocks of code](https://github.com/rust-lang-nursery/rustfmt/issues/439)
+
+If the left align position is beyond limit(It is **40** for now), rfmt prefer double indent align to function call align. rfmt make source code left lean, while rustfmt is right lean, I think. An exsiting issue: [rustfmt should avoid rightwards drifting big blocks of code](https://github.com/rust-lang-nursery/rustfmt/issues/439)
 ````
 fn main() {
     let mut arms = variants.iter().enumerate().map(|(i, &(ident, v_span, ref summary))| {
@@ -208,28 +164,25 @@ fn main() {
 
         let path = cx.path(v_span, vec![substr.type_ident, ident]);
         let thing = rand_thing(cx, v_span, path, summary, |cx, sp| rand_call(cx, sp));
-        cx.arm(v_span, vec!( pat ), thing)
+        cx.arm(v_span, vec![ pat ], thing)
     }).collect::<Vec<ast::Arm> >();
 }
 ````
 * rustfmt
 ```
 fn main() {
-    let mut arms = variants.iter()
-                           .enumerate()
-                           .map(|(i, &(ident, v_span, ref summary))| {
-                               let i_expr = cx.expr_usize(v_span, i);
-                               let pat = cx.pat_lit(v_span, i_expr);
+    let mut arms = variants
+        .iter()
+        .enumerate()
+        .map(|(i, &(ident, v_span, ref summary))| {
+            let i_expr = cx.expr_usize(v_span, i);
+            let pat = cx.pat_lit(v_span, i_expr);
 
-                               let path = cx.path(v_span, vec![substr.type_ident, ident]);
-                               let thing = rand_thing(cx,
-                                                      v_span,
-                                                      path,
-                                                      summary,
-                                                      |cx, sp| rand_call(cx, sp));
-                               cx.arm(v_span, vec![pat], thing)
-                           })
-                           .collect::<Vec<ast::Arm>>();
+            let path = cx.path(v_span, vec![substr.type_ident, ident]);
+            let thing = rand_thing(cx, v_span, path, summary, |cx, sp| rand_call(cx, sp));
+            cx.arm(v_span, vec![pat], thing)
+        })
+        .collect::<Vec<ast::Arm>>();
 }
 ```
 * rfmt
@@ -238,10 +191,9 @@ fn main() {
     let mut arms = variants.iter().enumerate().map(|(i, &(ident, v_span, ref summary))| {
         let i_expr = cx.expr_usize(v_span, i);
         let pat = cx.pat_lit(v_span, i_expr);
-
         let path = cx.path(v_span, vec![substr.type_ident, ident]);
         let thing = rand_thing(cx, v_span, path, summary, |cx, sp| rand_call(cx, sp));
-        cx.arm(v_span, vec!(pat), thing)
+        cx.arm(v_span, vec![pat], thing)
     }).collect::<Vec<ast::Arm>>();
 }
 ```
@@ -309,18 +261,20 @@ fn main() {
 }
 ```
 ```
-rfmt -c main.rs
+rfmt -c g.rs
 
-a.rs
-exceed_lines: {2}
+"g.rs"
 trailing_ws_lines: {1, 4}
-----------------------------------------
+
+------------------------------------------------------------------------------------------------------------------------
 ````
+
 You can check or overwrite all files in a directory.
 ```
 rfmt -c rust/src/libcore
 rfmt -o rust/src/libstd
 ```
+
 Maybe you are interested to see the Rust AST of a source code.
 ```
 // AST
@@ -331,77 +285,63 @@ rfmt -a a.rs
 ```
 ```
 Crate {
+    loc: Loc(7, 19, nl),
+    attrs: [],
     module: Mod {
-        inner: Span { lo: BytePos(7), hi: BytePos(19), expn_id: ExpnId(4294967295) },
+        loc: Loc(7, 19, nl),
+        name: "main",
         items: [
             Item {
-                ident: main#0,
+                loc: Loc(7, 19, nl),
                 attrs: [],
-                id: 4294967295,
-                node: Fn(
-                    FnDecl {
-                    	......
-                    }
-                }
-            }
-        ]
+                vis: "",
+                item: Fn(
+                    Fn {
+                        header: FnHeader {
+                            is_unsafe: false,
+                            is_async: false,
+                            is_const: false,
+                            abi: "\"Rust\"",
+                        },
+                        name: "main",
+                        generics: Generics {
+                            lifetime_defs: [],
+                            type_params: [],
+                            wh: Where {
+                                clauses: [],
+                            },
+                        },
+                        sig: FnSig {
+                            args: [],
+                            ret: Return {
+                                nl: false,
+                                ret: None,
+                            },
+                        },
+                        block: Block {
+                            loc: Loc(17, 19),
+                            is_unsafe: false,
+                            stmts: [],
+                        },
+                    },
+                ),
+            },
+        ],
     },
-    attrs: [],
-    config: [],
-    span: Span { lo: BytePos(7), hi: BytePos(18), expn_id: ExpnId(4294967295) },
-    exported_macros: []
 }
-----------------------------------------
-0: Isolated [
-    "// AST"
-]
-----------------------------------------
+
+------------------------------------------------------------------------------------------------------------------------
+
+{
+    7: [
+        "// AST",
+    ],
+}
+{}
 ```
 
-### Nightly features, like `expr?`, `default fn`
-The rSyntax is cloned from Rust nightly(1.10.0-nightly), so it supports the latest language feature.
-```
-struct A;
 
-impl A {
-    default fn f() -> bool { true }
-}
-
-fn f() -> Result<bool, String> { Ok() }
-
-fn ff() -> Result<bool, String> {
-    f()?
-}
-
-fn main() {
-    ff();
-}
-```
-* rfmt
-```
-struct A;
-
-impl A {
-    default fn f() -> bool {
-        true
-    }
-}
-
-fn f() -> Result<bool, String> {
-    Ok()
-}
-
-fn ff() -> Result<bool, String> {
-    f()?
-}
-
-fn main() {
-    ff();
-}
-```
-
-Drawbacks
-----------
+# Drawbacks
 As rfmt is written as a personal tool(toy) for my daily develop, it lacks some common features now.
 * No config  
 rustfmt provide lots of config option, but rfmt provide none. Code style is something like food, everyone has his taste. Although rustfmt has much configs now, there are still new config require open in issues. If majority part of rfmt's style suit your taste, you can clone and make some small modification, such as **LF**, **max width**, **indent**.
@@ -440,6 +380,7 @@ struct A {
     // ddddd
     a: bool, // eeeee
     b: i32, // ffff
+    // ggggg
 } // hhhhh
 
 // iiiii
