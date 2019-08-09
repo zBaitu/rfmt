@@ -1,7 +1,7 @@
 // aaaaa
 
 // bbbbb
-struct A { // ccccc-struct-trailing
+struct A<T> where T: bool { // ccccc-struct-trailing
     // ddddd
     a: bool, // eeeee
     b: i32, // ffff
