@@ -2716,12 +2716,14 @@ impl Formatter {
         self.fmt_attrs(&expr.attrs);
         self.insert_indent();
 
+        let mut loc = expr.loc;
         self.fmt_expr(expr);
         if is_semi {
             self.raw_insert(";");
+            loc.end += 1;
         }
 
-        self.try_fmt_trailing_comment(&expr.loc);
+        self.try_fmt_trailing_comment(&loc);
         self.nl();
         self.block_locs.pop();
     }
@@ -3126,12 +3128,14 @@ impl Formatter {
         self.fmt_attrs(&mac.attrs);
         self.insert_indent();
 
+        let mut loc = mac.loc;
         self.fmt_macro(&mac.mac);
         if mac.is_semi {
             self.raw_insert(";");
+            loc.end += 1;
         }
 
-        self.try_fmt_trailing_comment(&mac.loc);
+        self.try_fmt_trailing_comment(&loc);
         self.nl();
     }
 
