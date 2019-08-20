@@ -594,7 +594,11 @@ impl Display for Fn {
         display_generics(f, &self.generics)?;
         Display::fmt(&self.sig, f)?;
         display_where(f, &self.generics)?;
-        Display::fmt(&self.block, f)
+        if self.block.is_one_literal_expr() {
+            write!(f, " {{ {} }}", self.block.stmts[0])
+        } else {
+            Display::fmt(&self.block, f)
+        }
     }
 }
 
@@ -2361,7 +2365,11 @@ impl Formatter {
         self.fmt_generics(&item.generics);
         self.fmt_fn_sig(&item.sig);
         self.fmt_where(&item.generics);
-        self.fmt_block(&item.block);
+        if item.block.is_one_literal_expr() {
+            self.fmt_block_one_line(&item.block);
+        } else {
+            self.fmt_block(&item.block);
+        }
     }
 
     fn fmt_trait(&mut self, item: &Trait) {
@@ -2537,6 +2545,15 @@ impl Formatter {
         self.fmt_generics(&sig.generics);
         self.fmt_fn_sig(&sig.sig);
         self.fmt_where(&sig.generics);
+    }
+
+    fn fmt_block_one_line(&mut self, block: &Block) {
+        self.block_non_sep = false;
+        self.raw_insert(" { ");
+        if let StmtKind::Expr(ref expr, _) = block.stmts[0].stmt {
+            self.fmt_expr(expr);
+        }
+        self.raw_insert(" }");
     }
 
     fn fmt_block(&mut self, block: &Block) {
