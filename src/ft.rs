@@ -594,11 +594,7 @@ impl Display for Fn {
         display_generics(f, &self.generics)?;
         Display::fmt(&self.sig, f)?;
         display_where(f, &self.generics)?;
-        if self.block.is_one_literal_expr() {
-            write!(f, " {{ {} }}", self.block.stmts[0])
-        } else {
-            Display::fmt(&self.block, f)
-        }
+        try_display_block_one_line(f, &self.block)
     }
 }
 
@@ -651,7 +647,7 @@ impl Display for MethodTraitItem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(&self.sig, f)?;
         if let Some(ref block) = self.block {
-            Display::fmt(block, f)?;
+            try_display_block_one_line(f, block)?;
         }
         Ok(())
     }
@@ -726,7 +722,7 @@ impl Display for ExistentialImplItem {
 impl Display for MethodImplItem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(&self.sig, f)?;
-        Display::fmt(&self.block, f)
+        try_display_block_one_line(f, &self.block)
     }
 }
 
@@ -1260,6 +1256,15 @@ fn display_args(f: &mut fmt::Formatter, args: &Vec<Arg>) -> fmt::Result {
 #[inline]
 fn display_pattens(f: &mut fmt::Formatter, pattens: &Vec<Patten>) -> fmt::Result {
     display_lists!(f, " | ", pattens)
+}
+
+#[inline]
+fn try_display_block_one_line(f: &mut fmt::Formatter, block: &Block) -> fmt::Result {
+    if block.is_one_literal_expr() {
+        write!(f, " {{ {} }}", block.stmts[0])
+    } else {
+        Display::fmt(block, f)
+    }
 }
 
 #[inline]
@@ -2365,11 +2370,7 @@ impl Formatter {
         self.fmt_generics(&item.generics);
         self.fmt_fn_sig(&item.sig);
         self.fmt_where(&item.generics);
-        if item.block.is_one_literal_expr() {
-            self.fmt_block_one_line(&item.block);
-        } else {
-            self.fmt_block(&item.block);
-        }
+        self.try_fmt_block_one_line(&item.block);
     }
 
     fn fmt_trait(&mut self, item: &Trait) {
@@ -2422,7 +2423,7 @@ impl Formatter {
     fn fmt_method_trait_item(&mut self, item: &MethodTraitItem) {
         self.fmt_method_sig(&item.sig);
         if let Some(ref block) = item.block {
-            self.fmt_block(block);
+            self.try_fmt_block_one_line(block);
         } else {
             self.raw_insert(";");
         }
@@ -2496,7 +2497,7 @@ impl Formatter {
     #[inline]
     fn fmt_method_impl_item(&mut self, item: &MethodImplItem) {
         self.fmt_method_sig(&item.sig);
-        self.fmt_block(&item.block);
+        self.try_fmt_block_one_line(&item.block);
     }
 
     #[inline]
@@ -2545,6 +2546,14 @@ impl Formatter {
         self.fmt_generics(&sig.generics);
         self.fmt_fn_sig(&sig.sig);
         self.fmt_where(&sig.generics);
+    }
+
+    fn try_fmt_block_one_line(&mut self, block: &Block) {
+        if block.is_one_literal_expr() {
+            self.fmt_block_one_line(block);
+        } else {
+            self.fmt_block(block);
+        }
     }
 
     fn fmt_block_one_line(&mut self, block: &Block) {
