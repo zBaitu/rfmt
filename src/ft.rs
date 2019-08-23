@@ -1706,9 +1706,12 @@ impl Formatter {
     }
 
     #[inline]
-    fn try_fmt_leading_comments(&mut self, loc: &Loc) {
+    fn try_fmt_leading_comments(&mut self, loc: &Loc) -> bool {
         if self.has_leading_comments(loc) {
             self.fmt_leading_comments(loc);
+            true
+        } else {
+            false
         }
     }
 
@@ -1902,43 +1905,92 @@ impl Formatter {
     }
 
     fn fmt_items(&mut self, items: &Vec<Item>) {
+        let mut nl = false;
         for item in items {
-            match item.item {
-                ItemKind::ExternCrate(_) | ItemKind::Use(_) | ItemKind::ModDecl(_) => (),
-                _ => self.fmt_item(item),
+            nl = match item.item {
+                ItemKind::ExternCrate(_) | ItemKind::Use(_) | ItemKind::ModDecl(_) => false,
+                _ => self.fmt_item(item, nl),
             }
         }
     }
 
-    fn fmt_item(&mut self, item: &Item) {
-        self.try_fmt_leading_comments(&item.loc);
+    fn fmt_item(&mut self, item: &Item, nl: bool) -> bool {
+        if !self.try_fmt_leading_comments(&item.loc) && nl {
+            self.nl();
+        }
         self.fmt_attrs(&item.attrs);
         self.insert_indent();
         self.fmt_vis(&item.vis);
 
         self.block_locs.push(item.loc);
-        match item.item {
+        let nl = match item.item {
             ItemKind::ExternCrate(..) | ItemKind::Use(..) | ItemKind::ModDecl(..) => unreachable!(),
-            ItemKind::Mod(ref item) => self.fmt_sub_mod(item),
-            ItemKind::TypeAlias(ref item) => self.fmt_type_alias(item),
-            ItemKind::TraitAlias(ref item) => self.fmt_trait_alias(item),
-            ItemKind::Existential(ref item) => self.fmt_existential(item),
-            ItemKind::Const(ref item) => self.fmt_const(item),
-            ItemKind::Static(ref item) => self.fmt_static(item),
-            ItemKind::Struct(ref item) => self.fmt_struct(item),
-            ItemKind::Union(ref item) => self.fmt_union(item),
-            ItemKind::Enum(ref item) => self.fmt_enum(item),
-            ItemKind::ForeignMod(ref item) => self.fmt_foreign_mod(item),
-            ItemKind::Fn(ref item) => self.fmt_fn(item),
-            ItemKind::Trait(ref item) => self.fmt_trait(item),
-            ItemKind::Impl(ref item) => self.fmt_impl(item),
-            ItemKind::MacroDef(ref item) => self.fmt_macro_def(item),
-            ItemKind::Macro(ref item) => self.fmt_macro_item(item),
-        }
+            ItemKind::Mod(ref item) => {
+                self.fmt_sub_mod(item);
+                true
+            },
+            ItemKind::TypeAlias(ref item) => {
+                self.fmt_type_alias(item);
+                false
+            },
+            ItemKind::TraitAlias(ref item) => {
+                self.fmt_trait_alias(item);
+                false
+            },
+            ItemKind::Existential(ref item) => {
+                self.fmt_existential(item);
+                false
+            },
+            ItemKind::Const(ref item) => {
+                self.fmt_const(item);
+                false
+            },
+            ItemKind::Static(ref item) => {
+                self.fmt_static(item);
+                false
+            },
+            ItemKind::Struct(ref item) => {
+                self.fmt_struct(item);
+                true
+            },
+            ItemKind::Union(ref item) => {
+                self.fmt_union(item);
+                true
+            },
+            ItemKind::Enum(ref item) => {
+                self.fmt_enum(item);
+                true
+            },
+            ItemKind::ForeignMod(ref item) => {
+                self.fmt_foreign_mod(item);
+                true
+            },
+            ItemKind::Fn(ref item) => {
+                self.fmt_fn(item);
+                true
+            },
+            ItemKind::Trait(ref item) => {
+                self.fmt_trait(item);
+                true
+            },
+            ItemKind::Impl(ref item) => {
+                self.fmt_impl(item);
+                true
+            },
+            ItemKind::MacroDef(ref item) => {
+                self.fmt_macro_def(item);
+                true
+            },
+            ItemKind::Macro(ref item) => {
+                self.fmt_macro_item(item);
+                false
+            },
+        };
         self.block_locs.pop();
 
         self.try_fmt_trailing_comment(&item.loc);
         self.nl();
+        nl
     }
 
     fn fmt_sub_mod(&mut self, item: &Mod) {
@@ -2583,7 +2635,9 @@ impl Formatter {
         self.block_locs.push(stmt.loc);
         self.try_fmt_leading_comments(&stmt.loc);
         match stmt.stmt {
-            StmtKind::Item(ref item) => self.fmt_item(item),
+            StmtKind::Item(ref item) => {
+                self.fmt_item(item, false);
+            },
             StmtKind::Let(ref local) => self.fmt_let(local),
             StmtKind::Expr(ref expr, is_semi) => self.fmt_expr_stmt(expr, is_semi),
             StmtKind::Macro(ref mac) => self.fmt_macro_stmt(mac),
