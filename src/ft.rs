@@ -95,6 +95,7 @@ macro_rules! select_str {
         }
     );
 }
+
 select_str!(ptr_head, is_mut, "*mut ", "*const ");
 select_str!(static_head, is_mut, "static mut ", "static ");
 select_str!(range, is_inclusive, "..=", "..");
