@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+        use std::collections::{BTreeMap, HashMap};
 use std::fmt::{self, Display};
 
 use ir::*;
@@ -1662,6 +1662,24 @@ macro_rules! fmt_items {
     });
 }
 
+macro_rules! fmt_items_maybe_nl {
+    ($sf:ident, $items:expr, $fmt_item:ident) => ({
+        let mut nl = false;
+        for item in $items {
+            if !$sf.try_fmt_leading_comments(&item.loc) && nl {
+                $sf.nl();
+            }
+
+            $sf.fmt_attrs(&item.attrs);
+            $sf.insert_indent();
+            nl = $sf.$fmt_item(item);
+
+            $sf.try_fmt_trailing_comment(&item.loc);
+            $sf.nl();
+        }
+    });
+}
+
 pub fn fmt(krate: Crate, leading_cmnts: HashMap<Pos, Vec<String>>, trailing_cmnts: HashMap<Pos, String>) -> TsResult {
     Formatter::new(leading_cmnts, trailing_cmnts).fmt_crate(krate)
 }
@@ -2435,17 +2453,17 @@ impl Formatter {
     }
 
     fn fmt_trait_items(&mut self, items: &Vec<TraitItem>) {
-        fmt_items!(self, items, fmt_trait_item);
+        fmt_items_maybe_nl!(self, items, fmt_trait_item);
     }
 
     #[inline]
-    fn fmt_trait_item(&mut self, item: &TraitItem) {
+    fn fmt_trait_item(&mut self, item: &TraitItem) -> bool {
         self.fmt_attrs(&item.attrs);
         match item.item {
-            TraitItemKind::Const(ref item) => self.fmt_const_trait_item(item),
-            TraitItemKind::Type(ref item) => self.fmt_type_trait_item(item),
+            TraitItemKind::Const(ref item) => {self.fmt_const_trait_item(item); false}
+            TraitItemKind::Type(ref item) => {self.fmt_type_trait_item(item); false}
             TraitItemKind::Method(ref item) => self.fmt_method_trait_item(item),
-            TraitItemKind::Macro(ref item) => self.fmt_macro(item),
+            TraitItemKind::Macro(ref item) => {self.fmt_macro(item); false}
         }
     }
 
@@ -2473,12 +2491,14 @@ impl Formatter {
     }
 
     #[inline]
-    fn fmt_method_trait_item(&mut self, item: &MethodTraitItem) {
+    fn fmt_method_trait_item(&mut self, item: &MethodTraitItem) -> bool {
         self.fmt_method_sig(&item.sig);
         if let Some(ref block) = item.block {
             self.try_fmt_block_one_line(block);
+            true
         } else {
             self.raw_insert(";");
+            false
         }
     }
 
@@ -2501,11 +2521,11 @@ impl Formatter {
     }
 
     fn fmt_impl_items(&mut self, items: &Vec<ImplItem>) {
-        fmt_items!(self, items, fmt_impl_item);
+        fmt_items_maybe_nl!(self, items, fmt_impl_item);
     }
 
     #[inline]
-    fn fmt_impl_item(&mut self, item: &ImplItem) {
+    fn fmt_impl_item(&mut self, item: &ImplItem) -> bool {
         self.fmt_vis(&item.vis);
         self.insert(&impl_item_head(item.is_default));
 
@@ -2522,6 +2542,9 @@ impl Formatter {
         }
         if !is_method {
             self.raw_insert(";");
+            false
+        } else {
+            true
         }
     }
 
