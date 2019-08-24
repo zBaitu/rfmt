@@ -1,4 +1,4 @@
-        use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::{self, Display};
 
 use ir::*;
@@ -2460,10 +2460,19 @@ impl Formatter {
     fn fmt_trait_item(&mut self, item: &TraitItem) -> bool {
         self.fmt_attrs(&item.attrs);
         match item.item {
-            TraitItemKind::Const(ref item) => {self.fmt_const_trait_item(item); false}
-            TraitItemKind::Type(ref item) => {self.fmt_type_trait_item(item); false}
+            TraitItemKind::Const(ref item) => {
+                self.fmt_const_trait_item(item);
+                false
+            },
+            TraitItemKind::Type(ref item) => {
+                self.fmt_type_trait_item(item);
+                false
+            },
             TraitItemKind::Method(ref item) => self.fmt_method_trait_item(item),
-            TraitItemKind::Macro(ref item) => {self.fmt_macro(item); false}
+            TraitItemKind::Macro(ref item) => {
+                self.fmt_macro(item);
+                false
+            },
         }
     }
 
