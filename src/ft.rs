@@ -2503,8 +2503,7 @@ impl Formatter {
     fn fmt_method_trait_item(&mut self, item: &MethodTraitItem) -> bool {
         self.fmt_method_sig(&item.sig);
         if let Some(ref block) = item.block {
-            self.try_fmt_block_one_line(block);
-            true
+            !self.try_fmt_block_one_line(block)
         } else {
             self.raw_insert(";");
             false
@@ -2633,11 +2632,13 @@ impl Formatter {
         self.fmt_where(&sig.generics);
     }
 
-    fn try_fmt_block_one_line(&mut self, block: &Block) {
+    fn try_fmt_block_one_line(&mut self, block: &Block) -> bool {
         if block.is_one_literal_expr() {
             self.fmt_block_one_line(block);
+            true
         } else {
             self.fmt_block(block);
+            false
         }
     }
 

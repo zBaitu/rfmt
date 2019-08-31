@@ -28,6 +28,9 @@ pub trait Trait {
     fn f(&self) {}
     fn f(&'a self);
     fn f(self: Iterator) {}
+    fn f(self: Iterator) { true }
+    fn f(self: Iterator) { true }
+    fn f(self: Iterator) { true }
     a!(true);
 }
 
