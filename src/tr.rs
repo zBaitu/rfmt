@@ -1260,8 +1260,8 @@ impl Translator {
     fn trans_foreign_fn(&mut self, ident: String, generics: &ast::Generics, decl: &ast::FnDecl) -> ForeignFn {
         ForeignFn {
             name: ident,
-            generics: self.trans_generics(generics),
             sig: self.trans_fn_sig(decl),
+            generics: self.trans_generics(generics),
         }
     }
 
@@ -1279,8 +1279,8 @@ impl Translator {
         Fn {
             header: self.trans_fn_header(header),
             name: ident,
-            generics: self.trans_generics(generics),
             sig: self.trans_fn_sig(decl),
+            generics: self.trans_generics(generics),
             block: self.trans_block(block),
         }
     }
@@ -1306,16 +1306,15 @@ impl Translator {
         let loc = self.loc(&item.span);
         let attrs = self.trans_attrs(&item.attrs);
         let ident = ident_to_string(&item.ident);
-        let generics = self.trans_generics(&item.generics);
         let item = match item.node {
             ast::TraitItemKind::Const(ref ty, ref expr) => {
                 TraitItemKind::Const(self.trans_const_trait_item(ident, ty, expr))
             },
             ast::TraitItemKind::Type(ref bounds, ref ty) => {
-                TraitItemKind::Type(self.trans_type_trait_item(ident, generics, bounds, ty))
+                TraitItemKind::Type(self.trans_type_trait_item(ident, &item.generics, bounds, ty))
             },
             ast::TraitItemKind::Method(ref sig, ref block) => {
-                TraitItemKind::Method(self.trans_method_trait_item(ident, generics, sig, block))
+                TraitItemKind::Method(self.trans_method_trait_item(ident, &item.generics, sig, block))
             },
             ast::TraitItemKind::Macro(ref mac) => TraitItemKind::Macro(self.trans_macro(mac)),
         };
@@ -1337,17 +1336,17 @@ impl Translator {
         }
     }
 
-    fn trans_type_trait_item(&mut self, ident: String, generics: Generics,
+    fn trans_type_trait_item(&mut self, ident: String, generics: &ast::Generics,
                              bounds: &ast::GenericBounds, ty: &Option<ast::P<ast::Ty>>) -> TypeTraitItem {
         TypeTraitItem {
             name: ident,
-            generics,
+            generics: self.trans_generics(generics),
             bounds: self.trans_type_param_bounds(bounds),
             ty: map_ref_mut(ty, |ty| self.trans_type(ty)),
         }
     }
 
-    fn trans_method_trait_item(&mut self, ident: String, generics: Generics, sig: &ast::MethodSig,
+    fn trans_method_trait_item(&mut self, ident: String, generics: &ast::Generics, sig: &ast::MethodSig,
                                block: &Option<ast::P<ast::Block>>)
     -> MethodTraitItem {
         MethodTraitItem {
@@ -1356,12 +1355,12 @@ impl Translator {
         }
     }
 
-    fn trans_method_sig(&mut self, ident: String, generics: Generics, sig: &ast::MethodSig) -> MethodSig {
+    fn trans_method_sig(&mut self, ident: String, generics: &ast::Generics, sig: &ast::MethodSig) -> MethodSig {
         MethodSig {
             header: self.trans_fn_header(&sig.header),
             name: ident,
-            generics,
             sig: self.trans_fn_sig(&sig.decl),
+            generics: self.trans_generics(generics),
         }
     }
 
@@ -1390,19 +1389,18 @@ impl Translator {
         let vis = self.trans_vis(&item.vis);
         let is_default = is_default(item.defaultness);
         let ident = ident_to_string(&item.ident);
-        let generics = self.trans_generics(&item.generics);
         let item = match item.node {
             ast::ImplItemKind::Const(ref ty, ref expr) => {
                 ImplItemKind::Const(self.trans_const(ident, ty, expr))
             },
             ast::ImplItemKind::Type(ref ty) => {
-                ImplItemKind::Type(self.trans_type_impl_item(ident, generics, ty))
+                ImplItemKind::Type(self.trans_type_impl_item(ident, &item.generics, ty))
             },
             ast::ImplItemKind::Existential(ref bounds) => {
-                ImplItemKind::Existential(self.trans_type_existential_item(ident, generics, bounds))
+                ImplItemKind::Existential(self.trans_type_existential_item(ident, &item.generics, bounds))
             },
             ast::ImplItemKind::Method(ref method_sig, ref block) => {
-                ImplItemKind::Method(self.trans_method_impl_item(ident, generics, method_sig, block))
+                ImplItemKind::Method(self.trans_method_impl_item(ident, &item.generics, method_sig, block))
             },
             ast::ImplItemKind::Macro(ref mac) => ImplItemKind::Macro(self.trans_macro(mac)),
         };
@@ -1417,24 +1415,24 @@ impl Translator {
         }
     }
 
-    fn trans_type_impl_item(&mut self, ident: String, generics: Generics, ty: &ast::Ty) -> TypeImplItem {
+    fn trans_type_impl_item(&mut self, ident: String, generics: &ast::Generics, ty: &ast::Ty) -> TypeImplItem {
         TypeImplItem {
             name: ident,
-            generics,
+            generics: self.trans_generics(generics),
             ty: self.trans_type(ty),
         }
     }
 
-    fn trans_type_existential_item(&mut self, ident: String, generics: Generics, bounds: &ast::GenericBounds)
+    fn trans_type_existential_item(&mut self, ident: String, generics: &ast::Generics, bounds: &ast::GenericBounds)
     -> ExistentialImplItem {
         ExistentialImplItem {
             name: ident,
-            generics,
+            generics: self.trans_generics(generics),
             bounds: self.trans_type_param_bounds(bounds),
         }
     }
 
-    fn trans_method_impl_item(&mut self, ident: String, generics: Generics, sig: &ast::MethodSig,
+    fn trans_method_impl_item(&mut self, ident: String, generics: &ast::Generics, sig: &ast::MethodSig,
                               block: &ast::P<ast::Block>) -> MethodImplItem {
         MethodImplItem {
             sig: self.trans_method_sig(ident, generics, sig),
