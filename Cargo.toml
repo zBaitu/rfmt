@@ -1,6 +1,6 @@
 [package]
 name = "rfmt"
-version = "1.37.0"
+version = "1.38.0"
 authors = ["baitu <zbaitu@gmail.com>"]
 homepage = "https://github.com/zBaitu/rfmt"
 repository = "https://github.com/zBaitu/rfmt"

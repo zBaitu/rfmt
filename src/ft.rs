@@ -8,6 +8,8 @@ use crate::ir;
 use crate::ts;
 use crate::{need_nl_indent, need_wrap};
 
+const OK: fmt::Result = Ok(());
+
 macro_rules! display_lists {
     ($f:expr, $open:expr, $sep:expr, $close:expr, $($lists:expr),+) => ({
         write!($f, $open)?;
@@ -76,7 +78,7 @@ macro_rules! display_lines {
         for line in $lines {
             writeln!($f, "{}{}", line, $sep)?;
         }
-        Ok(())
+        OK
     });
 }
 
@@ -127,7 +129,7 @@ impl Display for Chunk {
             write!(f, "{}", line)?;
             first = false;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -147,7 +149,7 @@ impl Display for MetaItem {
         if let Some(ref items) = self.items {
             display_lists!(f, "(", ", ", ")", &**items)?;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -156,7 +158,7 @@ impl Display for Mod {
         for item in &self.items {
             writeln!(f, "{}", item)?;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -188,7 +190,7 @@ impl Display for Item {
             ItemKind::MacroDef(ref item) => Display::fmt(item, f)?,
             ItemKind::Macro(ref item) => Display::fmt(item, f)?,
         }
-        Ok(())
+        OK
     }
 }
 
@@ -226,7 +228,7 @@ impl Display for Generics {
         if !self.wh.is_empty() {
             write!(f, " where {}", self.wh)?;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -237,7 +239,7 @@ impl Display for LifetimeDef {
             write!(f, ": ")?;
             display_lists!(f, " + ", &self.bounds)?
         }
-        Ok(())
+        OK
     }
 }
 
@@ -248,8 +250,7 @@ impl Display for TypeParam {
         if let Some(ref ty) = self.default {
             write!(f, " = {}", ty)?;
         }
-
-        Ok(())
+        OK
     }
 }
 
@@ -324,7 +325,7 @@ impl Display for AngleParam {
         if !self.is_empty() {
             display_lists!(f, "<", ", ", ">", &self.lifetimes, &self.types, &self.bindings)?;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -346,7 +347,7 @@ impl Display for ParenParam {
         if let Some(ref output) = self.output {
             write!(f, " -> {}", output)?;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -444,7 +445,7 @@ impl Display for Arg {
         if self.has_patten {
             write!(f, "{}", self.patten)?;
             match self.ty.ty {
-                TypeKind::Symbol(s) if s == "_" => Ok(()),
+                TypeKind::Symbol(s) if s == "_" => OK,
                 _ => write!(f, ": {}", self.ty),
             }
         } else {
@@ -461,7 +462,7 @@ impl Display for Return {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.ret {
             Some(ref ty) => write!(f, " -> {}", ty),
-            None => Ok(()),
+            None => OK,
         }
     }
 }
@@ -505,7 +506,7 @@ impl Display for StructBody {
             StructBody::Tuple(ref fields) => {
                 display_lists!(f, "(", ", ", ")", fields)
             },
-            StructBody::Unit => Ok(()),
+            StructBody::Unit => OK,
         }
     }
 }
@@ -544,7 +545,7 @@ impl Display for EnumField {
         if let Some(ref expr) = self.expr {
             write!(f, " = {}", expr)?;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -627,7 +628,7 @@ impl Display for ConstTraitItem {
         if let Some(ref expr) = self.expr {
             Display::fmt(expr, f)?;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -640,7 +641,7 @@ impl Display for TypeTraitItem {
         if let Some(ref ty) = self.ty {
             write!(f, " = {}", ty)?;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -650,7 +651,7 @@ impl Display for MethodTraitItem {
         if let Some(ref block) = self.block {
             try_display_block_one_line(f, block)?;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -704,7 +705,7 @@ impl Display for ImplItem {
         if !is_method {
             write!(f, ";")?;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -764,7 +765,7 @@ impl Display for IdentPatten {
         if let Some(ref patten) = self.patten {
             write!(f, " @ {}", patten)?;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -846,7 +847,7 @@ impl Display for Let {
         if let Some(ref expr) = self.init {
             write!(f, " = {}", expr)?;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -971,7 +972,7 @@ impl Display for RangeExpr {
         if let Some(ref end) = self.end {
             Display::fmt(end, f)?;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -996,7 +997,7 @@ impl Display for IfExpr {
         if let Some(ref br) = self.br {
             write!(f, " else {}", br)?
         }
-        Ok(())
+        OK
     }
 }
 
@@ -1045,7 +1046,7 @@ impl Display for BreakExpr {
         if let Some(ref expr) = self.expr {
             Display::fmt(&expr, f)?;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -1055,7 +1056,7 @@ impl Display for ContinueExpr {
         if let Some(ref label) = self.label {
             Display::fmt(&label, f)?;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -1112,7 +1113,7 @@ impl Display for ReturnExpr {
         if let Some(ref expr) = self.ret {
             write!(f, " {}", expr)?;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -1129,7 +1130,7 @@ impl Display for MacroStmt {
         if self.is_semi {
             write!(f, ";")?;
         }
-        Ok(())
+        OK
     }
 }
 
@@ -1163,7 +1164,7 @@ impl Display for Macro {
 #[inline]
 fn fmt_use_trees(f: &mut fmt::Formatter, trees: &Option<Vec<UseTree>>) -> fmt::Result {
     if trees.is_none() {
-        return Ok(());
+        return OK;
     }
 
     let trees: &Vec<UseTree> = &trees.as_ref().unwrap();
@@ -1180,7 +1181,7 @@ fn display_attrs(f: &mut fmt::Formatter, attrs: &Vec<AttrKind>) -> fmt::Result {
     for attr in attrs {
         writeln!(f, "{}", attr)?;
     }
-    Ok(())
+    OK
 }
 
 #[inline]
@@ -1194,7 +1195,7 @@ fn try_display_type_param_bounds(f: &mut fmt::Formatter, bounds: &TypeParamBound
         write!(f, ": ")?;
         display_type_param_bounds(f, bounds)?;
     }
-    Ok(())
+    OK
 }
 
 #[inline]
@@ -1207,7 +1208,7 @@ fn display_for_liftime_defs(f: &mut fmt::Formatter, lifetime_defs: &Vec<Lifetime
     if !lifetime_defs.is_empty() {
         display_lists!(f, "for<", ", ", "> ", lifetime_defs)?;
     }
-    Ok(())
+    OK
 }
 
 #[inline]
@@ -1238,7 +1239,7 @@ fn display_generics(f: &mut fmt::Formatter, generics: &Generics) -> fmt::Result 
     if !generics.is_empty() {
         display_lists!(f, "<", ", ", ">", &generics.lifetime_defs, &generics.type_params)?;
     }
-    Ok(())
+    OK
 }
 
 #[inline]
@@ -1246,7 +1247,7 @@ fn display_where(f: &mut fmt::Formatter, generics: &Generics) -> fmt::Result {
     if !generics.wh.is_empty() {
         write!(f, " where {}", generics.wh)?;
     }
-    Ok(())
+    OK
 }
 
 #[inline]
@@ -1274,7 +1275,7 @@ fn display_expr(f: &mut fmt::Formatter, expr: &Expr, is_semi: bool) -> fmt::Resu
     if is_semi {
         write!(f, ";")?;
     }
-    Ok(())
+    OK
 }
 
 #[inline]
