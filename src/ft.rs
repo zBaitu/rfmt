@@ -1691,6 +1691,7 @@ struct Formatter {
     leading_cmnts: HashMap<Pos, Vec<String>>,
     trailing_cmnts: HashMap<Pos, String>,
     block_locs: Vec<Loc>,
+    if_stacks: u8,
 
     after_indent: bool,
     after_wrap: bool,
@@ -1705,6 +1706,7 @@ impl Formatter {
             leading_cmnts,
             trailing_cmnts,
             block_locs: Vec::new(),
+            if_stacks: 0,
 
             after_indent: false,
             after_wrap: false,
@@ -3038,7 +3040,7 @@ impl Formatter {
 
     #[inline]
     fn fmt_if_expr(&mut self, expr: &IfExpr) {
-        if is_if_one_line(expr) {
+        if self.if_stacks == 0 && is_if_one_line(expr) {
             return self.fmt_if_expr_one_line(expr);
         }
 
@@ -3048,9 +3050,11 @@ impl Formatter {
         self.fmt_block(&expr.block);
 
         if let Some(ref br) = expr.br {
+            self.if_stacks += 1;
             self.block_non_sep = true;
             self.raw_insert(" else ");
             self.fmt_expr(br);
+            self.if_stacks -= 1;
         }
     }
 
