@@ -1444,17 +1444,17 @@ fn is_if_one_line(expr: &IfExpr) -> bool {
 fn exract_if_else_value(expr: &IfExpr) -> (&Expr, &Expr) {
     let if_value = match &expr.block.stmts[0].stmt {
         StmtKind::Expr(ref expr, _) => expr,
-        _ => unreachable!(),
+        _ => unreachable!("{:?}", expr.block.stmts[0].stmt),
     };
 
     let else_value = match expr.br.as_ref().unwrap().expr {
         ExprKind::Block(ref block) => {
             match &block.block.stmts[0].stmt {
                 StmtKind::Expr(ref expr, _) => expr,
-                _ => unreachable!(),
+                _ => unreachable!("{:?}", block.block.stmts[0].stmt),
             }
         },
-        _ => unreachable!(),
+        _ => unreachable!("{:?}", expr.br.as_ref().unwrap().expr),
     };
 
     (if_value, else_value)
@@ -1946,7 +1946,7 @@ impl Formatter {
 
         self.block_locs.push(item.loc);
         let nl = match item.item {
-            ItemKind::ExternCrate(..) | ItemKind::Use(..) | ItemKind::ModDecl(..) => unreachable!(),
+            ItemKind::ExternCrate(..) | ItemKind::Use(..) | ItemKind::ModDecl(..) => unreachable!("{:?}", item.item),
             ItemKind::Mod(ref item) => {
                 self.fmt_sub_mod(item);
                 true

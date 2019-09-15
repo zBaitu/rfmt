@@ -79,7 +79,7 @@ fn sugared_doc_to_string(tokens: &ast::TokenStream) -> String {
             return token_lit_to_string(lit);
         }
     }
-    unreachable!()
+    unreachable!("{:?}", token_tree.0)
 }
 
 #[inline]
@@ -244,7 +244,7 @@ fn token_to_macro_sep(token: &ast::TokenKind) -> MacroSep {
         ast::TokenKind::Semi => (true, ";"),
         ast::TokenKind::FatArrow => (true, " =>"),
         ast::TokenKind::DotDotDot => (false, "..."),
-        _ => unreachable!(),
+        _ => unreachable!("{:?}", token),
     };
 
     MacroSep {
@@ -537,7 +537,7 @@ impl Translator {
             },
             ast::ItemKind::MacroDef(ref mac_def) => ItemKind::MacroDef(self.trans_macro_def(ident, mac_def)),
             ast::ItemKind::Mac(ref mac) => ItemKind::Macro(self.trans_macro(mac)),
-            ast::ItemKind::GlobalAsm(..) => unimplemented!(),
+            ast::ItemKind::GlobalAsm(..) => unimplemented!("ast::ItemKind::GlobalAsm"),
         };
 
         self.set_loc(&loc);
@@ -794,7 +794,7 @@ impl Translator {
         match *predicate {
             ast::WherePredicate::RegionPredicate(ref region) => self.trans_where_lifetime(region),
             ast::WherePredicate::BoundPredicate(ref bound) => self.trans_where_bound(bound),
-            ast::WherePredicate::EqPredicate(..) => unimplemented!(),
+            ast::WherePredicate::EqPredicate(..) => unimplemented!("ast::WherePredicate::EqPredicate"),
         }
     }
 
@@ -968,8 +968,8 @@ impl Translator {
                 TypeKind::BareFn(Box::new(self.trans_bare_fn_type(bare_fn)))
             },
             ast::TyKind::Mac(ref mac) => TypeKind::Macro(self.trans_macro(mac)),
-            ast::TyKind::Typeof(..) => unimplemented!(),
-            ast::TyKind::Err => unreachable!(),
+            ast::TyKind::Typeof(..) => unimplemented!("ast::TyKind::Typeof"),
+            ast::TyKind::Err => unreachable!("ast::TyKind::Err"),
         };
 
         self.set_loc(&loc);
@@ -1113,7 +1113,7 @@ impl Translator {
             ast::VariantData::Struct(ref fields, _) => {
                 self.trans_struct_fields(fields)
             },
-            _ => unreachable!(),
+            _ => unreachable!("{:?}", *var),
         };
 
         Union {
@@ -1530,7 +1530,7 @@ impl Translator {
                 PattenKind::Slice(Box::new(self.trans_slice_patten(pattens)))
             },
             ast::PatKind::Mac(ref mac) => PattenKind::Macro(self.trans_macro(mac)),
-            ast::PatKind::Box(..) => unreachable!(),
+            ast::PatKind::Box(..) => unreachable!("ast::PatKind::Box"),
         };
         self.set_loc(&loc);
 
@@ -1683,13 +1683,13 @@ impl Translator {
             },
             ast::ExprKind::Ret(ref expr) => ExprKind::Return(Box::new(self.trans_return_expr(expr))),
             ast::ExprKind::Mac(ref mac) => ExprKind::Macro(self.trans_macro(mac)),
-            ast::ExprKind::InlineAsm(..) => unimplemented!(),
-            ast::ExprKind::Box(..) => unreachable!(),
-            ast::ExprKind::Async(..) => unimplemented!(),
-            ast::ExprKind::Await(..) => unimplemented!(),
-            ast::ExprKind::TryBlock(..) => unimplemented!(),
-            ast::ExprKind::Yield(..) => unimplemented!(),
-            ast::ExprKind::Err => unreachable!(),
+            ast::ExprKind::InlineAsm(..) => unimplemented!("ast::ExprKind::InlineAsm"),
+            ast::ExprKind::Box(..) => unreachable!("ast::ExprKind::Box"),
+            ast::ExprKind::Async(..) => unimplemented!("ast::ExprKind::Async"),
+            ast::ExprKind::Await(..) => unimplemented!("ast::ExprKind::Await"),
+            ast::ExprKind::TryBlock(..) => unimplemented!("ast::ExprKind::TryBlock"),
+            ast::ExprKind::Yield(..) => unimplemented!("ast::ExprKind::Yield"),
+            ast::ExprKind::Err => unreachable!("ast::ExprKind::Err"),
         };
         self.set_loc(&loc);
 
