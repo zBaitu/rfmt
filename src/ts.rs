@@ -48,12 +48,21 @@ macro_rules! minus_nf {
 #[inline]
 fn list_len_info(list: &[&str]) -> (usize, usize) {
     let prefix_len = if list.len() > 1 {
-        list.iter().take(list.len() - 1).map(|s| s.len()).sum()
+        list.iter().take(list.len() - 1).map(|s| str_one_line_len(s)).sum()
     } else {
         0
     };
-    let len = list.iter().map(|s| s.len()).sum();
+    let len = list.iter().map(|s| str_one_line_len(s)).sum();
     (prefix_len, len)
+}
+
+#[inline]
+fn str_one_line_len(s: &str) -> usize {
+    if let Some(pos) = s.find('\n') {
+        pos
+    } else {
+        s.len()
+    }
 }
 
 #[inline]
