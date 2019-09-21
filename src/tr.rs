@@ -448,7 +448,9 @@ impl Translator {
     }
 
     fn trans_nested_meta_items(&mut self, nested_meta_items: &Vec<ast::NestedMetaItem>) -> Vec<MetaItem> {
-        trans_list!(self, nested_meta_items, trans_nested_meta_item)
+        let mut items: Vec<MetaItem> = trans_list!(self, nested_meta_items, trans_nested_meta_item);
+        items.sort_by(|a, b| a.name.cmp(&b.name));
+        items
     }
 
     #[inline]
@@ -622,17 +624,8 @@ impl Translator {
             ast::UseTreeKind::Nested(ref trees) => {
                 let loc = self.loc(&tree.span);
                 let path = path_to_string(&tree.prefix);
-                let mut trees = self.trans_use_trees(trees);
+                let trees = self.trans_use_trees(trees);
                 self.set_loc(&loc);
-                trees.sort_by(|a, b| {
-                    if a.path.starts_with("self") {
-                        Ordering::Less
-                    } else if b.path.starts_with("self") {
-                        Ordering::Greater
-                    } else {
-                        a.path.cmp(&b.path)
-                    }
-                });
                 (loc, path, Some(trees))
             },
         };
@@ -645,7 +638,17 @@ impl Translator {
     }
 
     fn trans_use_trees(&mut self, trees: &Vec<(ast::UseTree, ast::NodeId)>) -> Vec<UseTree> {
-        trees.iter().map(|ref e| self.trans_use_tree(&e.0)).collect()
+        let mut trees: Vec<UseTree> = trees.iter().map(|ref e| self.trans_use_tree(&e.0)).collect();
+        trees.sort_by(|a, b| {
+            if a.path.starts_with("self") {
+                Ordering::Less
+            } else if b.path.starts_with("self") {
+                Ordering::Greater
+            } else {
+                a.path.cmp(&b.path)
+            }
+        });
+        trees
     }
 
     fn trans_type_alias(&mut self, ident: String, generics: &ast::Generics, ty: &ast::Ty) -> TypeAlias {

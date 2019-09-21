@@ -11,23 +11,23 @@ mod ts;
 
 #[derive(Debug, StructOpt)]
 pub struct Opt {
-    #[structopt(short, long)]
+    #[structopt(long, short)]
     /// Print the rust original syntax ast debug info
     ast: bool,
 
-    #[structopt(short, long)]
+    #[structopt(long, short)]
     /// Check exceed lines and trailing white space lines
     check: bool,
 
-    #[structopt(short, long)]
+    #[structopt(long, short)]
     /// Print the rfmt ir debug info
     debug: bool,
 
-    #[structopt(short, long)]
+    #[structopt(long, short)]
     /// Print the rfmt ir simple format
     print: bool,
 
-    #[structopt(short, long)]
+    #[structopt(long, short)]
     /// Overwrite the source file
     overwrite: bool,
 
