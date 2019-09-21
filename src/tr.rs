@@ -2072,11 +2072,13 @@ impl Translator {
             return false;
         }
 
+        let mut prev = ' ';
         let start = nl.unwrap() + 1;
         for ch in self.src[start..pos as usize].chars() {
-            if !ch.is_whitespace() && ch != '.' {
+            if !ch.is_whitespace() && ch != '.' || !prev.is_whitespace() {
                 return false;
             }
+            prev = ch;
         }
         true
     }

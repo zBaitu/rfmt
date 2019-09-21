@@ -1610,6 +1610,23 @@ macro_rules! fmt_lists {
         })+
     });
 
+    ($sf:expr, $op:expr, $list:expr, $act:ident) => ({
+        let mut first = true;
+        for e in $list {
+            if !first {
+                if $op.loc.nl {
+                    $sf.wrap();
+                    $sf.raw_insert(&format!("{} ", $op));
+                } else {
+                    $sf.raw_insert(&format!(" {} ", $op));
+                }
+            }
+
+            $sf.$act(e);
+            first = false;
+        }
+    });
+
     ($sf:expr, $($list:expr, $act:ident),+) => ({
         fmt_lists!($sf, " ", " ", $($list, $act)+);
     });
@@ -2916,9 +2933,7 @@ impl Formatter {
 
     #[inline]
     fn fmt_list_op_expr(&mut self, expr: &ListOpExpr) {
-        let sep = format!(" {} ", expr.op);
-        let wrap_sep = format!("{} ", expr.op);
-        fmt_lists!(self, &sep, &wrap_sep, &expr.exprs, fmt_expr);
+        fmt_lists!(self, &expr.op, &expr.exprs, fmt_expr);
     }
 
     #[inline]
