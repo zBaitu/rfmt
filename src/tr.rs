@@ -281,11 +281,12 @@ pub struct TrResult {
     pub trailing_cmnts: HashMap<Pos, String>,
 }
 
-pub fn trans(sess: ParseSess, krate: ast::Crate, cmnts: Vec<ast::Comment>) -> TrResult {
-    Translator::new(sess, trans_comments(cmnts)).trans_crate(krate)
+pub fn trans(src: String, sess: ParseSess, krate: ast::Crate, cmnts: Vec<ast::Comment>) -> TrResult {
+    Translator::new(src, sess, trans_comments(cmnts)).trans_crate(krate)
 }
 
 struct Translator {
+    src: String,
     sess: ParseSess,
     cmnts: Vec<Comment>,
     cmnt_idx: usize,
@@ -295,8 +296,9 @@ struct Translator {
 }
 
 impl Translator {
-    fn new(sess: ParseSess, cmnts: Vec<Comment>) -> Translator {
+    fn new(src: String, sess: ParseSess, cmnts: Vec<Comment>) -> Translator {
         Translator {
+            src,
             sess,
             cmnts,
             cmnt_idx: 0,
@@ -849,6 +851,7 @@ impl Translator {
     #[inline]
     fn trans_path_segment(&mut self, seg: &ast::PathSegment) -> PathSegment {
         PathSegment {
+            loc: self.loc(&seg.ident.span),
             name: ident_to_string(&seg.ident),
             param: self.trans_generics_args_or_none(&seg.args),
         }
@@ -2064,20 +2067,14 @@ impl Translator {
 
     #[inline]
     fn is_nl(&self, pos: Pos) -> bool {
-        let snippet = self.span_to_snippet(span(self.last_loc.end, pos));
-        if snippet.is_err() {
-            return false;
-        }
-
-        let snippet = snippet.unwrap();
-        let nl = snippet.rfind('\n');
+        let nl = self.src[..pos as usize].rfind('\n');
         if nl.is_none() {
             return false;
         }
 
         let start = nl.unwrap() + 1;
-        for ch in snippet[start..].chars() {
-            if !ch.is_whitespace() {
+        for ch in self.src[start..pos as usize].chars() {
+            if !ch.is_whitespace() && ch != '.' {
                 return false;
             }
         }

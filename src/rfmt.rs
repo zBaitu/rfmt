@@ -127,8 +127,8 @@ fn trans(src: String, path: &PathBuf) -> TrResult {
     syntax::with_default_globals(|| {
         let sess = ParseSess::new(FilePathMapping::empty());
         let krate = parse::parse_crate_from_source_str(FileName::from(path.to_path_buf()), src.clone(), &sess).unwrap();
-        let cmnts = comments::gather_comments(&sess, FileName::from(path.to_path_buf()), src);
-        tr::trans(sess, krate, cmnts)
+        let cmnts = comments::gather_comments(&sess, FileName::from(path.to_path_buf()), src.clone());
+        tr::trans(src, sess, krate, cmnts)
     })
 }
 

@@ -279,6 +279,7 @@ impl Path {
 
 #[derive(Debug)]
 pub struct PathSegment {
+    pub loc: Loc,
     pub name: String,
     pub param: PathParam,
 }
@@ -286,6 +287,7 @@ pub struct PathSegment {
 impl PathSegment {
     pub fn new_sized() -> PathSegment {
         PathSegment {
+            loc: Default::default(),
             name: "?Sized".to_string(),
             param: PathParam::Angle(Default::default()),
         }

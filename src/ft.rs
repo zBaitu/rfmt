@@ -1472,6 +1472,11 @@ macro_rules! maybe_nl {
             $sf.wrap();
         }
     });
+    ($sf:expr, $e:expr) => ({
+        if $e.loc.nl {
+            $sf.wrap();
+        }
+    });
 }
 
 macro_rules! maybe_wrap {
@@ -3177,6 +3182,7 @@ impl Formatter {
     #[inline]
     fn fmt_method_call_expr(&mut self, expr: &MethodCallExpr) {
         self.fmt_expr(&expr.args[0]);
+        maybe_nl!(self, expr.path);
         self.raw_insert(".");
         self.fmt_path_segment(&expr.path, true);
         fmt_comma_lists!(self, "(", ")", &expr.args[1..], fmt_expr);
