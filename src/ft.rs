@@ -2032,8 +2032,7 @@ impl Formatter {
                 false
             },
             ItemKind::Struct(ref item) => {
-                self.fmt_struct(item);
-                true
+                self.fmt_struct(item)
             },
             ItemKind::Union(ref item) => {
                 self.fmt_union(item);
@@ -2387,14 +2386,17 @@ impl Formatter {
         self.raw_insert(";");
     }
 
-    fn fmt_struct(&mut self, item: &Struct) {
+    fn fmt_struct(&mut self, item: &Struct) -> bool {
         self.insert(&format!("struct {}", item.name));
         self.fmt_generics_and_where(&item.generics);
         self.fmt_struct_body(&item.body);
 
         match item.body {
-            StructBody::Tuple(_) | StructBody::Unit => self.raw_insert(";"),
-            _ => (),
+            StructBody::Tuple(_) | StructBody::Unit => {
+                self.raw_insert(";");
+                false
+            },
+            _ => true,
         }
     }
 
