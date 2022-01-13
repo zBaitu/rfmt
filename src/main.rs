@@ -2,12 +2,12 @@ use std::path::PathBuf;
 
 use structopt::StructOpt;
 
-mod ast;
-mod ft;
-mod ir;
+//mod ast;
+//mod ft;
+//mod ir;
 mod rfmt;
-mod tr;
-mod ts;
+//mod tr;
+//mod ts;
 
 #[derive(Debug, StructOpt)]
 pub struct Opt {
@@ -40,6 +40,8 @@ pub struct Opt {
 
 fn main() {
     let opt = Opt::from_args();
+    rfmt::dump_ast(&opt.input.unwrap());
+    /*
     if opt.input.is_none() {
         rfmt::fmt_from_stdin(opt);
     } else if opt.ast {
@@ -51,4 +53,5 @@ fn main() {
     } else {
         rfmt::fmt(opt);
     }
+     */
 }

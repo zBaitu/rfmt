@@ -3,14 +3,18 @@ use std::fs::File;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
-use syntax::parse::{self, ParseSess, lexer::comments};
-use syntax::source_map::FilePathMapping;
-use syntax_pos::FileName;
+use rustc_ap_rustc_parse::{self as parse};
+use rustc_ap_rustc_session::parse::ParseSess;
+use rustc_ap_rustc_span::{self as span, FileName, source_map::FilePathMapping};
+//use rustc_ap_rustc_parse::{self, ParseSess, lexer::comments};
+//use syntax::parse::{self, ParseSess, lexer::comments};
+//use syntax::source_map::FilePathMapping;
+//use syntax_pos::FileName;
 use walkdir::WalkDir;
 
 use crate::Opt;
-use crate::ft;
-use crate::tr::{self, TrResult};
+//use crate::ft;
+//use crate::tr::{self, TrResult};
 
 macro_rules! p {
     () => ({println!()});
@@ -29,27 +33,30 @@ const SEP: &str = r#"
 
 pub fn dump_ast(path: &PathBuf) {
     let src = fs::read_to_string(path).unwrap();
-
-    syntax::with_default_globals(|| {
+    span::with_default_session_globals(|| {
         let sess = ParseSess::new(FilePathMapping::empty());
         let krate = match parse::parse_crate_from_source_str(FileName::from(path.clone()), src.clone(), &sess) {
             Ok(krate) => krate,
             Err(mut e) => {
                 e.emit();
                 return;
-            },
+            }
         };
+        
         d!(krate);
-
-        p!(SEP);
-
-        let cmnts = comments::gather_comments(&sess, FileName::from(path.clone()), src);
-        for cmnt in cmnts {
-            p!("{}: {:#?} {:#?}", cmnt.pos.0, cmnt.style, cmnt.lines);
-        }
     });
+
+    p!(SEP);
+
+    /*
+    let cmnts = comments::gather_comments(&sess, FileName::from(path.clone()), src);
+    for cmnt in cmnts {
+        p!("{}: {:#?} {:#?}", cmnt.pos.0, cmnt.style, cmnt.lines);
+    }
+     */
 }
 
+/*
 pub fn fmt_from_stdin(opt: Opt) {
     let mut src = String::new();
     io::stdin().read_to_string(&mut src).unwrap();
@@ -131,4 +138,4 @@ fn trans(src: String, path: &PathBuf) -> TrResult {
         tr::trans(src, sess, krate, cmnts)
     })
 }
-
+*/

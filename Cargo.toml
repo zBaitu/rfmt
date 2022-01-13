@@ -10,14 +10,15 @@ license = "Apache-2.0/MIT"
 description = """
 Another Rust source code formatter.
 """
-edition = "2018"
+edition = "2021"
 
 [[bin]]
 name = "rfmt"
 
 [dependencies]
-structopt = "0.2"
-rustc-ap-syntax = "542.0.0"
-rustc-ap-syntax_pos = "542.0.0"
-rustc-ap-rustc_target = "542.0.0"
+structopt = "0.3"
 walkdir = "2"
+
+rustc-ap-rustc_parse = "727.0.0"
+rustc-ap-rustc_session = "727.0.0"
+rustc-ap-rustc_span = "727.0.0"
