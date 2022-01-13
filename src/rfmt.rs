@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use rustc_ap_rustc_parse::{self as parse};
 use rustc_ap_rustc_session::parse::ParseSess;
 use rustc_ap_rustc_span::{self as span, FileName, source_map::FilePathMapping};
+use rustc_ap_rustc_ast::util::comments;
 //use rustc_ap_rustc_parse::{self, ParseSess, lexer::comments};
 //use syntax::parse::{self, ParseSess, lexer::comments};
 //use syntax::source_map::FilePathMapping;
@@ -42,18 +43,16 @@ pub fn dump_ast(path: &PathBuf) {
                 return;
             }
         };
-        
+
         d!(krate);
+
+        p!(SEP);
+
+        let cmnts = comments::gather_comments(&sess.source_map(), FileName::from(path.clone()), src);
+        for cmnt in cmnts {
+            p!("{}: {:#?} {:#?}", cmnt.pos.0, cmnt.style, cmnt.lines);
+        }
     });
-
-    p!(SEP);
-
-    /*
-    let cmnts = comments::gather_comments(&sess, FileName::from(path.clone()), src);
-    for cmnt in cmnts {
-        p!("{}: {:#?} {:#?}", cmnt.pos.0, cmnt.style, cmnt.lines);
-    }
-     */
 }
 
 /*
