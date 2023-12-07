@@ -1,5 +1,8 @@
 # rFmt ---- Rust source code formatter
 
+Has moved to [rsfmt](https://github.com/zBaitu/rsfmt)
+(maybe rfmt, r is not a good name)
+
 https://github.com/zBaitu/rfmt
 
 
